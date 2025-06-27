@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { initiateKakaoLogin } from "@/lib/auth";
 
 interface LoginPageProps {
   onLogin: (userData: any) => void;
@@ -19,9 +20,14 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
   const [showNickname, setShowNickname] = useState(false);
 
   const handleOAuthLogin = (provider: "kakao" | "google") => {
-    // OAuth 로그인 시뮬레이션 - 실제로는 OAuth 플로우가 필요합니다
-    console.log(`${provider} 로그인 시도`);
-    setShowNickname(true);
+    if (provider === "kakao") {
+      // 실제 카카오 로그인 시작
+      initiateKakaoLogin();
+    } else if (provider === "google") {
+      // 구글 로그인은 아직 시뮬레이션 (나중에 구현)
+      console.log("구글 로그인 시도");
+      setShowNickname(true);
+    }
   };
 
   const handleNicknameSubmit = () => {
