@@ -1,14 +1,13 @@
-// hooks/useCreateRoom.ts
 import { useMutation } from '@tanstack/react-query';
 import api from '@/lib/api';
 
-interface CreateRoomPayload {
+export interface CreateRoomPayload {
   name: string;
-  gameMode: string;
-  description: string;
-  maxPlayers: number;
-  isPrivate?: boolean;
-  password?: string;
+  roomType: 'KEY_SING_YOU' | 'RANDOM_SONG' | 'PLAIN_SONG';
+  isPrivate: boolean;
+  roomPassword: number;
+  maxPlayer: number;
+  hostId: number;
 }
 
 export const useCreateRoom = () => {
