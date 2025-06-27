@@ -12,7 +12,12 @@ import { Switch } from '@/components/ui/switch';
 import { ArrowLeft } from 'lucide-react';
 import { useCreateRoom } from '@/hooks/useCreateRoom';
 
-const CreateRoom = () => {
+interface CreateRoomProps {
+    onBack: () => void;
+    onRoomCreated: (room: any) => void;
+  }
+
+const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
   const router = useRouter();
 
   const [roomName, setRoomName] = useState('');
@@ -44,12 +49,14 @@ const CreateRoom = () => {
     };
 
     createRoom(newRoom, {
-      onSuccess: () => router.push('/lobby'),
-      onError: (error) => {
-        alert('방 생성 실패');
-        console.error(error);
-      }
-    });
+        onSuccess: () => {
+          onRoomCreated(newRoom); 
+        },
+        onError: (error) => {
+          alert('방 생성 실패');
+          console.error(error);
+        }
+      });
   };
 
   const selectedGameMode = gameModes.find(mode => mode.value === gameMode);
@@ -59,7 +66,7 @@ const CreateRoom = () => {
       <Card className="w-full max-w-2xl bg-white/90 backdrop-blur-sm">
         <CardHeader>
           <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" onClick={() => router.back()}>
+            <Button variant="outline" size="icon" onClick={onBack}>
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
@@ -153,7 +160,7 @@ const CreateRoom = () => {
           )}
 
           <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={() => router.back()} className="flex-1">취소</Button>
+            <Button variant="outline" onClick={onBack} className="flex-1">취소</Button>
             <Button 
               onClick={handleCreateRoom}
               disabled={!roomName.trim() || !gameMode || (isPrivate && !password.trim()) || isLoading}
