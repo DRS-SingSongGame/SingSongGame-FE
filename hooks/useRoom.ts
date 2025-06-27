@@ -4,6 +4,7 @@ import api from '@/lib/api';
 import { ApiResponse } from '@/types/api';
 
 interface Room {
+    id: number;
     name: string;
     roomType: "KEY_SING_YOU" | "RANDOM_SONG" | "PLAIN_SONG"; 
     isPrivate: boolean;
