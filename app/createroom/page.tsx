@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import CreateRoom from '@/components/CreateRoom'; // ❗ 너 구조 기준 정확함
+import CreateRoom from '@/components/CreateRoom'; 
 
 export default function CreateRoomPage() {
   const router = useRouter();
