@@ -40,7 +40,7 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
         <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              닉네임 설정
+              닉네임 설정1
             </CardTitle>
             <CardDescription>
               게임에서 사용할 닉네임을 입력해주세요
