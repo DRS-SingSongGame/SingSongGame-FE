@@ -21,6 +21,6 @@ export const useCreateRoom = () => {
 
   return {
     mutate: mutation.mutate,
-    isLoading: mutation.isLoading,
+    isLoading: mutation.isPending,
   };
 };

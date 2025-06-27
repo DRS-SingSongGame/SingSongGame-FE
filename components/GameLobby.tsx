@@ -18,7 +18,7 @@ interface GameLobbyProps {
 }
 
 const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps) => {
-    const { mutate: joinRoom, isLoading: joining } = useJoinRoom();
+const { mutate: joinRoom, isLoading: joining } = useJoinRoom();
   const [searchTerm, setSearchTerm] = useState('');
   const [chatMessage, setChatMessage] = useState('');
   const [chatMessages, setChatMessages] = useState([
@@ -185,7 +185,8 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     joinRoom(
       {
         roomId: selectedRoom.id,
-        password: selectedRoom.isPrivate ? prompt('비밀번호를 입력하세요') : undefined
+        password: selectedRoom.isPrivate ? prompt('비밀번호를 입력하세요') ?? undefined : undefined
+
       },
       {
         onSuccess: () => {
