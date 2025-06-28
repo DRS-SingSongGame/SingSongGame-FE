@@ -38,26 +38,32 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
 
   const handleCreateRoom = () => {
     if (!roomName.trim() || !gameMode || (isPrivate && !password.trim())) return;
-
+  
+    const gameModeMap: Record<string, 'KEY_SING_YOU' | 'RANDOM_SONG' | 'PLAIN_SONG'> = {
+      '키싱유': 'KEY_SING_YOU',
+      '랜덤 노래 맞추기': 'RANDOM_SONG',
+      '평어 노래 맞추기': 'PLAIN_SONG',
+    };
+  
     const newRoom = {
       name: roomName.trim(),
-      gameMode,
-      description: description.trim() || '게임을 즐겨보세요!',
-      maxPlayers: parseInt(maxPlayers),
+      roomType: gameModeMap[gameMode],
       isPrivate,
-      password: isPrivate ? password : undefined
+      roomPassword: isPrivate ? Number(password) : 0,
+      maxPlayer: parseInt(maxPlayers),
+      hostId: 2, // TODO: 나중에 user.id로 교체
     };
-
+  
     createRoom(newRoom, {
-        onSuccess: () => {
-          onRoomCreated(newRoom); // 변경
-        },
-        onError: (error) => {
-          alert('방 생성 실패');
-          console.error(error);
-        }
-      });
-    }; 
+      onSuccess: () => {
+        onRoomCreated(newRoom);
+      },
+      onError: (error) => {
+        alert('방 생성 실패');
+        console.error(error);
+      }
+    });
+  };
   const selectedGameMode = gameModes.find(mode => mode.value === gameMode);
 
   return (

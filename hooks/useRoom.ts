@@ -20,7 +20,7 @@ export default function useRooms() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.get<ApiResponse<Room[]>>('/room');  
+        const res = await api.get<ApiResponse<Room[]>>('/api/room');  
         setRooms(res.data.data);
       } catch (err) {
         console.error('방 목록 불러오기 실패:', err);
