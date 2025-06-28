@@ -51,11 +51,17 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     return <div className="text-center mt-10">방 목록 불러오는 중...</div>;
   }
 
-  const filteredRooms = rooms.filter(room =>
-    room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getGameModeLabel(room.roomType).includes(searchTerm)
-  );
-
+  const filteredRooms = rooms
+  ? rooms.filter((room: {
+      id: number;
+      name: string;
+      roomType: "KEY_SING_YOU" | "RANDOM_SONG" | "PLAIN_SONG";
+      isPrivate: boolean;
+    }) =>
+      room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getGameModeLabel(room.roomType).includes(searchTerm)
+    )
+  : [];
   const handleSendMessage = () => {
     if (chatMessage.trim()) {
       const newMessage = {
