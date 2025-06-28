@@ -52,16 +52,12 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
   }
 
   const filteredRooms = rooms
-  ? rooms.filter((room: {
-      id: number;
-      name: string;
-      roomType: "KEY_SING_YOU" | "RANDOM_SONG" | "PLAIN_SONG";
-      isPrivate: boolean;
-    }) =>
-      room.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getGameModeLabel(room.roomType).includes(searchTerm)
-    )
-  : [];
+    ? rooms.filter((room) =>
+        room.roomName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getGameModeLabel(room.roomType).includes(searchTerm)
+      )
+    : [];
+
   const handleSendMessage = () => {
     if (chatMessage.trim()) {
       const newMessage = {
@@ -80,7 +76,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
   };
 
   return (
-    <div className="min-h-screen py-4 px-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 overflow-hidden">
+    <div className="min-h-screen py-4 px-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 overflow-y-auto">
       <div className="max-w-screen-2xl mx-auto grid grid-cols-5 gap-4 h-[92vh]">
         <div className="col-span-3 space-y-4 relative">
           <Card className="bg-white/90 backdrop-blur-sm flex flex-col flex-grow">
@@ -95,19 +91,18 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
             <CardContent className="flex-1 overflow-y-auto">
               <div className="space-y-2">
                 {filteredRooms.map((room) => (
-                  <Card key={room.id} className={`cursor-pointer ${selectedRoom?.id === room.id ? 'border-pink-500 border-2' : ''}`} onClick={() => setSelectedRoom(room)}>
+                  <Card key={room.roomId} className={`cursor-pointer ${selectedRoom?.roomId === room.roomId ? 'border-pink-500 border-2' : ''}`} onClick={() => setSelectedRoom(room)}>
                     <CardContent className="p-3">
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold text-base">{room.name}</h3>
+                        <h3 className="font-semibold text-base">{room.roomName}</h3>
                         <div className="flex items-center gap-2">
                           {room.isPrivate && <Badge variant="secondary">🔒</Badge>}
                           <Badge className={getGameModeColor(room.roomType)}>{getGameModeLabel(room.roomType)}</Badge>
                         </div>
                       </div>
-                      {/* <p className="text-sm text-gray-600">{room.description}</p> */}
-                      <div className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                        {/* <Users className="w-4 h-4" /> {room.currentPlayers}/{room.maxPlayers} */}
-                      </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                        {1} / {room.maxPlayer}
+                        </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -166,9 +161,8 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
             <CardContent className="flex flex-col gap-2">
               {selectedRoom ? (
                 <>
-                  <p><strong>방 이름:</strong> {selectedRoom.name}</p>
+                  <p><strong>방 이름:</strong> {selectedRoom.roomName}</p>
                   <p><strong>게임 종류:</strong> {getGameModeLabel(selectedRoom.roomType)}</p>
-                  {/* <p><strong>게임 설명:</strong> {selectedRoom.description}</p> */}
                 </>
               ) : (
                 <p className="text-sm text-gray-600">방을 선택하면 상세 정보가 표시됩니다.</p>
@@ -180,7 +174,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                   onClick={() => {
                     joinRoom(
                       {
-                        roomId: selectedRoom.id,
+                        roomId: selectedRoom.roomId,
                         password: selectedRoom.isPrivate ? prompt('비밀번호를 입력하세요') ?? undefined : undefined
                       },
                       {
