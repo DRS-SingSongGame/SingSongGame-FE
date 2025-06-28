@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000', // 백엔드 주소
+  baseURL: 'https://singsonggame.store', // 백엔드 주소
   headers: {
     'Content-Type': 'application/json',
   },

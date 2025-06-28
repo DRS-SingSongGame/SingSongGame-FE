@@ -4,14 +4,14 @@ import api from '@/lib/api';
 import { ApiResponse } from '@/types/api';
 
 interface Room {
-  id: number;
-  name: string;
-  gameMode: string;
-  description: string;
-  currentPlayers: number;
-  maxPlayers: number;
-  isPrivate: boolean;
-}
+    id: number;
+    name: string;
+    roomType: "KEY_SING_YOU" | "RANDOM_SONG" | "PLAIN_SONG"; 
+    isPrivate: boolean;
+    roomPassword: number;
+    maxPlayer: number;
+    hostId: number;
+  }
 
 export default function useRooms() {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -20,7 +20,7 @@ export default function useRooms() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.get<ApiResponse<Room[]>>('/room');  
+        const res = await api.get<ApiResponse<Room[]>>('/api/room');  
         setRooms(res.data.data);
       } catch (err) {
         console.error('방 목록 불러오기 실패:', err);
