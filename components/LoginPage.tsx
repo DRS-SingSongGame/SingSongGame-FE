@@ -82,7 +82,7 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
         </CardHeader>
         <CardContent className="space-y-4">
           <Button
-            onClick={() => handleOAuthLogin("kakao")}
+            onClick={() => handleOAuthLogin()}
             className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-3"
           >
             <svg
