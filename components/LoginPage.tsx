@@ -19,10 +19,11 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
   const [showName, setShowName] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+  const loginUrl = `${API_BASE_URL}/oauth2/authorization/kakao`;
 
   const handleOAuthLogin = () => {
     // OAuth 로그인 시뮬레이션 - 실제로는 OAuth 플로우가 필요합니다
-    window.location.href = `${API_BASE_URL}/oauth2/authorization/kakao`;
+    window.location.href = loginUrl;
   };
 
   const handleNameSubmit = () => {
@@ -34,42 +35,6 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
       });
     }
   };
-
-  if (showName) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              닉네임 설정
-            </CardTitle>
-            <CardDescription>
-              게임에서 사용할 닉네임을 입력해주세요
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">닉네임</Label>
-              <Input
-                id="name"
-                placeholder="닉네임을 입력하세요"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={12}
-              />
-            </div>
-            <Button
-              onClick={handleNameSubmit}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-              disabled={!name.trim()}
-            >
-              게임 시작하기
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
