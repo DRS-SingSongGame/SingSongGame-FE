@@ -18,8 +18,7 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
   const [name, setName] = useState("");
   const [showName, setShowName] = useState(false);
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-  const loginUrl = `${API_BASE_URL}/oauth2/authorization/kakao`;
+  const loginUrl = `/oauth2/authorization/kakao`;
 
   const handleOAuthLogin = () => {
     // OAuth 로그인 시뮬레이션 - 실제로는 OAuth 플로우가 필요합니다
