@@ -53,5 +53,7 @@ jobs:
 
             docker pull ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}
 
+            cp /home/ubuntu/.env.production /home/ubuntu/docker-app/.env.production
+
             docker run -d --name frontend -p 3000:3000 \
               ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}
