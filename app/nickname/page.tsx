@@ -12,12 +12,15 @@ export default function NicknamePage() {
   const [name, setName] = useState("");
   const router = useRouter();
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+
   const handleSubmit = async () => {
     if (!name.trim()) return;
   
     try {
       // 1. 닉네임 설정 요청
-      await fetch("http://localhost:8080/api/auth/nickname", {
+      await fetch(`${API_BASE_URL}/api/auth/nickname`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
@@ -25,7 +28,7 @@ export default function NicknamePage() {
       });
   
       // 2. 유저 정보 다시 가져오기
-      const res = await fetch("http://localhost:8080/api/user/me", {
+      const res = await fetch(`${API_BASE_URL}/api/user/me`, {
         method: "GET",
         credentials: "include",
       });
