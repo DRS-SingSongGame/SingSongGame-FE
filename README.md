@@ -46,3 +46,7 @@ singsonggameFE/
 ## 배포
 
 가장 쉬운 Next.js 앱 배포 방법은 [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme)을 사용하는 것입니다.
+
+## 설치 패키지
+
+`npm install axios`

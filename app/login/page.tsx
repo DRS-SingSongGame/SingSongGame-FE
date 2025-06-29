@@ -1,15 +1,14 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import LoginPage from '@/components/LoginPage';
+import { useRouter } from 'next/navigation';
 
 const Login = () => {
   const router = useRouter();
 
   const handleLogin = (userData: any) => {
-    // 사용자 데이터를 localStorage에 저장 (실제 앱에서는 더 안전한 방법 사용)
-    localStorage.setItem('user', JSON.stringify(userData));
-    router.push('/lobby');
+    console.log('로그인 성공:', userData);
+    router.push('/');
   };
 
   return (
