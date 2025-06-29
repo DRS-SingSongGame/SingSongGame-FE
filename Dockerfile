@@ -8,8 +8,6 @@ RUN npm ci
 
 COPY . .
 
-COPY .env.production .env.production
-
 RUN npm run build
 
 # 2단계: 런타임용 stage
