@@ -107,7 +107,10 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                                 <Badge className={getGameModeColor(room.roomType)}>{getGameModeLabel(room.roomType)}</Badge>
                               </div>
                             </div>
-                            <div className="text-sm text-gray-500 mt-1">{1} / {room.maxPlayer}</div>
+                            <div className="flex justify-between items-center text-sm text-gray-500 mb-1">
+                              <span>{1} / {room.maxPlayer}</span>
+                              <span>방장: {room.hostName}</span>
+                            </div>
                           </CardContent>
                         </Card>
                       </DialogTrigger>
