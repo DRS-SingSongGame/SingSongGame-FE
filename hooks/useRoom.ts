@@ -9,6 +9,7 @@ interface Room {
   isPrivate: boolean;
   maxPlayer: number;
   gameStatus: string;
+  hostName: string;
 }
 
 interface ApiResponse<T> {
