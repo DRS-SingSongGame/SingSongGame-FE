@@ -22,6 +22,7 @@ export default function useRooms() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    
     (async () => {
       try {
         const res = await api.get<ApiResponse<Room[]>>('/api/room');
