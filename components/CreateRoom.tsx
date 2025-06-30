@@ -33,7 +33,7 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
     { value: '키싱유', label: '키싱유', description: '키워드에 맞는 노래 부르기' },
     { value: '랜덤 노래 맞추기', label: '랜덤 노래 맞추기', description: '노래 듣고 제목 맞추기' },
     { value: '평어 노래 맞추기', label: '평어 노래 맞추기', description: '가사 듣고 노래 맞추기' },
-    { value: '놀라운 토요일', label: '놀라운 토요일', description: '빈칸 가사 맞추기' }
+    
   ];
 
   const handleCreateRoom = () => {
@@ -76,7 +76,7 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
             </Button>
             <div>
               <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                🎮 방 만들기
+                 방 만들기
               </CardTitle>
               <CardDescription>
                 새로운 게임방을 만들어 친구들과 함께 즐겨보세요
