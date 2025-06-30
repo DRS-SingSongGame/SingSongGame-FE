@@ -8,6 +8,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,
 });
 
 // 요청, 응답 인터셉터도 여기서 추가 가능 (토큰 등)
