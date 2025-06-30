@@ -117,25 +117,13 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="description">방 설명</Label>
-            <Textarea
-              id="description"
-              placeholder="방에 대한 간단한 설명을 입력하세요 (선택사항)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={100}
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="maxPlayers">최대 인원</Label>
             <Select value={maxPlayers} onValueChange={setMaxPlayers}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[2, 3, 4, 5, 6, 7, 8].map((num) => (
+                {[2, 3, 4, 5, 6].map((num) => (
                   <SelectItem key={num} value={num.toString()}>{num}명</SelectItem>
                 ))}
               </SelectContent>
