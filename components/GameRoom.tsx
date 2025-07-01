@@ -13,6 +13,7 @@ import { Crown, Play, CheckCircle, Circle, LogOut } from 'lucide-react';
 interface GameRoomProps {
   user: any;
   room: any;
+  onBack: () => void;
 }
 
 const GameRoom = ({ user, room }: GameRoomProps) => {
