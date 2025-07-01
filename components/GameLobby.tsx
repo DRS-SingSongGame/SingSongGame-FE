@@ -1,7 +1,7 @@
 'use client';
 
 import useRooms from '@/hooks/useRoom'; 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -12,6 +12,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogTr
 import { Search, RefreshCw, LogOut, Settings, Zap, Play, X } from 'lucide-react';
 import { useJoinRoom } from '@/hooks/useJoinRoom';
 import ChatBox from '@/components/chat/ChatBox';
+import { connectLobbySocket, disconnectLobbySocket, sendLobbyMessage } from '@/lib/lobbySocket';
+
+export interface ChatMessage {
+  id: number;
+  type: 'TALK' | 'ENTER' | 'LEAVE';
+  roomId: string;
+  senderId: string;
+  senderName: string;
+  message: string;
+  timestamp: string;
+  time: string;
+}
 
 interface GameLobbyProps {
   user: any;
@@ -41,39 +53,42 @@ const getGameModeLabel = (mode: string) => {
 const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps) => {
   const { mutate: joinRoom, isLoading: joining } = useJoinRoom();
   const [searchTerm, setSearchTerm] = useState('');
-  const [chatMessage, setChatMessage] = useState('');
-  const [chatMessages, setChatMessages] = useState([
-    { id: 1, user: '관리자', message: '싱송겜 게임 로비에 오신 것을 환영합니다!', time: '10:30' },
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([{
+    id: 1,
+    type: 'ENTER',
+    roomId: 'lobby',
+    senderId: 'system',
+    senderName: '관리자',
+    message: '싱송겜 게임 로비에 오신 것을 환영합니다!',
+    timestamp: new Date().toISOString(),
+    time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+  }]);
+
+  useEffect(() => {
+    connectLobbySocket(user.id, user.nickname, (msg: ChatMessage) => {
+      setChatMessages((prev) => [...prev, msg]);
+    });
+    return () => {
+      disconnectLobbySocket(user.id);
+    };
+  }, []);
+
+  const handleSendMessage = (message: string) => {
+    sendLobbyMessage(user.id, user.nickname, message);
+  };
 
   const { rooms, loading } = useRooms();
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  if (loading) {
-    return <div className="text-center mt-10">방 목록 불러오는 중...</div>;
-  }
+  if (loading) return <div className="text-center mt-10">방 목록 불러오는 중...</div>;
 
-  const filteredRooms = rooms
-    ? rooms.filter((room) =>
-        room.roomName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getGameModeLabel(room.roomType).includes(searchTerm)
-      )
-    : [];
+  const filteredRooms = rooms?.filter((room) =>
+    room.roomName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    getGameModeLabel(room.roomType).includes(searchTerm)
+  ) || [];
 
-  const handleSendMessage = (message: string) => {
-    const newMessage = {
-      id: chatMessages.length + 1,
-      user: user.nickname,
-      message: message.trim(),
-      time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-    };
-    setChatMessages([...chatMessages, newMessage]);
-  };
-
-  const handleQuickMatch = () => {
-    console.log('Quick match started');
-  };
+  const handleQuickMatch = () => console.log('Quick match started');
 
   return (
     <div className="min-h-screen py-4 px-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 overflow-y-auto">
@@ -98,7 +113,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                         <Card className="cursor-pointer h-[130px]">
                           <CardContent className="p-4">
                             <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-semibold text-base truncate whitespace-nowrap overflow-hidden max-w-[50%]">{room.roomName}</h3>
+                              <h3 className="font-semibold text-base truncate whitespace-nowrap overflow-hidden max-w-[50%]">{room.roomName}</h3>
                               <div className="flex items-center gap-2">
                                 {room.isPrivate && <Badge variant="secondary">🔒</Badge>}
                                 <Badge className={getGameModeColor(room.roomType)}>{getGameModeLabel(room.roomType)}</Badge>
@@ -178,22 +193,21 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
 
           <Card className="flex flex-col justify-between bg-gradient-to-r from-purple-500/90 via-pink-500/90 to-orange-500/90 backdrop-blur-sm border-0 text-white h-[300px]">
             <CardHeader>
-                <CardTitle className="text-xl font-bold flex items-center gap-2">
+              <CardTitle className="text-xl font-bold flex items-center gap-2">
                 <Zap className="w-6 h-6 text-yellow-300" /> ⚡ 빠른 대전
-                </CardTitle>
-                <CardDescription className="text-purple-100">즉시 매칭으로 빠르게 게임을 시작하세요!</CardDescription>
+              </CardTitle>
+              <CardDescription className="text-purple-100">즉시 매칭으로 빠르게 게임을 시작하세요!</CardDescription>
             </CardHeader>
-            
             <CardContent className="pb-4">
-                <Button
+              <Button
                 size="lg"
                 onClick={handleQuickMatch}
                 className="w-full h-20 bg-yellow-400 hover:bg-yellow-500 text-black font-bold text-xl"
-                >
+              >
                 <Play className="w-5 h-5 mr-2" /> 빠른 대전 시작
-                </Button>
+              </Button>
             </CardContent>
-            </Card>
+          </Card>
         </div>
       </div>
 

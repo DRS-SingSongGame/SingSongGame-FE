@@ -1,72 +1,74 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface ChatMessage {
+export interface ChatMessage {
   id: number;
-  user: string;
+  type: 'TALK' | 'ENTER' | 'LEAVE';
+  roomId: string;
+  senderId: string;
+  senderName: string;
   message: string;
+  timestamp: string;
   time: string;
 }
 
 interface ChatBoxProps {
-  user: { nickname: string };
+  user: any;
   messages: ChatMessage[];
-  onSend: (message: string) => void;
+  onSend?: (message: string) => void;
 }
 
 const ChatBox = ({ user, messages, onSend }: ChatBoxProps) => {
   const [input, setInput] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isComposing, setIsComposing] = useState(false);
 
   const handleSend = () => {
-    if (!input.trim()) return;
-    onSend(input);
+    const messageToSend = input.trim();
+    if (!messageToSend) return;
+    onSend?.(messageToSend);
     setInput('');
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleSend();
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !isComposing) {
+      e.preventDefault();
+      handleSend();
+    }
   };
-
-  useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   return (
     <Card className="bg-white/90 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="text-lg">로비 채팅</CardTitle>
+        <CardTitle>로비 채팅</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2 pb-1 h-full flex flex-col justify-between">
-        <ScrollArea className="h-[110px]">
+      <CardContent>
+        <ScrollArea className="h-[200px] mb-2 pr-2">
           <div className="space-y-2">
             {messages.map((msg) => (
-              <div key={msg.id} className="flex gap-2 text-sm">
-                <span className="font-semibold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
-                  {msg.user}:
-                </span>
-                <span>{msg.message}</span>
-                <span className="text-gray-400 text-xs ml-auto">{msg.time}</span>
+              <div key={msg.id} className={`text-sm ${msg.senderName === user.nickname ? 'text-right' : 'text-left'}`}>
+                <div className="font-semibold">
+                  {msg.senderName} <span className="text-gray-400 text-xs">{msg.time}</span>
+                </div>
+                <div className="bg-gray-100 inline-block rounded px-2 py-1">{msg.message}</div>
               </div>
             ))}
-            <div ref={scrollRef} />
           </div>
         </ScrollArea>
-        <div className="flex gap-2 pt-1">
+        <div className="flex gap-2">
           <Input
-            placeholder="메시지를 입력하세요..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyPress}
+            onKeyDown={handleKeyDown}
+            onCompositionStart={() => setIsComposing(true)}
+            onCompositionEnd={() => setIsComposing(false)}
+            placeholder="메시지를 입력하세요..."
           />
-          <Button onClick={handleSend} className="bg-gradient-to-r from-pink-500 to-purple-500">
-            전송
-          </Button>
+          <Button onClick={handleSend}>전송</Button>
         </div>
       </CardContent>
     </Card>
