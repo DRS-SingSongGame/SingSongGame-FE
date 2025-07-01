@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -21,11 +21,13 @@ interface ChatBoxProps {
   user: any;
   messages: ChatMessage[];
   onSend?: (message: string) => void;
+  autoScrollToBottom?: boolean;
 }
 
-const ChatBox = ({ user, messages, onSend }: ChatBoxProps) => {
+const ChatBox = ({ user, messages, onSend, autoScrollToBottom }: ChatBoxProps) => {
   const [input, setInput] = useState('');
   const [isComposing, setIsComposing] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {
     const messageToSend = input.trim();
@@ -41,6 +43,12 @@ const ChatBox = ({ user, messages, onSend }: ChatBoxProps) => {
     }
   };
 
+  useEffect(() => {
+    if (autoScrollToBottom && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, autoScrollToBottom]);
+
   return (
     <Card className="bg-white/90 backdrop-blur-sm">
       <CardHeader>
@@ -48,7 +56,7 @@ const ChatBox = ({ user, messages, onSend }: ChatBoxProps) => {
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[200px] mb-2 pr-2">
-          <div className="space-y-2">
+          <div ref={scrollRef} className="space-y-2 max-h-[200px] overflow-y-auto">
             {messages.map((msg) => (
               <div key={msg.id} className={`text-sm ${msg.senderName === user.nickname ? 'text-right' : 'text-left'}`}>
                 <div className="font-semibold">
