@@ -48,7 +48,20 @@ jobs:
           username: ubuntu
           key: ${{ secrets.INSTANCE_SSH_KEY }}
           script: |
-            docker stop frontend-dev || true && docker rm frontend-dev || true
+            # 1. ECR 로그인 추가
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+            | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
+            # 2. 기존 컨테이너 중지 및 삭제
+            docker stop frontend-dev || true
+            docker rm frontend-dev || true
+
+            # 3. 이미지 pull (이전 단계에서 push한 dev 태그)
             docker pull ${{ secrets.ECR_REGISTRY }}/singsonggame-fe:dev
+
+            # 4. 컨테이너 실행
+            docker run -d --name frontend-dev -p 3001:3000 \
+              ${{ secrets.ECR_REGISTRY }}/singsonggame-fe:dev
+
             docker run -d --name frontend-dev -p 3001:3000 \
               ${{ secrets.ECR_REGISTRY }}/singsonggame-fe:dev
