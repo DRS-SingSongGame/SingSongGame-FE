@@ -44,7 +44,7 @@ jobs:
       - name: Deploy to Dev EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.DEV_FE_INSTANCE_HOST }}
+          host: ${{ secrets.INSTANCE_HOST }}
           username: ubuntu
           key: ${{ secrets.INSTANCE_SSH_KEY }}
           script: |
