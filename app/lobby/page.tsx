@@ -9,13 +9,30 @@ export default function LobbyPage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      router.push('/login'); // 로그인 안 했으면 로그인 페이지로
-    }
+    const checkLogin = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/me`, {
+          method: 'GET',
+          credentials: 'include', // ✅ 쿠키를 반드시 같이 보냄
+        });
+  
+        const result = await res.json();
+  
+        if (result?.data) {
+          setUser(result.data); // 서버에서 받은 유저 정보로 상태 갱신
+          localStorage.setItem('user', JSON.stringify(result.data)); // localStorage도 동기화
+        } else {
+          throw new Error();
+        }
+      } catch {
+        // 토큰 없음, 만료, 인증 실패 등 → 로그인 페이지로 이동
+        router.push('/login');
+      }
+    };
+  
+    checkLogin();
   }, []);
+  
 
   if (!user) return null; // 초기 렌더 방지
 
@@ -24,9 +41,13 @@ export default function LobbyPage() {
       user={user}
       onCreateRoom={() => router.push('/createroom')}
       onJoinRoom={(room) => router.push(`/game-room?id=${room.id}`)}
-      onLogout={() => {
-        localStorage.removeItem('user');
-        router.push('/login');
+      onLogout={async () => {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+        });
+        localStorage.removeItem("user");
+        router.push("/login");
       }}
     />
   );

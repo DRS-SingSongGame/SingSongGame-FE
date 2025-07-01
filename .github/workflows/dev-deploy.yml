@@ -1,0 +1,64 @@
+name: Deploy Frontend Dev
+
+on:
+  push:
+    branches:
+      - dev-deploy
+
+jobs:
+  deploy-frontend-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install deps and build
+        run: |
+          npm ci
+          echo "NEXT_PUBLIC_API_URL=https://singsonggame.store/api-dev" > .env
+          npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+          | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
+      - name: Build & Push Docker image (with :dev tag)
+        run: |
+          docker build -t ${{ secrets.ECR_REGISTRY }}/singsonggame-fe:dev .
+          docker push  ${{ secrets.ECR_REGISTRY }}/singsonggame-fe:dev
+
+      - name: Deploy to Dev EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.INSTANCE_HOST }}
+          username: ubuntu
+          key: ${{ secrets.INSTANCE_SSH_KEY }}
+          script: |
+            # 1. ECR 로그인 추가
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+            | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
+            # 2. 기존 컨테이너 중지 및 삭제
+            docker stop frontend-dev || true
+            docker rm frontend-dev || true
+
+            # 3. 이미지 pull (이전 단계에서 push한 dev 태그)
+            docker pull ${{ secrets.ECR_REGISTRY }}/singsonggame-fe:dev
+
+            # 4. 컨테이너 실행
+            docker run -d --name frontend-dev -p 3001:3000 \
+              ${{ secrets.ECR_REGISTRY }}/singsonggame-fe:dev

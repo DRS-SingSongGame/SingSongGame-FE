@@ -1,19 +1,19 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import CreateRoom from '@/components/CreateRoom'; 
+import CreateRoom from '@/components/CreateRoom';
 
 export default function CreateRoomPage() {
   const router = useRouter();
 
   const handleRoomCreated = (room: any) => {
-    // 방 생성 시 로비로 이동
-    localStorage.setItem('room', JSON.stringify(room));
-    router.push('/lobby');
+    localStorage.setItem('room', JSON.stringify(room)); // 이걸로 GameRoom에서 꺼내쓰기
+    router.push('/gameroom'); // GameRoom 페이지로 이동
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-400 via-purple-500 via-blue-500 to-cyan-400">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100"
+>
       <CreateRoom
         onBack={() => router.back()}
         onRoomCreated={handleRoomCreated}
@@ -21,3 +21,4 @@ export default function CreateRoomPage() {
     </div>
   );
 }
+

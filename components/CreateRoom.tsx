@@ -33,7 +33,7 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
     { value: '키싱유', label: '키싱유', description: '키워드에 맞는 노래 부르기' },
     { value: '랜덤 노래 맞추기', label: '랜덤 노래 맞추기', description: '노래 듣고 제목 맞추기' },
     { value: '평어 노래 맞추기', label: '평어 노래 맞추기', description: '가사 듣고 노래 맞추기' },
-    { value: '놀라운 토요일', label: '놀라운 토요일', description: '빈칸 가사 맞추기' }
+    
   ];
 
   const handleCreateRoom = () => {
@@ -76,7 +76,7 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
             </Button>
             <div>
               <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                🎮 방 만들기
+                 방 만들기
               </CardTitle>
               <CardDescription>
                 새로운 게임방을 만들어 친구들과 함께 즐겨보세요
@@ -117,25 +117,13 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="description">방 설명</Label>
-            <Textarea
-              id="description"
-              placeholder="방에 대한 간단한 설명을 입력하세요 (선택사항)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={100}
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="maxPlayers">최대 인원</Label>
             <Select value={maxPlayers} onValueChange={setMaxPlayers}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[2, 3, 4, 5, 6, 7, 8].map((num) => (
+                {[2, 3, 4, 5, 6].map((num) => (
                   <SelectItem key={num} value={num.toString()}>{num}명</SelectItem>
                 ))}
               </SelectContent>

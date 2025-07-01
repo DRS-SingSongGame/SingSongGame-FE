@@ -9,6 +9,7 @@ interface Room {
   isPrivate: boolean;
   maxPlayer: number;
   gameStatus: string;
+  hostName: string;
 }
 
 interface ApiResponse<T> {
@@ -22,9 +23,10 @@ export default function useRooms() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    
     (async () => {
       try {
-        const res = await api.get<ApiResponse<Room[]>>('/api/room');
+        const res = await api.get<ApiResponse<Room[]>>(`${process.env.NEXT_PUBLIC_API_URL}/room`);
         setRooms(res.data.data);
       } catch (err) {
         console.error('방 목록 불러오기 실패:', err);
