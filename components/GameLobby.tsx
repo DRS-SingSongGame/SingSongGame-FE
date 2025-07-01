@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Search, RefreshCw, LogOut, Settings, Zap, Play, X } from 'lucide-react';
 import { useJoinRoom } from '@/hooks/useJoinRoom';
+import ChatBox from '@/components/chat/ChatBox';
 
 interface GameLobbyProps {
   user: any;
@@ -42,8 +43,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
   const [searchTerm, setSearchTerm] = useState('');
   const [chatMessage, setChatMessage] = useState('');
   const [chatMessages, setChatMessages] = useState([
-    { id: 1, user: '관리자', message: '뮤직 게임 로비에 오신 것을 환영합니다!', time: '10:30' },
-    { id: 2, user: '음악왕', message: '누구 게임 하실 분~', time: '10:32' }
+    { id: 1, user: '관리자', message: '싱송겜 게임 로비에 오신 것을 환영합니다!', time: '10:30' },
   ]);
 
   const { rooms, loading } = useRooms();
@@ -61,17 +61,14 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
       )
     : [];
 
-  const handleSendMessage = () => {
-    if (chatMessage.trim()) {
-      const newMessage = {
-        id: chatMessages.length + 1,
-        user: user.nickname,
-        message: chatMessage.trim(),
-        time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-      };
-      setChatMessages([...chatMessages, newMessage]);
-      setChatMessage('');
-    }
+  const handleSendMessage = (message: string) => {
+    const newMessage = {
+      id: chatMessages.length + 1,
+      user: user.nickname,
+      message: message.trim(),
+      time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+    };
+    setChatMessages([...chatMessages, newMessage]);
   };
 
   const handleQuickMatch = () => {
@@ -201,26 +198,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
       </div>
 
       <div className="mt-4">
-        <Card className="bg-white/90 backdrop-blur-sm">
-          <CardHeader><CardTitle className="text-lg">로비 채팅</CardTitle></CardHeader>
-          <CardContent className="space-y-2 pb-1 h-full flex flex-col justify-between">
-            <ScrollArea className="h-[110px]">
-              <div className="space-y-2">
-                {chatMessages.map((msg) => (
-                  <div key={msg.id} className="flex gap-2 text-sm">
-                    <span className="font-semibold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">{msg.user}:</span>
-                    <span>{msg.message}</span>
-                    <span className="text-gray-400 text-xs ml-auto">{msg.time}</span>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-            <div className="flex gap-2 pt-1">
-              <Input placeholder="메시지를 입력하세요..." value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} />
-              <Button onClick={handleSendMessage} className="bg-gradient-to-r from-pink-500 to-purple-500">전송</Button>
-            </div>
-          </CardContent>
-        </Card>
+        <ChatBox user={user} messages={chatMessages} onSend={handleSendMessage} />
       </div>
     </div>
   );
