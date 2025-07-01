@@ -26,7 +26,7 @@ export default function useRooms() {
     
     (async () => {
       try {
-        const res = await api.get<ApiResponse<Room[]>>('/api/room');
+        const res = await api.get<ApiResponse<Room[]>>(`${process.env.NEXT_PUBLIC_API_URL}/room`);
         setRooms(res.data.data);
       } catch (err) {
         console.error('방 목록 불러오기 실패:', err);
