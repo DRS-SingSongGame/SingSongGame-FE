@@ -11,7 +11,7 @@ export default function LobbyPage() {
   useEffect(() => {
     const checkLogin = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/me`, {
+        const res = await fetch(`/api/user/me`, {
           method: 'GET',
           credentials: 'include', // ✅ 쿠키를 반드시 같이 보냄
         });
@@ -42,7 +42,7 @@ export default function LobbyPage() {
       onCreateRoom={() => router.push('/createroom')}
       onJoinRoom={(room) => router.push(`/game-room?id=${room.id}`)}
       onLogout={async () => {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
+        await fetch(`/api/auth/logout`, {
           method: "POST",
           credentials: "include",
         });

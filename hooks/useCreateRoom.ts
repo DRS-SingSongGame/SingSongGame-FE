@@ -13,7 +13,7 @@ export interface CreateRoomPayload {
 export const useCreateRoom = () => {
   const mutation = useMutation({
     mutationFn: async (room: CreateRoomPayload) => {
-      const response = await api.post(`${process.env.NEXT_PUBLIC_API_URL}/room`, room);
+      const response = await api.post(`/api/room`, room);
       return response.data;
     },
   });
