@@ -21,7 +21,7 @@ export default function NicknamePage() {
     if (!name.trim()) return;
     setChecking(true);
     try {
-      const res = await fetch(`/api/user/check-name?name=${encodeURIComponent(name)}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/check-name?name=${encodeURIComponent(name)}`);
       const result = await res.json();
       setIsAvailable(result?.data ?? result?.body ?? false);
     } catch (err) {
@@ -48,7 +48,7 @@ export default function NicknamePage() {
   
     try {
       // 1. 닉네임 설정 요청
-      await fetch(`/api/auth/nickname`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/nickname`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
@@ -56,7 +56,7 @@ export default function NicknamePage() {
       });
   
       // 2. 유저 정보 다시 가져오기
-      const res = await fetch(`/api/user/me`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/me`, {
         method: "GET",
         credentials: "include",
       });
