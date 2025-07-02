@@ -49,7 +49,7 @@ export default function NicknamePage() {
     try {
       // 1. 닉네임 설정 요청
       await fetch(`/api/auth/nickname`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
         credentials: "include", // ✅ 쿠키 포함
