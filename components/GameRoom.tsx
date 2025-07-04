@@ -12,12 +12,12 @@ import api from '@/lib/api';
 import RandomSongGame from './RandomSongGame';
 import { Button } from './ui/Button';
 import { Badge } from './ui/badge';
+import { sendGameMessage } from '@/lib/gameSocket';
 interface GameRoomProps {
   user: any;
   room: any;
   onBack: () => void;
 }
-
 interface Player {
   id: string;
   nickname: string;
@@ -25,7 +25,6 @@ interface Player {
   isHost: boolean;
   isReady: boolean;
 }
-
 interface ChatMessage {
   id: number;
   type: 'TALK' | 'ENTER' | 'LEAVE';
@@ -36,7 +35,6 @@ interface ChatMessage {
   timestamp: string;
   time: string;
 }
-
 const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
@@ -44,7 +42,6 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameStatus, setGameStatus] = useState(room.gameStatus || 'WAITING'); // 방 정보에서 게임 상태 가져오기
-
   // 게임 모드 라벨 및 색상 함수 (기존과 동일)
   const getGameModeColor = (mode: string) => {
     switch (mode) {
@@ -55,7 +52,6 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
       default: return 'bg-gradient-to-r from-gray-500 to-slate-500';
     }
   };
-
   const getGameModeLabel = (mode: string) => {
     switch (mode) {
       case 'KEY_SING_YOU': return '키싱유';
@@ -64,29 +60,24 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
       default: return '알 수 없음';
     }
   };
-
   useEffect(() => {
     // 초기 방 정보 및 플레이어 목록 로딩
     const fetchRoomDetails = async () => {
       try {
-        const response = await api.get(`/api/room/${room.roomId}`);
+        const response = await api.get<{ data: any }>(`/api/room/${room.roomId}`);
         const fetchedRoom = response.data.data; // API 응답 구조에 따라 조정
         setGameStatus(fetchedRoom.gameStatus); // 게임 상태 업데이트
-
         // 플레이어 목록 초기화 (API 응답에 플레이어 정보가 포함되어 있다고 가정)
         // TODO: 백엔드 API 응답에 플레이어 목록이 포함되어 있지 않다면 별도 API 호출 필요
         // 현재는 room.players가 없으므로 임시로 빈 배열로 초기화
-        setPlayers(fetchedRoom.players || []); 
-
+        setPlayers(fetchedRoom.players || []);
       } catch (error) {
         console.error('방 정보 불러오기 실패:', error);
         // 에러 처리 (예: 로비로 돌아가기)
         router.push('/lobby');
       }
     };
-
     fetchRoomDetails();
-
     // WebSocket 연결
     connectGameSocket(room.roomId, {
       onConnect: (frame) => {
@@ -98,12 +89,17 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
       onMessage: (msg) => {
         // 게임 관련 메시지 처리 (예: 플레이어 목록 업데이트, 게임 상태 변경 등)
         console.log('Game WebSocket Message:', msg);
+        // 플레이어 목록 업데이트
         if (msg.type === 'PLAYER_UPDATE') {
-          setPlayers(msg.players); // 플레이어 목록 업데이트
-        } else if (msg.type === 'GAME_STATUS_UPDATE') {
-          setGameStatus(msg.status); // 게임 상태 업데이트
-        } else if (msg.type === 'CHAT') {
-          setChatMessages((prev) => [...prev, msg]); // 채팅 메시지 추가
+          setPlayers(msg.players);
+        }
+        // 게임 상태 업데이트
+        else if (msg.type === 'GAME_STATUS_UPDATE') {
+          setGameStatus(msg.status);
+        }
+        // 채팅 메시지 (방 채팅)
+        else if (msg.messageType === 'TALK' || msg.messageType === 'ENTER' || msg.messageType === 'LEAVE') {
+          setChatMessages((prev) => [...prev, msg]);
         }
       },
       onGameStartCountdown: (response) => {
@@ -126,37 +122,30 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
         // TODO: 게임 종료 결과 표시 로직 추가
       },
     });
-
     return () => {
       disconnectGameSocket();
     };
   }, [room.roomId, router]);
-
-  const handleSendMessage = () => {
-    if (chatMessage.trim()) {
-      sendGameMessage(room.roomId, user.id, user.nickname, chatMessage.trim());
-      setChatMessage('');
+  const handleSendMessage = (message: string) => {
+    console.log('[상위 컴포넌트] 보내는 메시지:', message);
+    if (message.trim()) {
+      sendGameMessage(room.roomId, user.id, user.nickname, message.trim());
     }
   };
-
   const handleReadyToggle = () => {
     setIsReady(!isReady);
     // TODO: 백엔드에 준비 상태 전송 (WebSocket 또는 HTTP)
   };
-
   const handleLeaveRoom = () => {
     // TODO: 백엔드에 방 나가기 요청 (HTTP)
     router.push('/lobby');
   };
-
   const isHost = user.id === room.hostId; // 방장 여부 확인
   const allPlayersReady = players.filter(p => !p.isHost).every(p => p.isReady); // 방장 제외 모든 플레이어 준비 완료
-
   // 게임 상태에 따른 조건부 렌더링
   if (gameStatus === 'IN_PROGRESS') {
     return <RandomSongGame user={user} room={room} players={players} onBack={handleLeaveRoom} onGameEnd={() => {}} />;
   }
-
   return (
     <div className="min-h-[100vh] h-[800px] p-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100">
       <div className="max-w-screen-xl mx-auto space-y-4 h-full">
@@ -165,7 +154,6 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
             <CardTitle className="text-2xl font-bold text-pink-700">{room.roomName}</CardTitle>
           </CardHeader>
         </Card>
-
         <div className="grid grid-cols-4 gap-4 h-[calc(100%-100px)]">
           <div className="col-span-3 h-full flex flex-col gap-4">
             <Card className="bg-white/90 backdrop-blur-sm flex-1">
@@ -195,7 +183,6 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
                 ))}
               </CardContent>
             </Card>
-
             <Card className="bg-white/90 backdrop-blur-sm flex-1 flex flex-col">
               <CardHeader>
                 <CardTitle className="text-pink-700">채팅</CardTitle>
@@ -205,7 +192,6 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
               </CardContent>
             </Card>
           </div>
-
           <div className="flex flex-col h-full">
             <Card className="bg-white/90 backdrop-blur-sm flex flex-col justify-between h-full">
               <div>
@@ -227,7 +213,6 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
                   </div>
                 </CardContent>
               </div>
-
               <div className="flex flex-col gap-2 p-4">
                 {isHost ? (
                   <Button
@@ -255,5 +240,4 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
     </div>
   );
 };
-
 export default GameRoom;

@@ -2,35 +2,55 @@
 
 import { useEffect, useState } from 'react';
 import GameRoom from '@/components/GameRoom';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import api from '@/lib/api'; 
 
 export default function GameRoomPage() {
   const params = useParams();
-  const roomId = params.roomId as string; // URL 파라미터에서 roomId 가져오기
-
-  const [user, setUser] = useState<any>(null); // 실제 사용자 정보
-  const [room, setRoom] = useState<any>(null);
+  const router = useRouter();
+  const roomId = params.roomId as string;
+  
+  const [user, setUser] = useState<any>(null); // 사용자 정보
+  const [room, setRoom] = useState<any>(null); // 실제 서버에서 받은 room 정보
 
   useEffect(() => {
-    // localStorage에서 사용자 정보 가져오기
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser({
-        id: parsedUser.id,
-        nickname: parsedUser.nickname,
-        avatar: parsedUser.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + parsedUser.nickname // 아바타가 없으면 기본값
-      });
-    }
+    const fetchData = async () => {
+      // ✅ 사용자 정보 불러오기
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser({
+          id: parsedUser.id,
+          nickname: parsedUser.nickname,
+          avatar: parsedUser.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + parsedUser.nickname
+        });
+      }
 
-    // TODO: 실제 방 정보를 백엔드에서 가져오는 로직 추가
-    // 현재는 mockUser와 roomId만 사용한다고 가정합니다.
-    setRoom({ roomId: roomId, roomName: `방 ${roomId}`, maxPlayer: 6, hostName: '호스트', roomType: 'RANDOM_SONG' });
-  }, [roomId]);
+      // ✅ 방 정보 서버에서 가져오기
+      try {
+        const res = await api.get(`/api/room/${roomId}`)as any
+        const roomData = res.data?.data;
+        console.log(roomData);
+
+        if (!roomData) {
+          console.warn("❌ 유효하지 않은 방입니다.");
+          router.push('/lobby');
+          return;
+        }
+        setRoom(roomData);
+      } catch (error) {
+        console.error("❌ 방 정보 로딩 실패:", error);
+        router.push('/lobby');
+      }
+    };
+
+    if (roomId) {
+      fetchData();
+    }
+  }, [roomId, router]);
 
   const handleBack = () => {
-    console.log('로비로 이동');
-    // TODO: 로비로 이동하는 라우터 로직 추가
+    router.push('/lobby');
   };
 
   if (!user || !room) return <div>로딩 중...</div>;
