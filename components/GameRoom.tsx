@@ -102,14 +102,22 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
         console.error('Game WebSocket Error:', error);
       },
       onMessage: (msg) => {
-        // 게임 관련 메시지 처리 (예: 플레이어 목록 업데이트, 게임 상태 변경 등)
-        console.log('Game WebSocket Message:', msg);
-        if (msg.type === 'PLAYER_UPDATE') {
-          setPlayers(msg.players); // 플레이어 목록 업데이트
-        } else if (msg.type === 'GAME_STATUS_UPDATE') {
-          setGameStatus(msg.status); // 게임 상태 업데이트
-        } else if (msg.type === 'CHAT') {
-          setChatMessages((prev) => [...prev, msg]); // 채팅 메시지 추가
+        console.log("Game WebSocket Message:", msg);
+      
+        if (msg.messageType === 'TALK' || msg.messageType === 'ENTER' || msg.messageType === 'LEAVE') {
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now(), // 혹은 uuid
+              roomId: msg.roomId,
+              senderId: msg.senderId,
+              senderName: msg.senderName,
+              message: msg.message,
+              timestamp: msg.timestamp,
+              type: msg.messageType,
+              time: new Date(msg.timestamp).toLocaleTimeString(),
+            },
+          ]);
         }
       },
       onGameStartCountdown: (response) => {
