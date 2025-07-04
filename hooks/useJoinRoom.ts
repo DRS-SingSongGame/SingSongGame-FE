@@ -10,7 +10,7 @@ interface JoinRoomPayload {
 export const useJoinRoom = () => {
   const mutation = useMutation({
     mutationFn: async ({ roomId, password }: JoinRoomPayload) => {
-      const response = await api.post(`/api/room/${roomId}/join`, { password });
+      const response = await api.post(`/api/room/join/${roomId}`, { password });
       return response.data;
     },
   });

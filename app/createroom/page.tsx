@@ -8,7 +8,7 @@ export default function CreateRoomPage() {
 
   const handleRoomCreated = (room: any) => {
     localStorage.setItem('room', JSON.stringify(room)); // 이걸로 GameRoom에서 꺼내쓰기
-    router.push('/gameroom'); // GameRoom 페이지로 이동
+    router.push(`/room/${room.roomId}`); // GameRoom 페이지로 이동
   };
 
   return (
