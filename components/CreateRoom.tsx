@@ -54,6 +54,9 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
       hostId: 2, // TODO: 나중에 user.id로 교체
     };
   
+    console.log('Creating room with payload:', newRoom);
+    console.log('maxPlayers string:', maxPlayers, 'parsed maxPlayer:', parseInt(maxPlayers));
+
     createRoom(newRoom, {
       onSuccess: () => {
         onRoomCreated(newRoom);
