@@ -144,9 +144,19 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
     // TODO: 백엔드에 준비 상태 전송 (WebSocket 또는 HTTP)
   };
 
-  const handleLeaveRoom = () => {
+  const handleLeaveRoom = async () => {
     // TODO: 백엔드에 방 나가기 요청 (HTTP)
-    router.push('/lobby');
+    
+    //router.push('/lobby');
+
+    try {
+      await api.delete(`/api/room/${room.roomId}/leave`);
+      router.push('/lobby');
+    } catch (error) {
+      alert('방 나가기에 실패했습니다.');
+      router.push('/lobby');
+    }
+
   };
 
   const isHost = user.id === room.hostId; // 방장 여부 확인

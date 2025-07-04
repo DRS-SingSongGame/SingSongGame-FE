@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft } from 'lucide-react';
-import { useCreateRoom } from '@/hooks/useCreateRoom';
+import { useCreateRoom, CreateRoomResponse } from '@/hooks/useCreateRoom';
+import { useJoinRoom } from '@/hooks/useJoinRoom';
+import { ApiResponse } from '@/types/api';
 
 interface CreateRoomProps {
     onBack: () => void;
@@ -28,6 +30,7 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
   const [password, setPassword] = useState('');
 
   const { mutate: createRoom, isLoading } = useCreateRoom();
+  const { mutate: joinRoom, isLoading: isJoining } = useJoinRoom();
 
   const gameModes = [
     { value: '키싱유', label: '키싱유', description: '키워드에 맞는 노래 부르기' },
@@ -58,8 +61,35 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
     console.log('maxPlayers string:', maxPlayers, 'parsed maxPlayer:', parseInt(maxPlayers));
 
     createRoom(newRoom, {
-      onSuccess: () => {
-        onRoomCreated(newRoom);
+      onSuccess: (response: any) => {
+        // 방 생성 성공 시 바로 게임룸으로 이동
+        console.log('방 생성 성공:', response);
+        
+        // 응답에서 roomId를 찾아서 이동 (다양한 응답 구조 대응)
+        const roomId = response?.data?.roomId || response?.roomId || response?.data?.id || response?.id;
+        
+        if (roomId) {
+          // 방 생성 후 자동으로 방에 조인
+          joinRoom(
+            { roomId: Number(roomId), password: isPrivate ? password : undefined },
+            {
+              onSuccess: () => {
+                console.log('방 조인 성공');
+                router.push(`/room/${roomId}`);
+              },
+              onError: (error) => {
+                console.error('방 조인 실패:', error);
+                alert('방 생성은 성공했지만 방 참여에 실패했습니다.');
+                // 조인 실패해도 방으로 이동 (방장이므로 접근 가능할 것)
+                router.push(`/room/${roomId}`);
+              }
+            }
+          );
+        } else {
+          // roomId가 없는 경우 임시로 생성된 방 정보로 이동
+          const tempRoomId = Date.now(); // 임시 roomId 생성
+          router.push(`/room/${tempRoomId}`);
+        }
       },
       onError: (error) => {
         alert('방 생성 실패');
@@ -159,10 +189,10 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
             <Button variant="outline" onClick={onBack} className="flex-1">취소</Button>
             <Button 
               onClick={handleCreateRoom}
-              disabled={!roomName.trim() || !gameMode || (isPrivate && !password.trim()) || isLoading}
+              disabled={!roomName.trim() || !gameMode || (isPrivate && !password.trim()) || isLoading || isJoining}
               className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
             >
-              {isLoading ? '생성 중...' : '방 만들기'}
+              {isLoading || isJoining ? '처리 중...' : '방 만들기'}
             </Button>
           </div>
         </CardContent>
