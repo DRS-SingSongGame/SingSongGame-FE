@@ -10,9 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft } from 'lucide-react';
+
 import { useCreateRoom, CreateRoomResponse } from '@/hooks/useCreateRoom';
 import { useJoinRoom } from '@/hooks/useJoinRoom';
 import { ApiResponse } from '@/types/api';
+import api from '@/lib/api';
+
 
 interface CreateRoomProps {
     onBack: () => void;
@@ -61,6 +64,7 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
     console.log('maxPlayers string:', maxPlayers, 'parsed maxPlayer:', parseInt(maxPlayers));
 
     createRoom(newRoom, {
+
       onSuccess: (response: any) => {
         // 방 생성 성공 시 바로 게임룸으로 이동
         console.log('방 생성 성공:', response);
@@ -91,10 +95,6 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
           router.push(`/room/${tempRoomId}`);
         }
       },
-      onError: (error) => {
-        alert('방 생성 실패');
-        console.error(error);
-      }
     });
   };
   const selectedGameMode = gameModes.find(mode => mode.value === gameMode);
