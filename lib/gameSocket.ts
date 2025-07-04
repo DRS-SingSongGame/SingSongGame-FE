@@ -86,7 +86,7 @@ export const sendGameMessage = (
     console.log("📨 보내는 채팅 메시지:", payload);
 
     stompClient.publish({
-      destination: `/app/room/${roomId}/chat`, // ✅ 백엔드에 맞는 경로
+      destination: `/api/room/${roomId}/chat`, // ✅ 백엔드에 맞는 경로
       body: JSON.stringify(payload),
     });
   } else {
