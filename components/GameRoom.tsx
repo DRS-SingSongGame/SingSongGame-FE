@@ -13,6 +13,7 @@ import RandomSongGame from './RandomSongGame';
 import { Button } from './ui/Button';
 import { Badge } from './ui/badge';
 import { sendGameMessage } from '@/lib/gameSocket';
+import PlayerSlots from './PlayerSlots';
 interface GameRoomProps {
   user: any;
   room: any;
@@ -168,30 +169,8 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
         <div className="grid grid-cols-4 gap-4 h-[calc(100%-100px)]">
           <div className="col-span-3 h-full flex flex-col gap-4">
             <Card className="bg-white/90 backdrop-blur-sm flex-1">
-              <CardContent className="grid grid-cols-2 gap-4 h-full pt-5">
-                {[...players, ...Array.from({ length: room.maxPlayer - players.length }).map((_, idx) => ({
-                  id: `empty-${idx}`, nickname: '비어있음', avatar: '', isHost: false, isReady: false
-                }))].slice(0, room.maxPlayer).map((player) => (
-                  <div key={player.id} className="flex items-center gap-4 border p-4 rounded-lg bg-white/80 h-[110px]">
-                    {player.avatar ? (
-                      <Avatar className="w-16 h-16">
-                        <AvatarImage src={player.avatar} />
-                        <AvatarFallback>{player.nickname[0]}</AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-base">빈</div>
-                    )}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-purple-700 text-lg">{player.nickname}</h4>
-                        {player.isHost && <Crown className="w-5 h-5 text-yellow-500" />}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {player.nickname === '비어있음' ? '' : player.isHost ? '방장' : player.isReady ? '준비 완료' : '대기 중'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <CardContent>
+                <PlayerSlots roomId={room.roomId} maxPlayer={room.maxPlayer} />
               </CardContent>
             </Card>
             <Card className="bg-white/90 backdrop-blur-sm flex-1 flex flex-col">
