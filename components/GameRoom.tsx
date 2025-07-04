@@ -13,7 +13,7 @@ import RandomSongGame from './RandomSongGame';
 import { Button } from './ui/Button';
 import { Badge } from './ui/badge';
 import { sendGameMessage } from '@/lib/gameSocket';
-import PlayerSlots from './PlayerSlots';
+import PlayerSlots from '@/components/PlayerSlots';
 interface GameRoomProps {
   user: any;
   room: any;
