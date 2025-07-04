@@ -31,6 +31,7 @@ const ChatBox = ({ user, messages, onSend, autoScrollToBottom }: ChatBoxProps) =
 
   const handleSend = () => {
     const messageToSend = input.trim();
+    console.log("text", messageToSend)
     if (!messageToSend) return;
     onSend?.(messageToSend);
     setInput('');

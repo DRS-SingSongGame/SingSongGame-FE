@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft } from 'lucide-react';
 import { useCreateRoom } from '@/hooks/useCreateRoom';
+import api from '@/lib/api';
 
 interface CreateRoomProps {
     onBack: () => void;
@@ -58,13 +59,36 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
     console.log('maxPlayers string:', maxPlayers, 'parsed maxPlayer:', parseInt(maxPlayers));
 
     createRoom(newRoom, {
-      onSuccess: () => {
-        onRoomCreated(newRoom);
+      onSuccess: async (data: any) => {
+        console.log("✅ 서버 응답:", data);
+        const roomId = data?.data?.id;
+    
+        if (!roomId) {
+          console.error("❌ roomId 없음! 응답 확인 필요:", data);
+          return;
+        }
+    
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+    
+        try {
+          await api.post(`/api/room/join/${roomId}`, {
+            id: user.id,
+            nickname: user.nickname,
+            avatar: user.avatar || user.profileImage,
+          });
+          console.log("✅ 유저 방 참가 완료");
+        } catch (err) {
+          console.error("❌ 유저 방 참가 실패", err);
+          return;
+        }
+    
+        const fullRoom = {
+          ...newRoom,
+          roomId,
+        };
+    
+        onRoomCreated(fullRoom);
       },
-      onError: (error) => {
-        alert('방 생성 실패');
-        console.error(error);
-      }
     });
   };
   const selectedGameMode = gameModes.find(mode => mode.value === gameMode);

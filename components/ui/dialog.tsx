@@ -1,6 +1,7 @@
 // components/ui/dialog.tsx
 'use client';
 
+import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils'; 
@@ -32,6 +33,18 @@ const DialogTitle = ({ children }: { children: React.ReactNode }) => (
   <h2 className="text-lg font-semibold">{children}</h2>
 );
 
+const DialogDescription = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+DialogDescription.displayName = DialogPrimitive.Description.displayName
+
 export {
   Dialog,
   DialogTrigger,
@@ -39,4 +52,5 @@ export {
   DialogHeader,
   DialogTitle,
   DialogClose,
+  DialogDescription,
 };

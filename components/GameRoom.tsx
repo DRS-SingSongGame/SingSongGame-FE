@@ -12,6 +12,7 @@ import api from '@/lib/api';
 import RandomSongGame from './RandomSongGame';
 import { Button } from './ui/Button';
 import { Badge } from './ui/badge';
+import { sendGameMessage } from '@/lib/gameSocket';
 interface GameRoomProps {
   user: any;
   room: any;
@@ -38,6 +39,8 @@ interface ChatMessage {
 }
 
 const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
+
+  
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
@@ -56,6 +59,8 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
     }
   };
 
+  
+
   const getGameModeLabel = (mode: string) => {
     switch (mode) {
       case 'KEY_SING_YOU': return '키싱유';
@@ -69,7 +74,7 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
     // 초기 방 정보 및 플레이어 목록 로딩
     const fetchRoomDetails = async () => {
       try {
-        const response = await api.get(`/api/room/${room.roomId}`);
+        const response = await api.get<{ data: any }>(`/api/room/${room.roomId}`);
         const fetchedRoom = response.data.data; // API 응답 구조에 따라 조정
         setGameStatus(fetchedRoom.gameStatus); // 게임 상태 업데이트
 
@@ -92,6 +97,7 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
       onConnect: (frame) => {
         console.log('Game WebSocket Connected:', frame);
       },
+      
       onError: (error) => {
         console.error('Game WebSocket Error:', error);
       },
@@ -132,10 +138,11 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
     };
   }, [room.roomId, router]);
 
-  const handleSendMessage = () => {
-    if (chatMessage.trim()) {
-      sendGameMessage(room.roomId, user.id, user.nickname, chatMessage.trim());
-      setChatMessage('');
+  const handleSendMessage = (message: string) => {
+    console.log('[상위 컴포넌트] 보내는 메시지:', message);
+  
+    if (message.trim()) {
+      sendGameMessage(room.roomId, user.id, user.nickname, message.trim());
     }
   };
 
