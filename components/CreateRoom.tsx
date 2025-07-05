@@ -156,7 +156,7 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[2, 3, 4, 5, 6].map((num) => (
+                {[1, 2, 3, 4, 5, 6].map((num) => (
                   <SelectItem key={num} value={num.toString()}>{num}명</SelectItem>
                 ))}
               </SelectContent>

@@ -154,6 +154,27 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
   };
   const isHost = user.id === room.hostId; // 방장 여부 확인
   const allPlayersReady = players.filter(p => !p.isHost).every(p => p.isReady); // 방장 제외 모든 플레이어 준비 완료
+  // 최대 인원이 1명인 방에서 방장 혼자 있으면 true
+  const canStartGame = (room.maxPlayer === 1 && players.length === 1 && isHost) || allPlayersReady;
+  const handleGameStart = () => {
+    if (!room || !room.roomType) return;
+    let path = "";
+    switch (room.roomType) {
+      case "RANDOM_SONG":
+        path = `/room/${room.roomId}/randomsonggame`;
+        break;
+      case "KEY_SING_YOU":
+        path = `/room/${room.roomId}/keysingyou`;
+        break;
+      case "PLAIN_SONG":
+        path = `/room/${room.roomId}/FlatLyricsGame`;
+        break;
+      default:
+        alert("알 수 없는 게임 타입입니다.");
+        return;
+    }
+    router.push(path);
+  };
   // 게임 상태에 따른 조건부 렌더링
   if (gameStatus === 'IN_PROGRESS') {
     return <RandomSongGame user={user} room={room} players={players} onBack={handleLeaveRoom} onGameEnd={() => {}} />;
@@ -206,8 +227,9 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
               <div className="flex flex-col gap-2 p-4">
                 {isHost ? (
                   <Button
-                    disabled={!allPlayersReady}
+                    disabled={!canStartGame}
                     className="bg-green-600 hover:bg-green-700 text-white w-full h-[50px] text-lg"
+                    onClick={handleGameStart}
                   >
                     <Play className="w-4 h-4 mr-2" /> 게임 시작
                   </Button>
