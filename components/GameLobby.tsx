@@ -221,7 +221,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
       </div>
 
       <div className="mt-4">
-        <ChatBox user={user} messages={chatMessages} onSend={handleSendMessage} autoScrollToBottom={true} />
+        <ChatBox user={user} messages={chatMessages} onSend={handleSendMessage} autoScrollToBottom={true} chatType="lobby" />
       </div>
     </div>
   );

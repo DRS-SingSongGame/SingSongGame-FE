@@ -178,7 +178,7 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
                 <CardTitle className="text-pink-700">채팅</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col flex-1">
-                <ChatBox user={user} messages={chatMessages} onSend={handleSendMessage} autoScrollToBottom={true} />
+                <ChatBox user={user} messages={chatMessages} onSend={handleSendMessage} autoScrollToBottom={true} chatType="room" />
               </CardContent>
             </Card>
           </div>
