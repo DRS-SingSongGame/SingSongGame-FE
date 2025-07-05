@@ -7,7 +7,9 @@ interface Player {
   nickname: string;
   avatar: string;
   isHost: boolean;
-  isReady: boolean;
+  // 기존 isReady 유지, ready도 추가
+  isReady?: boolean;
+  ready: boolean | null;
 }
 
 interface PlayerSlotsProps {
@@ -46,7 +48,8 @@ const PlayerSlots = ({ roomId, maxPlayer }: PlayerSlotsProps) => {
         nickname: '비어있음',
         avatar: '',
         isHost: false,
-        isReady: false
+        isReady: false,
+        ready: false
       }))].slice(0, maxPlayer).map((player) => (
         <div key={player.id} className="flex items-center gap-4 border p-4 rounded-lg bg-white/80 h-[110px]">
           {player.avatar ? (
@@ -63,7 +66,13 @@ const PlayerSlots = ({ roomId, maxPlayer }: PlayerSlotsProps) => {
               {player.isHost && <span>👑</span>}
             </div>
             <div className="text-sm text-gray-500">
-              {player.nickname === '비어있음' ? '' : player.isHost ? '방장' : player.isReady ? '준비 완료' : '대기 중'}
+              {player.nickname === '비어있음'
+                ? ''
+                : player.isHost
+                  ? '방장'
+                  : (player.ready === true || player.isReady === true)
+                    ? '준비 완료'
+                    : '대기 중'}
             </div>
           </div>
         </div>

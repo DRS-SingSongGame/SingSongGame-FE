@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Crown, Play, CheckCircle, Circle, LogOut } from 'lucide-react';
+import { Crown, CheckCircle, Circle, LogOut } from 'lucide-react';
 import { connectGameSocket, disconnectGameSocket } from '@/lib/gameSocket';
 import { CardContent } from './ui/Card';
 import { CardTitle } from './ui/Card';
@@ -14,6 +14,7 @@ import { Button } from './ui/Button';
 import { Badge } from './ui/badge';
 import { sendGameMessage } from '@/lib/gameSocket';
 import PlayerSlots from '@/components/PlayerSlots';
+import GameStartButton from '@/components/GameStartButton';
 interface GameRoomProps {
   user: any;
   room: any;
@@ -24,7 +25,9 @@ interface Player {
   nickname: string;
   avatar: string;
   isHost: boolean;
-  isReady: boolean;
+  // 기존 isReady 유지, ready도 추가
+  isReady?: boolean;
+  ready?: boolean | null;
 }
 interface ChatMessage {
   id: number;
@@ -90,9 +93,29 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
       onMessage: (msg) => {
         // 게임 관련 메시지 처리 (예: 플레이어 목록 업데이트, 게임 상태 변경 등)
         console.log('Game WebSocket Message:', msg);
+        
         // 플레이어 목록 업데이트
         if (msg.type === 'PLAYER_UPDATE') {
           setPlayers(msg.players);
+        }
+        // 플레이어 준비 상태 업데이트
+        else if (msg.type === 'PLAYER_READY_UPDATE' || (msg.message && msg.message.startsWith('READY_UPDATE:'))) {
+          let playerId, readyState;
+          
+          if (msg.type === 'PLAYER_READY_UPDATE') {
+            playerId = msg.playerId;
+            readyState = msg.ready;
+          } else {
+            // 메시지에서 파싱
+            playerId = msg.senderId;
+            readyState = msg.message.split(':')[1] === 'true';
+          }
+          
+          setPlayers(prev => prev.map(player => 
+            player.id === playerId 
+              ? { ...player, ready: readyState }
+              : player
+          ));
         }
         // 게임 상태 업데이트
         else if (msg.type === 'GAME_STATUS_UPDATE') {
@@ -133,9 +156,28 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
       sendGameMessage(room.roomId, user.id, user.nickname, message.trim());
     }
   };
-  const handleReadyToggle = () => {
-    setIsReady(!isReady);
-    // TODO: 백엔드에 준비 상태 전송 (WebSocket 또는 HTTP)
+  const handleReadyToggle = async () => {
+    const newReadyState = !isReady;
+    setIsReady(newReadyState);
+    
+    try {
+      // API 호출
+      await api.post(`/api/room/${room.roomId}/ready`, { ready: newReadyState });
+      
+      // 웹소켓으로 준비 상태 변경 브로드캐스트
+      sendGameMessage(room.roomId, user.id, user.nickname, `READY_UPDATE:${newReadyState}`);
+      
+      // 로컬 플레이어 상태도 업데이트
+      setPlayers(prev => prev.map(player => 
+        player.id === user.id 
+          ? { ...player, ready: newReadyState }
+          : player
+      ));
+    } catch (e) {
+      console.error('준비 상태 변경 실패:', e);
+      // 실패 시 상태 되돌리기
+      setIsReady(!newReadyState);
+    }
   };
 
   const handleLeaveRoom = async () => {
@@ -152,10 +194,6 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
     }
 
   };
-  const isHost = user.id === room.hostId; // 방장 여부 확인
-  const allPlayersReady = players.filter(p => !p.isHost).every(p => p.isReady); // 방장 제외 모든 플레이어 준비 완료
-  // 최대 인원이 1명인 방에서 방장 혼자 있으면 true
-  const canStartGame = (room.maxPlayer === 1 && players.length === 1 && isHost) || allPlayersReady;
   const handleGameStart = () => {
     if (!room || !room.roomType) return;
     let path = "";
@@ -225,22 +263,29 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
                 </CardContent>
               </div>
               <div className="flex flex-col gap-2 p-4">
-                {isHost ? (
-                  <Button
-                    disabled={!canStartGame}
-                    className="bg-green-600 hover:bg-green-700 text-white w-full h-[50px] text-lg"
-                    onClick={handleGameStart}
-                  >
-                    <Play className="w-4 h-4 mr-2" /> 게임 시작
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleReadyToggle}
-                    className={`w-full h-[50px] text-lg ${isReady ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'}`}
-                  >
-                    {isReady ? <><CheckCircle className="w-4 h-4 mr-2" /> 준비 완료</> : <><Circle className="w-4 h-4 mr-2" /> 준비하기</>}
-                  </Button>
+                {/* 게임 시작 버튼 (방장만 표시) */}
+                <GameStartButton 
+                  roomId={room.roomId} 
+                  user={user} 
+                  room={room} 
+                  onGameStart={handleGameStart} 
+                />
+                
+                {/* 준비 버튼 (일반 플레이어만 표시) */}
+                {user.id !== room.hostId && (
+                  <div className="space-y-2">
+                    <Button
+                      onClick={handleReadyToggle}
+                      className={`w-full h-[50px] text-lg ${isReady ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'}`}
+                    >
+                      {isReady ? <><CheckCircle className="w-4 h-4 mr-2" /> 준비 완료</> : <><Circle className="w-4 h-4 mr-2" /> 준비하기</>}
+                    </Button>
+                    <div className="text-xs text-gray-500 text-center">
+                      {isReady ? '방장이 게임을 시작할 수 있습니다' : '준비 완료 후 방장이 게임을 시작합니다'}
+                    </div>
+                  </div>
                 )}
+                
                 <Button className="w-full h-[50px] bg-red-500 hover:bg-red-600 text-white text-lg" onClick={handleLeaveRoom}>
                   <LogOut className="w-4 h-4 mr-2" /> 나가기
                 </Button>
