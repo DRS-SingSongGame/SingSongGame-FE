@@ -8,7 +8,7 @@ interface GameSocketCallbacks {
   onRoundStart: (response: any) => void;
   onAnswerCorrect: (response: any) => void;
   onGameEnd: (response: any) => void;
-  onRoundFailed: (response: any) => void;
+  onRoundFailed?: (response: any) => void;
   onMessage?: (msg: any) => void; // Generic message handler
 }
 export const connectGameSocket = (
