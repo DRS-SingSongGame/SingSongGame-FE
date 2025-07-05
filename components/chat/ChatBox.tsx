@@ -19,12 +19,13 @@ export interface ChatMessage {
 
 interface ChatBoxProps {
   user: any;
-  messages: ChatMessage[];
-  onSend?: (message: string) => void;
+  messages: any[];
+  onSend: (msg: string) => void;
   autoScrollToBottom?: boolean;
+  chatType?: "lobby" | "room";
 }
 
-const ChatBox = ({ user, messages, onSend, autoScrollToBottom }: ChatBoxProps) => {
+const ChatBox = ({ user, messages, onSend, autoScrollToBottom, chatType = "lobby" }: ChatBoxProps) => {
   const [input, setInput] = useState('');
   const [isComposing, setIsComposing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -53,13 +54,13 @@ const ChatBox = ({ user, messages, onSend, autoScrollToBottom }: ChatBoxProps) =
   return (
     <Card className="bg-white/90 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle>로비 채팅</CardTitle>
+        <CardTitle>{chatType === "room" ? "방 채팅" : "로비 채팅"}</CardTitle>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[200px] mb-2 pr-2">
           <div ref={scrollRef} className="space-y-2 max-h-[200px] overflow-y-auto">
             {messages.map((msg) => (
-              <div key={msg.id} className={`text-sm ${msg.senderName === user.nickname ? 'text-right' : 'text-left'}`}>
+              <div key={msg.id} className="text-sm text-left">
                 <div className="font-semibold">
                   {msg.senderName} <span className="text-gray-400 text-xs">{msg.time}</span>
                 </div>
