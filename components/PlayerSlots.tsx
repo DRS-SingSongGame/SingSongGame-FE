@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
 import api from "@/lib/api";
 
@@ -17,20 +17,26 @@ interface PlayerSlotsProps {
 
 const PlayerSlots = ({ roomId, maxPlayer }: PlayerSlotsProps) => {
   const [players, setPlayers] = useState<Player[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let isUnmounted = false;
     const fetchPlayers = async () => {
       try {
         const response = await api.get<{ data: any }>(`/api/room/${roomId}`);
-        setPlayers(response.data.data.players || []);
+        if (!isUnmounted) setPlayers(response.data.data.players || []);
       } catch (e) {
-        setPlayers([]);
+        if (!isUnmounted) setPlayers([]);
       }
-      timer = setTimeout(fetchPlayers, 2000);
+      if (!isUnmounted) {
+        timerRef.current = setTimeout(fetchPlayers, 2000);
+      }
     };
     fetchPlayers();
-    return () => clearTimeout(timer);
+    return () => {
+      isUnmounted = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [roomId]);
 
   return (
