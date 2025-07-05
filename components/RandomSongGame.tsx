@@ -76,6 +76,11 @@ const RandomSongGame = ({
   const router = useRouter();
   const [gameEndResults, setGameEndResults] = useState<any[]>([]);
   const [showGameEndModal, setShowGameEndModal] = useState(false);
+  const [showNoAnswerModal, setShowNoAnswerModal] = useState(false);
+  const [noAnswerModalContent, setNoAnswerModalContent] = useState<{
+    title: string;
+    subtitle: string;
+  }>({ title: "", subtitle: "" });
 
 
 
@@ -189,6 +194,19 @@ const RandomSongGame = ({
         }, 5000);
       },
       
+      onRoundFailed: (data) => {
+        // 예: { title: "아이유 - 너랑 나" }
+        setNoAnswerModalContent({
+          title: "정답자가 없습니다 😢",
+          subtitle: `제목: ${data.title}`,
+        });
+        setShowNoAnswerModal(true);
+      
+        setTimeout(() => {
+          setShowNoAnswerModal(false);
+        }, 3000);
+      },
+
       onGameEnd: (response) => {
         console.log("Game End:", response);
         setPhase("final");
@@ -589,6 +607,21 @@ const RandomSongGame = ({
             </DialogContent>
           </Dialog>
         )}
+        {showNoAnswerModal && (
+      <Dialog open={showNoAnswerModal} onOpenChange={setShowNoAnswerModal}>
+        <DialogContent className="sm:max-w-[425px] text-center">
+          <DialogHeader>
+          <DialogTitle >
+            <div className="text-xl text-gray-700">{noAnswerModalContent.title}</div>
+          </DialogTitle>
+            <p className="text-md text-gray-600 mt-2">
+              {noAnswerModalContent.subtitle}
+            </p>
+          </DialogHeader>
+          <p className="text-sm text-gray-500 mt-4">다음 라운드로 이동 중...</p>
+        </DialogContent>
+      </Dialog>
+    )}
       </div>
     );
   }

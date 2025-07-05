@@ -8,6 +8,7 @@ interface GameSocketCallbacks {
   onRoundStart: (response: any) => void;
   onAnswerCorrect: (response: any) => void;
   onGameEnd: (response: any) => void;
+  onRoundFailed: (response: any) => void;
   onMessage?: (msg: any) => void; // Generic message handler
 }
 export const connectGameSocket = (
@@ -29,14 +30,18 @@ export const connectGameSocket = (
         `/topic/room/${roomId}/round-start`,
         (response) => {
           callbacks.onRoundStart(JSON.parse(response.body));
-        }
-      );
+        });
       stompClient?.subscribe(
         `/topic/room/${roomId}/answer-correct`,
         (response) => {
           callbacks.onAnswerCorrect(JSON.parse(response.body)); // Ensure parsing for consistency
+        });
+      stompClient?.subscribe(`/topic/room/${roomId}/round-failed`, (response) => {
+        const parsed = JSON.parse(response.body);
+        if (callbacks.onRoundFailed) {
+          callbacks.onRoundFailed(parsed);
         }
-      );
+      });
       stompClient?.subscribe(`/topic/room/${roomId}/game-end`, (response) => {
         callbacks.onGameEnd(JSON.parse(response.body)); // Ensure parsing for consistency
       });
