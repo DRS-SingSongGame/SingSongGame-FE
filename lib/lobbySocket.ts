@@ -50,6 +50,9 @@ export function connectLobbySocket(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, nickname })
         });
+
+        // 로비 유저 메시지 전송
+        sendLobbyUserMessage();
       },
       onStompError: (frame) => {
         console.error('[lobbySocket] STOMP error:', frame);
@@ -95,3 +98,15 @@ export function sendLobbyMessage(userId: string, nickname: string, message: stri
     body: JSON.stringify(body)
   });
 }
+
+export const sendLobbyUserMessage = () => {
+  if (client && client.connected) {
+    console.log(":수신_봉투: 로비 유저 테스트 메시지 전송");
+    client.publish({
+      destination: `/api/lobby/user`,
+      body: JSON.stringify({}),
+    });
+  } else {
+    console.warn("STOMP client not connected, cannot send lobby user message.");
+  }
+};
