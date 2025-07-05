@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import {
@@ -28,7 +29,9 @@ import {
   Timer,
   Users,
 } from "lucide-react";
-import { connectGameSocket, disconnectGameSocket } from "@/lib/gameSocket";
+import { connectGameSocket, disconnectGameSocket, sendGameMessage } from "@/lib/gameSocket";
+import ChatBox, { ChatMessage } from "./chat/ChatBox";
+import axios from "axios";
 
 interface RandomSongGameProps {
   user: any;
@@ -55,6 +58,8 @@ const RandomSongGame = ({
   const [roundTimer, setRoundTimer] = useState<number>(0); // Timer for current round
   const audioRef = useRef<HTMLAudioElement>(null);
   const roundTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isComposing, setIsComposing] = useState(false);
   const [nextRoundCountdown, setNextRoundCountdown] = useState<number>(0); // New state for next round countdown
   const nextRoundIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref for next round interval
   const [hasUserInteractedForAudio, setHasUserInteractedForAudio] =
@@ -63,7 +68,16 @@ const RandomSongGame = ({
   const [answerModalData, setAnswerModalData] = useState<{
     winnerNickname: string;
     correctAnswer: string;
+    correctTitle: string;
   } | null>(null);
+  const currentRoundRef = useRef<number>(0);
+  const totalRoundsRef = useRef<number>(0);
+  const phaseRef = useRef<Phase>("waiting");
+  const router = useRouter();
+  const [gameEndResults, setGameEndResults] = useState<any[]>([]);
+  const [showGameEndModal, setShowGameEndModal] = useState(false);
+
+
 
   useEffect(() => {
     setLoading(true);
@@ -97,6 +111,10 @@ const RandomSongGame = ({
       },
       onRoundStart: (response) => {
         console.log("Round Start:", response);
+
+        currentRoundRef.current = response.round;
+        totalRoundsRef.current = response.totalRounds;
+
         setPhase("playing");
         setGameSession((prev: any) => ({
           ...prev,
@@ -105,6 +123,7 @@ const RandomSongGame = ({
             audioUrl: response.audioUrl,
             artist: response.artist,
             hint: response.hint, // Use hint from backend
+            title: response.title,
           },
           roundStartTime: Date.now(), // Set client-side start time for timer
           roundDuration: 30, // Assuming 30 seconds as per backend InGameService
@@ -130,17 +149,20 @@ const RandomSongGame = ({
         console.log("Answer Correct:", response);
         // setPhase('answer_revealed'); // New phase for revealing answer
         // Update scores and winner info
+        console.log("🎵 response.correctTitle:", response.correctTitle);
+
         setGameSession((prev: any) => ({
           ...prev,
           winner: response.winnerNickname,
           playerScores: response.updatedScores || prev?.playerScores,
-          correctAnswer: response.correctAnswer, // Store correct answer
+          correctTitle : response.correctTitle,
         }));
 
         // Show answer modal
         setAnswerModalData({
           winnerNickname: response.winnerNickname,
           correctAnswer: response.correctAnswer,
+          correctTitle: response.correctTitle,
         });
         setShowAnswerModal(true);
 
@@ -148,26 +170,25 @@ const RandomSongGame = ({
         setTimeout(() => {
           setShowAnswerModal(false);
           setAnswerModalData(null);
-        }, 5000);
+      
+          // ✅ 마지막 라운드인 경우 강제 종료 fallback
+          const isLastRound =
+            currentRoundRef.current >= totalRoundsRef.current;
 
-        // Music continues to play
-        // Start 10-second countdown for next round (this is now handled by backend)
-        // if (nextRoundIntervalRef.current) {
-        //   clearInterval(nextRoundIntervalRef.current);
-        // }
-        // let currentNextRoundCountdown = 10;
-        // setNextRoundCountdown(currentNextRoundCountdown);
-        // nextRoundIntervalRef.current = setInterval(() => {
-        //   currentNextRoundCountdown--;
-        //   if (currentNextRoundCountdown >= 0) {
-        //     setNextRoundCountdown(currentNextRoundCountdown);
-        //   } else {
-        //     clearInterval(nextRoundIntervalRef.current!);
-        //     // Optionally, transition to a waiting state for the next round to start from backend
-        //     // setPhase('waiting_for_next_round'); // Or similar
-        //   }
-        // }, 1000);
+          if (isLastRound && phaseRef.current !== "final") {
+            console.log("🚨 마지막 라운드 종료 fallback 실행");
+            setPhase("final");
+            onGameEnd(
+              Object.entries(gameSession?.playerScores || {}).map(([id, score]) => ({
+                id,
+                score,
+              }))
+            );
+          }
+      
+        }, 5000);
       },
+      
       onGameEnd: (response) => {
         console.log("Game End:", response);
         setPhase("final");
@@ -175,7 +196,13 @@ const RandomSongGame = ({
           clearInterval(roundTimerIntervalRef.current);
         }
         // Call onGameEnd prop to handle navigation/results display
-        onGameEnd(response.finalResults || []); // Pass actual results if available from backend
+        setPhase("final");
+        setShowGameEndModal(true);
+      // setGameEndResults(response.finalResults || []);
+      },
+      onMessage: (msg) => {
+        console.log("📩 받은 채팅 메시지:", msg);
+        setChatMessages((prev) => [...prev, msg]);
       },
     });
 
@@ -231,6 +258,10 @@ const RandomSongGame = ({
     }
   }, [phase, gameSession?.currentSong?.audioUrl]);
 
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
   // 2. 카운트다운 계산 (백엔드 roundStartTime 기준) - This is now handled by WebSocket callback
   // useEffect(() => {
   //   if (phase === 'countdown' && gameSession?.roundStartTime) {
@@ -253,14 +284,38 @@ const RandomSongGame = ({
   // }, [phase, gameSession?.currentSong?.audioUrl]);
 
   // 4. 정답 제출
-  const submitAnswer = async () => {
-    if (!chatMessage.trim()) return;
-    await api.post(`/api/game-session/${room.roomId}/answer`, {
-      // userId: user.id, // Backend uses @LoginUser, so userId is not needed in body
-      answer: chatMessage.trim(),
-    });
+  const handleSendMessage = async () => {
+    const trimmed = chatMessage.trim();
+    if (!trimmed) return;
+  
+    console.log("📝 입력된 메시지:", trimmed);
+  
+    // 1. 채팅 메시지 전송
+    sendGameMessage(room.roomId, user.id, user.nickname, trimmed);
+  
+    // 2. 정답 제출
+    if (phase === "playing") {
+      try {
+        await api.post(`/api/game-session/${room.roomId}/answer`, {
+          answer: trimmed,
+        });
+        console.log("✅ 정답 제출 성공");
+      } catch (err) {
+        if (err && typeof err === 'object' && 'response' in err) {
+          const axiosError = err as any;
+          console.error("❌ 정답 제출 실패:", axiosError.response?.data || axiosError.message);
+        } else if (err instanceof Error) {
+          console.error("❌ 정답 제출 실패:", err.message);
+        } else {
+          console.error("❌ 알 수 없는 에러", err);
+        }
+      }
+    }
+  
     setChatMessage("");
   };
+  
+  
 
   const handlePlayAudio = () => {
     if (audioRef.current) {
@@ -380,8 +435,8 @@ const RandomSongGame = ({
               <div className="flex justify-between items-center">
                 <div>
                   <CardTitle className="text-2xl font-bold">
-                    Round {gameSession?.currentRound} /{" "}
-                    {gameSession?.totalRounds}
+                    Round {gameSession?.currentRound} / 10
+                    
                   </CardTitle>
                   <CardDescription className="text-lg">
                     힌트:{" "}
@@ -472,28 +527,32 @@ const RandomSongGame = ({
               </CardContent>
             </Card>
             <div className="lg:col-span-2">
-              <Card className="bg-white/90 backdrop-blur-sm h-full">
-                <CardHeader>
-                  <CardTitle>💬 실시간 채팅</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="정답을 입력하세요..."
-                      value={chatMessage}
-                      onChange={(e) => setChatMessage(e.target.value)}
-                      onKeyPress={(e) => e.key === "Enter" && submitAnswer()}
-                      disabled={phase !== "playing"}
-                    />
-                    <Button
-                      onClick={submitAnswer}
-                      disabled={phase !== "playing"}
-                    >
-                      전송
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+            <Card className="bg-white/90 backdrop-blur-sm flex-1 flex flex-col">
+              <CardHeader>
+                <CardTitle className="text-pink-700">채팅</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col flex-1">
+                <div className="flex-1 overflow-y-auto">
+                  <ChatBox user={user} messages={chatMessages} autoScrollToBottom={true} hideInput={true} />
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <Input
+                    placeholder="메시지를 입력하세요..."
+                    value={chatMessage}
+                    onChange={(e) => setChatMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !isComposing) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    onCompositionStart={() => setIsComposing(true)}
+                    onCompositionEnd={() => setIsComposing(false)}
+                  />
+                  <Button onClick={handleSendMessage}>전송</Button>
+                </div>
+              </CardContent>
+            </Card>
             </div>
           </div>
           {/* Audio element is controlled by ref and WebSocket updates */}
@@ -522,7 +581,7 @@ const RandomSongGame = ({
                 </p>
               </DialogHeader>
               <div className="text-2xl font-bold text-blue-700 mt-4">
-                정답: {answerModalData.correctAnswer}
+                정답: {answerModalData.correctTitle}
               </div>
               <p className="text-sm text-gray-500 mt-2">
                 다음 라운드로 이동 중...
@@ -534,53 +593,34 @@ const RandomSongGame = ({
     );
   }
 
-  if (phase === "final") {
-    // 결과 화면
-    const sorted = players
-      .map((p) => ({ ...p, score: gameSession?.playerScores?.[p.id] || 0 }))
-      .sort((a, b) => b.score - a.score);
-    return (
-      <div className="min-h-screen p-4 bg-gradient-to-br from-cyan-400 via-blue-500 via-purple-500 to-pink-500">
-        <div className="max-w-4xl mx-auto">
-          <Button
-            variant="outline"
-            onClick={onBack}
-            className="mb-4 bg-white/90 backdrop-blur-sm"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            게임방으로 돌아가기
-          </Button>
-          <Card className="bg-white/90 backdrop-blur-sm">
-            <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-                🎵 랜덤 노래 맞추기
-              </CardTitle>
-              <CardDescription className="text-lg">최종 결과</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {sorted.map((player) => (
-                  <div
-                    key={player.id}
-                    className="text-center p-4 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200"
-                  >
-                    <Avatar className="w-16 h-16 mx-auto mb-2">
-                      <AvatarImage src={player.avatar} />
-                      <AvatarFallback>{player.nickname[0]}</AvatarFallback>
-                    </Avatar>
-                    <h3 className="font-semibold">{player.nickname}</h3>
-                    <Badge className="mt-1 bg-blue-500">
-                      점수: {player.score}점
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  return (
+    <div className="min-h-screen p-4 bg-gradient-to-br ...">
+      {/* 기존 게임 화면 (waiting / countdown / playing 등) 렌더링 */}
+  
+      {/* 🎉 게임 종료 모달 */}
+      <Dialog open={phase === "final"} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-[425px] text-center">
+          <DialogHeader>
+            <DialogTitle>
+              <span className="text-3xl font-bold text-purple-600">
+                🎉 게임 종료 🎉
+              </span>
+            </DialogTitle>
+            <p className="text-gray-700 mt-4">게임이 종료되었습니다!</p>
+            <p className="text-sm text-gray-500">추후에 결과 기능이 추가될 예정입니다.</p>
+          </DialogHeader>
+          <div className="mt-6 flex gap-4 justify-center">
+            <Button onClick={() => router.push("/lobby")}>로비로 이동</Button>
+            <Button variant="secondary" onClick={() => router.push(`/room/${room.roomId}`)}>
+              대기방으로 이동
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+  
+  
 
   return null;
 };
