@@ -39,6 +39,8 @@ interface RandomSongGameProps {
   players: any[];
   onBack: () => void;
   onGameEnd: (results: any[]) => void;
+  onGameStart?: () => void; 
+  isAISongGame?: boolean;  
 }
 
 type Phase = "waiting" | "countdown" | "playing" | "final";
@@ -49,8 +51,9 @@ const RandomSongGame = ({
   players,
   onBack,
   onGameEnd,
+  isAISongGame,
+  onGameStart,
 }: RandomSongGameProps) => {
-  const [chatMessage, setChatMessage] = useState("");
   const [gameSession, setGameSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState<Phase>("waiting"); // Initial phase is waiting
@@ -59,7 +62,6 @@ const RandomSongGame = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const roundTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [isComposing, setIsComposing] = useState(false);
   const [nextRoundCountdown, setNextRoundCountdown] = useState<number>(0); // New state for next round countdown
   const nextRoundIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref for next round interval
   const [hasUserInteractedForAudio, setHasUserInteractedForAudio] =
@@ -97,6 +99,19 @@ const RandomSongGame = ({
         console.error("WebSocket Error:", error);
         setLoading(false);
         // Handle error, e.g., show error message to user
+      },
+      onMessage: (msg) => {
+        // 게임 관련 메시지 처리 (예: 플레이어 목록 업데이트, 게임 상태 변경 등)
+        console.log('Game WebSocket Message:', msg);
+        // 플레이어 목록 업데이트
+        if (msg.type === 'PLAYER_UPDATE') {
+          // 플레이어 정보 업데이트 로직이 필요하다면 여기에 추가
+          console.log('Player update received:', msg.players);
+        }
+        // 채팅 메시지 (게임 내 채팅)
+        else if (msg.messageType === 'TALK' || msg.messageType === 'ENTER' || msg.messageType === 'LEAVE') {
+          setChatMessages((prev) => [...prev, msg]);
+        }
       },
       onGameStartCountdown: (response) => {
         console.log("Game Start Countdown:", response);
@@ -218,10 +233,7 @@ const RandomSongGame = ({
         setShowGameEndModal(true);
       // setGameEndResults(response.finalResults || []);
       },
-      onMessage: (msg) => {
-        console.log("📩 받은 채팅 메시지:", msg);
-        setChatMessages((prev) => [...prev, msg]);
-      },
+
     });
 
     return () => {
@@ -302,16 +314,16 @@ const RandomSongGame = ({
   // }, [phase, gameSession?.currentSong?.audioUrl]);
 
   // 4. 정답 제출
-  const handleSendMessage = async () => {
-    const trimmed = chatMessage.trim();
+  const handleSendMessage = async (message: string) => {
+    const trimmed = message.trim();
     if (!trimmed) return;
   
     console.log("📝 입력된 메시지:", trimmed);
   
-    // 1. 채팅 메시지 전송
+    // 1. 채팅 메시지 전송 (웹소켓)
     sendGameMessage(room.roomId, user.id, user.nickname, trimmed);
   
-    // 2. 정답 제출
+    // 2. 정답 제출 (HTTP API)
     if (phase === "playing") {
       try {
         await api.post(`/api/game-session/${room.roomId}/answer`, {
@@ -329,8 +341,6 @@ const RandomSongGame = ({
         }
       }
     }
-  
-    setChatMessage("");
   };
   
   
@@ -367,8 +377,8 @@ const RandomSongGame = ({
   // phase별 화면
   if (phase === "waiting") {
     return (
-      <div className="min-h-screen p-4 bg-gradient-to-br from-cyan-400 via-blue-500 via-purple-500 to-pink-500">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen p-4 bg-gradient-to-br from-cyan-400 via-blue-500 via-purple-500 to-pink-500 flex flex-col">
+        <div className="max-w-4xl mx-auto flex-1">
           <Button
             variant="outline"
             onClick={onBack}
@@ -380,10 +390,12 @@ const RandomSongGame = ({
           <Card className="bg-white/90 backdrop-blur-sm">
             <CardHeader className="text-center">
               <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-                🎵 랜덤 노래 맞추기
+                {isAISongGame ? "🤖 AI 노래 맞추기" : "🎵 랜덤 노래 맞추기"}
               </CardTitle>
               <CardDescription className="text-lg">
-                노래를 듣고 제목을 가장 빨리 맞춰보세요!
+                {isAISongGame
+                  ? "AI가 부른 노래를 듣고 제목을 맞춰보세요!"
+                  : "노래를 듣고 제목을 가장 빨리 맞춰보세요!"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -406,14 +418,30 @@ const RandomSongGame = ({
               </div>
               <div className="text-center">
                 <Button
-                  onClick={handleStartGame}
+                  onClick={isAISongGame ? onGameStart : handleStartGame}
                   size="lg"
                   className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 text-white font-bold text-xl px-12 py-6"
                 >
                   <Play className="w-6 h-6 mr-3" />
-                  게임 시작!
+                  {isAISongGame ? "AI 노래 맞추기 시작!" : "게임 시작!"}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="max-w-4xl mx-auto w-full mt-6">
+          <Card className="bg-white/90 backdrop-blur-sm flex flex-col">
+            <CardHeader>
+              <CardTitle className="text-pink-700">채팅</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col flex-1">
+              <ChatBox
+                user={user}
+                messages={chatMessages}
+                onSend={handleSendMessage}
+                autoScrollToBottom={true}
+                chatType="room"
+              />
             </CardContent>
           </Card>
         </div>
@@ -545,32 +573,20 @@ const RandomSongGame = ({
               </CardContent>
             </Card>
             <div className="lg:col-span-2">
-            <Card className="bg-white/90 backdrop-blur-sm flex-1 flex flex-col">
-              <CardHeader>
-                <CardTitle className="text-pink-700">채팅</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col flex-1">
-                <div className="flex-1 overflow-y-auto">
-                  <ChatBox user={user} messages={chatMessages} autoScrollToBottom={true} hideInput={true} />
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <Input
-                    placeholder="메시지를 입력하세요..."
-                    value={chatMessage}
-                    onChange={(e) => setChatMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isComposing) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    onCompositionStart={() => setIsComposing(true)}
-                    onCompositionEnd={() => setIsComposing(false)}
+              <Card className="bg-white/90 backdrop-blur-sm flex-1 flex flex-col">
+                <CardHeader>
+                  <CardTitle className="text-pink-700">게임 채팅</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col flex-1">
+                  <ChatBox 
+                    user={user} 
+                    messages={chatMessages} 
+                    onSend={handleSendMessage} 
+                    autoScrollToBottom={true} 
+                    chatType="room" 
                   />
-                  <Button onClick={handleSendMessage}>전송</Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             </div>
           </div>
           {/* Audio element is controlled by ref and WebSocket updates */}
@@ -644,7 +660,7 @@ const RandomSongGame = ({
           </DialogHeader>
           <div className="mt-6 flex gap-4 justify-center">
             <Button onClick={() => router.push("/lobby")}>로비로 이동</Button>
-            <Button variant="secondary" onClick={() => router.push(`/room/${room.roomId}`)}>
+            <Button variant="secondary" onClick={() => router.push(`/room/${room.roomId}/randomsonggame`)}>
               대기방으로 이동
             </Button>
           </div>
