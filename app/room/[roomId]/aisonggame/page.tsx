@@ -55,6 +55,20 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
     fetchData();
   }, [params.roomId]);
 
+  // 플레이어 목록만 2초마다 새로고침
+  useEffect(() => {
+    const fetchPlayers = async () => {
+      try {
+        const roomRes = await api.get<ApiResponse<Room>>(`/api/room/${params.roomId}`);
+        setPlayers(roomRes.data.data.players);
+      } catch (err) {
+        // 무시
+      }
+    };
+    const interval = setInterval(fetchPlayers, 2000);
+    return () => clearInterval(interval);
+  }, [params.roomId]);
+
   useEffect(() => {
     if (!room?.roomId) return;
 
@@ -113,12 +127,23 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
 
   const handleStartGame = async () => {
     console.log("AI 노래 맞추기 게임 시작...");
+    console.log("현재 room:", room);
+    console.log("현재 user:", user);
+    
+    if (!room?.roomId) {
+      console.error("room.roomId가 없습니다!");
+      return;
+    }
+    
     try {
-      await api.post(`/api/game-session/${room.roomId}/start`);
+      console.log(`/api/game-session/${room.roomId}/start API 호출 시작`);
+      const response = await api.post(`/api/game-session/${room.roomId}/start`);
+      console.log("API 응답:", response);
       console.log("AI 노래 맞추기 게임 시작 API 호출 성공.");
       setGameStarted(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI 노래 맞추기 게임 시작 실패:", error);
+      console.error("에러 상세:", error.response?.data || error.message);
     }
   };
 
@@ -209,21 +234,24 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
 
             {/* 게임 시작 버튼 */}
             <div className="text-center">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button
-                  onClick={handleStartGame}
-                  disabled={gameStarted}
-                  size="lg"
-                  className="bg-red-500 hover:bg-red-600 text-white font-bold text-xl px-12 py-6"
+              {user.id === room.hostId ? (
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <Play className="w-6 h-6 mr-3" />
-                  {gameStarted ? "게임 시작 중..." : "AI 노래 맞추기 시작!"}
-                </Button>
-              </motion.div>
-              
+                  <Button
+                    onClick={handleStartGame}
+                    disabled={gameStarted}
+                    size="lg"
+                    className="bg-red-500 hover:bg-red-600 text-white font-bold text-xl px-12 py-6"
+                  >
+                    <Play className="w-6 h-6 mr-3" />
+                    {gameStarted ? "게임 시작 중..." : "AI 노래 맞추기 시작!"}
+                  </Button>
+                </motion.div>
+              ) : (
+                <div className="text-lg text-gray-700 font-semibold py-8">게임 시작을 기다리는 중...</div>
+              )}
               <p className="text-sm text-gray-600 mt-2">
                 버튼을 누르면 모든 참가자가 동시에 게임이 시작됩니다
               </p>

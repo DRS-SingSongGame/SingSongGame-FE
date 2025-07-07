@@ -385,6 +385,25 @@ const RandomSongGame = ({
     phaseRef.current = phase;
   }, [phase]);
 
+  // players 상태를 내부에서 관리
+  const [playersState, setPlayersState] = useState(players);
+  useEffect(() => {
+    setPlayersState(players);
+  }, [players]);
+
+  // 대기실에서만 2초마다 플레이어 목록 새로고침
+  useEffect(() => {
+    if (phase !== 'waiting') return;
+    const fetchPlayers = async () => {
+      try {
+        const res = await api.get(`/api/room/${room.roomId}`);
+        setPlayersState((res.data as any).data.players);
+      } catch (e) {}
+    };
+    const interval = setInterval(fetchPlayers, 2000);
+    return () => clearInterval(interval);
+  }, [phase, room.roomId]);
+
   // 4. 정답 제출
   const handleSendMessage = async (message: string) => {
     const trimmed = message.trim();
@@ -488,7 +507,7 @@ const RandomSongGame = ({
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {players.map((player) => (
+                {playersState.map((player) => (
                   <div
                     key={player.id}
                     className="text-center p-4 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200"
@@ -627,7 +646,7 @@ const RandomSongGame = ({
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {players
+                  {playersState
                     .map((player) => ({
                       ...player,
                       score: gameSession?.playerScores?.[player.id] || 0,
@@ -781,7 +800,7 @@ const RandomSongGame = ({
               {gameEndResults
                 .sort((a, b) => b.score - a.score)
                 .map((result, index) => {
-                  const player = players.find((p) => p.id === result.userId);
+                  const player = playersState.find((p) => p.id === result.userId);
                   if (!player) return null;
 
                   const isFirst = index === 0;
