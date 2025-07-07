@@ -300,6 +300,10 @@ const RandomSongGame = ({
   //     audioRef.current.play();
   //   }
   // }, [phase, gameSession?.currentSong?.audioUrl]);
+  
+  
+  
+
 
   // 4. 정답 제출
   const handleSendMessage = async () => {
@@ -333,6 +337,21 @@ const RandomSongGame = ({
     setChatMessage("");
   };
   
+  
+  const handleLeaveRoom = async () => {
+    // TODO: 백엔드에 방 나가기 요청 (HTTP)
+
+    //router.push('/lobby');
+
+    try {
+      await api.delete(`/api/room/${room.roomId}/leave`);
+      router.push('/lobby');
+    } catch (error) {
+      alert('방 나가기에 실패했습니다.');
+      router.push('/lobby');
+    }
+
+  };
   
 
   const handlePlayAudio = () => {
@@ -371,7 +390,8 @@ const RandomSongGame = ({
         <div className="max-w-4xl mx-auto">
           <Button
             variant="outline"
-            onClick={onBack}
+            //onClick={onBack}
+            onClick={handleLeaveRoom}
             className="mb-4 bg-white/90 backdrop-blur-sm"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
