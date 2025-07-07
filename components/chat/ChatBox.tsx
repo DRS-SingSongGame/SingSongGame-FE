@@ -59,13 +59,15 @@
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[200px] mb-2 pr-2">
-            <div ref={scrollRef} className="space-y-2 max-h-[200px] overflow-y-auto">
+            <div ref={scrollRef} className="space-y-2 max-h-[200px] overflow-y-auto scrollbar-hide">
               {messages.map((msg) => (
-                <div key={msg.id} className={`text-sm ${msg.senderName === user.nickname ? 'text-right' : 'text-left'}`}>
-                  <div className="font-semibold">
-                    {msg.senderName} <span className="text-gray-400 text-xs">{msg.time}</span>
-                  </div>
-                  <div className="bg-gray-100 inline-block rounded px-2 py-1">{msg.message}</div>
+                <div
+                  key={msg.id}
+                  className="flex items-center w-full text-sm"
+                >
+                  <span className="font-semibold text-purple-600 mr-1">{msg.senderName}:</span>
+                  <span className="ml-1 whitespace-pre-line break-all flex-1">{msg.message}</span>
+                  <span className="text-gray-400 text-xs ml-2 whitespace-nowrap">{msg.time}</span>
                 </div>
               ))}
             </div>
