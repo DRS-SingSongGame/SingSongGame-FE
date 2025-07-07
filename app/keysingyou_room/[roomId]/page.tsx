@@ -18,14 +18,13 @@ export default function GameRoomPage() {
       // ✅ 사용자 정보 불러오기
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
+        console.log(storedUser);
         const parsedUser = JSON.parse(storedUser);
         setUser({
           id: parsedUser.id,
           nickname: parsedUser.nickname,
           avatar:
-            parsedUser.avatar ||
-            "https://api.dicebear.com/7.x/avataaars/svg?seed=" +
-              parsedUser.nickname,
+            parsedUser.profileImage
         });
       }
 

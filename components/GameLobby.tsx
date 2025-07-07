@@ -113,7 +113,11 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
       {
         onSuccess: () => {
           const gamePath = getGamePath(room.roomId, room.roomType);
-          router.push(gamePath);
+          if (room.roomType == "KEY_SING_YOU") {
+            router.push(`/keysingyou_room/${room.roomId}`);
+          } else {
+            router.push(gamePath);
+          }
         },
         onError: (error) => {
           alert('방 참여 실패');
@@ -139,9 +143,6 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[430px]">
-                {loading ? (
-                  <div className="text-center text-sm text-gray-500">방 목록 불러오는 중...</div>
-                ) : (
                   <div className="grid grid-cols-2 gap-3">
                     {filteredRooms.map((room) => (
                       <Card 
@@ -165,7 +166,6 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                       </Card>
                     ))}
                   </div>
-                )}
               </ScrollArea>
             </CardContent>
           </Card>
