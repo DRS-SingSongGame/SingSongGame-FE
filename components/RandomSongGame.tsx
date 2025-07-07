@@ -85,6 +85,7 @@ const RandomSongGame = ({
     winnerNickname: string;
     correctAnswer: string;
     correctTitle: string;
+    scoreGain: number;
   } | null>(null);
   const currentRoundRef = useRef<number>(0);
   const totalRoundsRef = useRef<number>(0);
@@ -101,25 +102,33 @@ const RandomSongGame = ({
   }>({ title: "", subtitle: "" });
   const [progress, setProgress] = useState(0);
   const [winnerAnimatedScore, setWinnerAnimatedScore] = useState(0);
+  const isHost = user.id === room.hostId;
+  
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (phase === 'playing') {
+      setTimeout(() => {
+        inputRef.current?.focus(); // ✅ ref가 null 아닌 시점에만
+      }, 100); // 💡 delay를 주면 리렌더 타이밍 문제 해결
+    }
+  }, [phase]);
 
   // 정답자가 없는 경우 프로그레스바 애니메이션 //
 
-  const progressStartTimeRef = useRef<number | null>(null);
+  
 
   useEffect(() => {
     if (!showNoAnswerModal) return;
   
     let frameId: number;
-    const duration = 3000; // 3초
-    progressStartTimeRef.current = null;
-    setProgress(0); // 강제 초기화
+    const duration = 2500; // 3초
+    let startTime: number | null = null;
   
     const step = (timestamp: number) => {
-      if (!progressStartTimeRef.current) {
-        progressStartTimeRef.current = timestamp;
-      }
+      if (startTime === null) startTime = timestamp;
   
-      const elapsed = timestamp - progressStartTimeRef.current;
+      const elapsed = timestamp - startTime;
       const value = Math.min((elapsed / duration) * 100, 100);
       setProgress(value);
   
@@ -128,11 +137,12 @@ const RandomSongGame = ({
       }
     };
   
+    // 강제 초기화 후 시작
+    setProgress(0);
     frameId = requestAnimationFrame(step);
   
     return () => {
       cancelAnimationFrame(frameId);
-      setProgress(0);
     };
   }, [showNoAnswerModal]);
   
@@ -213,6 +223,7 @@ const RandomSongGame = ({
       },
       onRoundStart: (response) => {
         console.log("Round Start:", response);
+        
 
         currentRoundRef.current = response.round;
         totalRoundsRef.current = response.totalRounds;
@@ -265,6 +276,7 @@ const RandomSongGame = ({
           winnerNickname: response.winnerNickname,
           correctAnswer: response.correctAnswer,
           correctTitle: response.correctTitle,
+          scoreGain: response.scoreGain ?? 0,
         });
         setShowAnswerModal(true);
 
@@ -523,16 +535,24 @@ const RandomSongGame = ({
                   </div>
                 ))}
               </div>
-              <div className="text-center">
-                <Button
-                  onClick={isAISongGame ? onGameStart : handleStartGame}
-                  size="lg"
-                  className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 text-white font-bold text-xl px-12 py-6"
-                >
-                  <Play className="w-6 h-6 mr-3" />
-                  {isAISongGame ? "AI 노래 맞추기 시작!" : "게임 시작!"}
-                </Button>
-              </div>
+              {phase === "waiting" && (
+                <div className="text-center">
+                  {isHost ? (
+                    <Button
+                      onClick={handleStartGame}
+                      size="lg"
+                      className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 text-white font-bold text-xl px-12 py-6"
+                    >
+                      <Play className="w-6 h-6 mr-3" />
+                      게임 시작!
+                    </Button>
+                   ) : ( 
+                    <p className="text-lg font-semibold text-black/90 mt-4">
+                      ⏳ 방장이 게임을 시작할 때까지 기다려주세요...
+                    </p>
+                   )} 
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -728,18 +748,21 @@ const RandomSongGame = ({
                       transition={{ duration: 2.0, ease: "easeOut" }}
                       className="absolute -top-8 ml-[150px] text-xl font-bold text-yellow-400 drop-shadow-md z-10"
                     >
-                      +{winnerScore - (winner.score ?? 0)}점!
+                      +{answerModalData?.scoreGain ?? 0}점!
                     </motion.div>
 
-                    <motion.div
-                      key={winnerAnimatedScore}
-                      initial={{ y: 10, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ duration: 0.4 }}
-                      className="text-2xl font-bold text-blue-700"
-                    >
-                      현재 점수: {winnerAnimatedScore}점
-                    </motion.div>
+                    <div className="text-2xl font-bold text-blue-700">
+                      현재 점수:{" "}
+                      <motion.span
+                        key={winnerAnimatedScore}
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ duration: 0.4 }}
+                        className="inline-block"
+                      >
+                        {winnerAnimatedScore}점
+                      </motion.span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -759,7 +782,18 @@ const RandomSongGame = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <div className="text-4xl mb-2">😢</div>
+          <motion.div
+            className="text-4xl mb-2"
+            animate={{ y: [0, -5, 0] }}
+            transition={{
+              duration: 1,
+              repeat: Infinity,
+              repeatType: "loop",
+              ease: "easeInOut",
+            }}
+          >
+            😢
+          </motion.div>
           <h2 className="text-xl font-bold text-red-600">정답자가 없습니다!</h2>
           <p className="text-md text-gray-600 mt-2">
             정답: "<span className="text-blue-600 font-semibold">{noAnswerModalContent.subtitle}</span>"
@@ -767,10 +801,10 @@ const RandomSongGame = ({
     
           {/* ⏳ 3초 Progress Bar */}
           <div className="mt-6">
-              <Progress
+              {/* <Progress
                 value={progress}
                 className="h-2 transition-[width] duration-200 ease-out rounded-full"
-              />
+              /> */}
             <p className="text-sm text-gray-500 mt-1">3초 후 다음 라운드로 이동합니다...</p>
           </div>
         </motion.div>
@@ -836,7 +870,14 @@ const RandomSongGame = ({
             <div className="mt-6 flex gap-3 justify-center">
               {/* <Button onClick={() => router.push("/lobby")}>:house: 로비로</Button> */}
               <Button onClick={handleLeaveRoom}>로비로 이동</Button>
-              <Button variant="secondary" onClick={() => router.push(`/room/${room.roomId}/randomsonggame`)}>
+              <Button variant="secondary" onClick={() => {
+                // 💡 모든 상태를 초기화하고 waiting phase로 돌입
+                setPhase("waiting");
+                setGameSession(null); // 이전 세션 제거
+                setWinnerAnimatedScore(0);
+                setAnswerModalData(null);
+                setChatMessages([]);  // (선택) 채팅 비우기
+              }}>
                 🔁 다시 하기
               </Button>
             </div>
