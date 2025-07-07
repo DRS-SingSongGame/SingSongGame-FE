@@ -644,7 +644,7 @@ const RandomSongGame = ({
           </DialogHeader>
           <div className="mt-6 flex gap-4 justify-center">
             <Button onClick={() => router.push("/lobby")}>로비로 이동</Button>
-            <Button variant="secondary" onClick={() => router.push(`/room/${room.roomId}`)}>
+            <Button variant="secondary" onClick={() => router.push(`/room/${room.roomId}/randomsonggame`)}>
               대기방으로 이동
             </Button>
           </div>
