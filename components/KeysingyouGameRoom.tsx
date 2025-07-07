@@ -25,7 +25,7 @@ interface GameRoomProps {
 }
 
 interface User {
-  id: number;
+  id: string;
   avatar: string;
   nickname: string;
 
@@ -93,6 +93,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
   const chunks = useRef<Blob[]>([]);
   const keywordRef = useRef<Keyword | null>(null);
   const turnRef = useRef<number>(0);
+  const roomChatBoxRef = useRef<HTMLDivElement>(null);
 
   /* ───── 타이머 1초 감소 ───── */
   useEffect(() => {
@@ -100,6 +101,12 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     const iv = setInterval(() => setTimer((t) => (t <= 1 ? 0 : t - 1)), 1000);
     return () => clearInterval(iv);
   }, [timer]);
+
+  useEffect(() => {
+    if (roomChatBoxRef.current) {
+      roomChatBoxRef.current.scrollTop = roomChatBoxRef.current.scrollHeight;
+    }
+  }, [chatMsgs]);
 
   // 게임 모드 라벨 및 색상 함수 (기존과 동일)
   const getGameModeColor = (mode: string) => {
@@ -326,84 +333,64 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
 
                   {/* 채팅 */}
                   <Card className="bg-white/90 backdrop-blur-sm flex-1 flex flex-col">
-                    <CardHeader>
-                      <CardTitle className="text-pink-700">채팅</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-col flex-1">
-                      <section
+                      <div
+                        id="room-chat-box"
+                        ref={roomChatBoxRef}
                         style={{
-                          border: "1px solid #ddd",
-                          borderRadius: "8px",
-                          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-                          padding: "16px",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "12px",
-                          height: "384px",
+                          flex: 1,
+                          overflowY: "auto",
+                          background: "#f9fafb",
+                          border: "1px solid #ccc",
+                          borderRadius: "4px",
+                          padding: "12px",
+                          whiteSpace: "pre-line",
+                          maxHeight: 193.2,
                         }}
+                        className="scrollbar-hide"
                       >
-                        <div
-                          id="room-chat-box"
+                        {chatMsgs.length === 0 ? (
+                          <p className="text-gray-500 italic"></p>
+                        ) : (
+                          chatMsgs.map((c, i) => (
+                            <p
+                              key={i}
+                              style={{
+                                marginBottom: "8px",
+                                wordBreak: "break-word",
+                              }}
+                            >
+                              {c.message}
+                            </p>
+                          ))
+                        )}
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <input
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && sendChat()}
+                          placeholder="메시지 입력"
                           style={{
                             flex: 1,
-                            overflowY: "auto",
-                            background: "#f9fafb",
+                            padding: "8px",
                             border: "1px solid #ccc",
                             borderRadius: "4px",
-                            padding: "12px",
-                            whiteSpace: "pre-line",
                           }}
-                        >
-                          {chatMsgs.length === 0 ? (
-                            <p className="text-gray-500 italic">채팅이 없습니다.</p>
-                          ) : (
-                            chatMsgs.map((c, i) => (
-                              <p
-                                key={i}
-                                style={{
-                                  marginBottom: "8px",
-                                  wordBreak: "break-word",
-                                }}
-                              >
-                                {c.message}
-                              </p>
-                            ))
-                          )}
-                        </div>
-                        <div
+                        />
+                        <button
+                          onClick={sendChat}
                           style={{
-                            display: "flex",
-                            gap: "8px",
+                            padding: "8px 16px",
+                            background: "#1d4ed8",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "4px",
+                            cursor: "pointer",
                           }}
                         >
-                          <input
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && sendChat()}
-                            placeholder="메시지 입력"
-                            style={{
-                              flex: 1,
-                              padding: "8px",
-                              border: "1px solid #ccc",
-                              borderRadius: "4px",
-                            }}
-                          />
-                          <button
-                            onClick={sendChat}
-                            style={{
-                              padding: "8px 16px",
-                              background: "#1d4ed8",
-                              color: "#fff",
-                              border: "none",
-                              borderRadius: "4px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            전송
-                          </button>
-                        </div>
-                      </section>
-                    </CardContent>
+                          전송
+                        </button>
+                      </div>
                   </Card>
                 </div>
 
@@ -656,7 +643,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
 
             <div className="text-center">
               <Button
-                onClick={onBack}
+                onClick={handleLeaveRoom}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg"
               >
                 로비로 돌아가기
@@ -690,7 +677,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       <div className="max-w-6xl mx-auto">
         {/* 헤더 */}
         <div className="mb-6">
-          <Button variant="outline" onClick={onBack} className="mb-4 bg-white/90">
+          <Button variant="outline" onClick={handleLeaveRoom} className="mb-4 bg-white/90">
             <ArrowLeft className="w-4 h-4 mr-2" />
             게임 나가기
           </Button>
