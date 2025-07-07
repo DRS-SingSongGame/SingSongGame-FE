@@ -67,7 +67,10 @@ const GameChat = ({
             disabled={!isReading}
           />
           <Button 
-            onClick={onChatSubmit}
+            onClick={() => {
+              console.log("[버튼 클릭됨] 전송 버튼 눌림");
+              onChatSubmit();
+            }}
             disabled={!isReading}
           >
             전송

@@ -54,7 +54,7 @@ export default function FlatLyricsGamePage({ params }: { params: { roomId: strin
   return (
     <FlatLyricsGame
       user={dummyUser}
-      room={dummyRoom}
+      room={{ roomId: 1, name: "테스트방" }}
       players={dummyPlayers}
       onBack={handleBack}
       onGameEnd={handleGameEnd}
