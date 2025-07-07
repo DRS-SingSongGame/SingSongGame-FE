@@ -815,7 +815,8 @@ const RandomSongGame = ({
             </ul>
 
             <div className="mt-6 flex gap-3 justify-center">
-              <Button onClick={() => router.push("/lobby")}>🏠 로비로</Button>
+              {/* <Button onClick={() => router.push("/lobby")}>:house: 로비로</Button> */}
+              <Button onClick={handleLeaveRoom}>로비로 이동</Button>
               <Button variant="secondary" onClick={() => router.push(`/room/${room.roomId}/randomsonggame`)}>
                 🔁 다시 하기
               </Button>
