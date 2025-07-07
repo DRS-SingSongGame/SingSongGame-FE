@@ -136,8 +136,8 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
     }
     
     try {
-      console.log(`/api/game-session/${room.roomId}/start API 호출 시작`);
-      const response = await api.post(`/api/game-session/${room.roomId}/start`);
+      console.log(`/api/ai-game/${room.roomId}/start API 호출 시작`);
+      const response = await api.post(`/api/ai-game/${room.roomId}/start`);
       console.log("API 응답:", response);
       console.log("AI 노래 맞추기 게임 시작 API 호출 성공.");
       setGameStarted(true);
