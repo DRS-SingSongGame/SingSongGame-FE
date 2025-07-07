@@ -153,22 +153,6 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
     try {
       // 웹소켓을 통해 메시지 전송
       sendGameMessage(room.roomId, user.id, user.nickname, message.trim(), true);
-      
-      // 로컬 채팅 메시지에 즉시 추가
-      const newMessage: ChatMessage = {
-        id: Date.now(),
-        type: 'TALK' as const,
-        roomId: room.roomId.toString(),
-        senderId: user.id,
-        senderName: user.nickname,
-        message: message.trim(),
-        timestamp: new Date().toISOString(),
-        time: new Date().toLocaleTimeString("ko-KR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setChatMessages((prev) => [...prev, newMessage]);
     } catch (error) {
       console.error("채팅 메시지 전송 실패:", error);
     }
