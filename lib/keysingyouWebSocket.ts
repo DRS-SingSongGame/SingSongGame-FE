@@ -4,7 +4,7 @@ let webSocket: Socket | null = null;
 
 export const getSocket = () => {
   if (!webSocket) {
-    webSocket = io("http://localhost:8000");
+    webSocket = io("http://localhost:8000/");
   }
   return webSocket;
 };
