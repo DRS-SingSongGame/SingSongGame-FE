@@ -13,7 +13,8 @@ interface GameSocketCallbacks {
 }
 export const connectGameSocket = (
   roomId: string,
-  callbacks: GameSocketCallbacks
+  callbacks: GameSocketCallbacks,
+  isAiGame: boolean = false
 ) => {
   const socket = new SockJS("/api/ws/chat");
   stompClient = new Client({
@@ -22,35 +23,35 @@ export const connectGameSocket = (
     onConnect: (frame) => {
       console.log("Connected: " + frame);
       callbacks.onConnect(frame);
+      const prefix = isAiGame ? "ai-room" : "room";
       // Subscribe to game-related topics
-      stompClient?.subscribe(`/topic/room/${roomId}/game-start`, (response) => {
+      stompClient?.subscribe(`/topic/${prefix}/${roomId}/game-start`, (response) => {
         callbacks.onGameStartCountdown(JSON.parse(response.body));
       });
       stompClient?.subscribe(
-        `/topic/room/${roomId}/round-start`,
+        `/topic/${prefix}/${roomId}/round-start`,
         (response) => {
           callbacks.onRoundStart(JSON.parse(response.body));
         });
       stompClient?.subscribe(
-        `/topic/room/${roomId}/answer-correct`,
+        `/topic/${prefix}/${roomId}/answer-correct`,
         (response) => {
           callbacks.onAnswerCorrect(JSON.parse(response.body)); // Ensure parsing for consistency
-        });
+        }
+      );
+      stompClient?.subscribe(`/topic/${prefix}/${roomId}/game-end`, (response) => {
+        callbacks.onGameEnd(JSON.parse(response.body)); // Ensure parsing for consistency
+      });
       stompClient?.subscribe(`/topic/room/${roomId}/round-failed`, (response) => {
         const parsed = JSON.parse(response.body);
         if (callbacks.onRoundFailed) {
           callbacks.onRoundFailed(parsed);
         }
       });
-      stompClient?.subscribe(`/topic/room/${roomId}/game-end`, (response) => {
-        callbacks.onGameEnd(JSON.parse(response.body)); // Ensure parsing for consistency
-      });
       // Subscribe to general game messages (e.g., chat, player updates)
-      stompClient?.subscribe(`/topic/room/${roomId}/chat`, (response) => {
-        console.log('[:큰_노란색_원: 수신한 WebSocket 메시지]', response.body); // :왼쪽을_가리키는_손_모양: 원본 그대로 확인
+      stompClient?.subscribe(`/topic/${prefix}/${roomId}/chat`, (response) => {
         try {
-          const parsed = JSON.parse(response.body);
-          console.log('[:큰_초록색_원: 파싱된 메시지]', parsed); // :왼쪽을_가리키는_손_모양: 파싱 결과 확인
+          const parsed = JSON.parse(response.body)
           if (callbacks.onMessage) {
             callbacks.onMessage(parsed);
           }
@@ -58,6 +59,10 @@ export const connectGameSocket = (
           console.error('[:빨간색_원: JSON 파싱 오류]', e, response.body);
         }
       });
+      stompClient?.subscribe(`/topic/ai-room/${roomId}/game-start`, (response) => {
+        // router.push(`/room/${roomId}/aisonggame/FlatLyricsGame`); // This line was not in the original file, so it's not added.
+      });
+      
     },
     onStompError: (error) => {
       console.error("STOMP error", error);
@@ -81,13 +86,15 @@ export const sendGameMessage = (
   roomId: string,
   senderId: string,
   senderName: string,
-  message: string
+  message: string,
+  isAiGame: boolean = false
 ) => {
+  const prefix = isAiGame ? "ai-room" : "room";
   if (stompClient && stompClient.connected) {
     const payload = { senderId, senderName, message };
     console.log(":수신_봉투: 보내는 채팅 메시지:", payload);
     stompClient.publish({
-      destination: `/api/room/${roomId}/chat`, // :흰색_확인_표시: 백엔드에 맞는 경로
+      destination: `/api/${prefix}/${roomId}/chat`, // :흰색_확인_표시: 백엔드에 맞는 경로
       body: JSON.stringify(payload),
     });
   } else {

@@ -35,7 +35,7 @@ const dummyPlayers = [
   },
 ];
 
-export default function FlatLyricsGamePage() {
+export default function FlatLyricsGamePage({ params }: { params: { roomId: string } }) {
   const router = useRouter();
 
   const handleBack = () => {
@@ -47,10 +47,14 @@ export default function FlatLyricsGamePage() {
     // 결과 처리 로직
   };
 
+  const onGameStart = () => {
+    router.push(`/room/${params.roomId}/aisonggame/FlatLyricsGame`);
+  };
+
   return (
     <FlatLyricsGame
       user={dummyUser}
-      room={dummyRoom}
+      room={{ roomId: 1, name: "테스트방" }}
       players={dummyPlayers}
       onBack={handleBack}
       onGameEnd={handleGameEnd}

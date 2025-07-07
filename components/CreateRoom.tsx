@@ -39,6 +39,15 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
     
   ];
 
+  const getGamePath = (roomId: string, roomType: string) => {
+    switch (roomType) {
+      case 'RANDOM_SONG': return `/room/${roomId}/randomsonggame`;
+      case 'KEY_SING_YOU': return `/room/${roomId}/keysingyougame`;
+      case 'PLAIN_SONG': return `/room/${roomId}/aisonggame`;
+      default: return `/room/${roomId}`;
+    }
+  };
+
   const handleCreateRoom = () => {
     if (!roomName.trim() || !gameMode || (isPrivate && !password.trim())) return;
   
@@ -67,6 +76,7 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
         
         // 응답에서 roomId를 찾아서 이동 (다양한 응답 구조 대응)
         const roomId = response?.data?.roomId || response?.roomId || response?.data?.id || response?.id;
+        const roomType = gameModeMap[gameMode];
         
         if (roomId) {
           // 방 생성 후 자동으로 방에 조인
@@ -75,20 +85,23 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
             {
               onSuccess: () => {
                 console.log('방 조인 성공');
-                router.push(`/room/${roomId}`);
+                const gamePath = getGamePath(roomId.toString(), roomType);
+                router.push(gamePath);
               },
               onError: (error) => {
                 console.error('방 조인 실패:', error);
                 alert('방 생성은 성공했지만 방 참여에 실패했습니다.');
-                // 조인 실패해도 방으로 이동 (방장이므로 접근 가능할 것)
-                router.push(`/room/${roomId}`);
+                // 조인 실패해도 게임 페이지로 이동 (방장이므로 접근 가능할 것)
+                const gamePath = getGamePath(roomId.toString(), roomType);
+                router.push(gamePath);
               }
             }
           );
         } else {
           // roomId가 없는 경우 임시로 생성된 방 정보로 이동
           const tempRoomId = Date.now(); // 임시 roomId 생성
-          router.push(`/room/${tempRoomId}`);
+          const gamePath = getGamePath(tempRoomId.toString(), roomType);
+          router.push(gamePath);
         }
       },
       onError: (error) => {
