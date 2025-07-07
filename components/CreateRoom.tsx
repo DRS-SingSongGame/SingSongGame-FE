@@ -86,14 +86,22 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
               onSuccess: () => {
                 console.log('방 조인 성공');
                 const gamePath = getGamePath(roomId.toString(), roomType);
-                router.push(gamePath);
+                if (gameModeMap[gameMode] == "KEY_SING_YOU") {
+                  router.push(`/keysingyou_room/${roomId}`);
+                } else {
+                  router.push(gamePath);
+                }
               },
               onError: (error) => {
                 console.error('방 조인 실패:', error);
                 alert('방 생성은 성공했지만 방 참여에 실패했습니다.');
                 // 조인 실패해도 게임 페이지로 이동 (방장이므로 접근 가능할 것)
                 const gamePath = getGamePath(roomId.toString(), roomType);
-                router.push(gamePath);
+                if (gameModeMap[gameMode] == "KEY_SING_YOU") {
+                  router.push(`/keysingyou_room/${roomId}`);
+                } else {
+                  router.push(gamePath);
+                }
               }
             }
           );
@@ -101,7 +109,11 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
           // roomId가 없는 경우 임시로 생성된 방 정보로 이동
           const tempRoomId = Date.now(); // 임시 roomId 생성
           const gamePath = getGamePath(tempRoomId.toString(), roomType);
-          router.push(gamePath);
+          if (gameModeMap[gameMode] == "KEY_SING_YOU") {
+                  router.push(`/keysingyou_room/${roomId}`);
+          } else {
+            router.push(gamePath);
+          }
         }
       },
       onError: (error) => {
