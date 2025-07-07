@@ -6,7 +6,8 @@ import GameChat from "./GameChat";
 import GameScoreboard from "./GameScoreboard";
 import GameInfo from "./GameInfo";
 import GameResultModal from "./GameResultModal";
-import api from "@/lib/api";
+import { connectGameSocket, disconnectGameSocket } from "@/lib/gameSocket";
+import { sendGameMessage } from "@/lib/gameSocket";
 
 interface FlatLyricsGameProps {
   user: any;
@@ -30,7 +31,7 @@ interface GameState {
   currentSong: Song | null;
   scores: { [playerId: string]: number };
   correctAnswer: string | null;
-  correctArtist: string | null; // 가수 이름 상태 추가
+  correctArtist: string | null;
   roundWinner: string | null;
 }
 
@@ -44,15 +45,9 @@ interface ChatMessage {
   isSystem?: boolean;
 }
 
-const FlatLyricsGame = ({
-  user,
-  room,
-  players,
-  onBack,
-  onGameEnd,
-}: FlatLyricsGameProps) => {
+const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGameProps) => {
   const [gameState, setGameState] = useState<GameState>({
-    currentRound: 0, // 라운드 시작 전 상태
+    currentRound: 0,
     totalRounds: 5,
     timeLeft: 60,
     isReading: false,
@@ -63,263 +58,177 @@ const FlatLyricsGame = ({
     roundWinner: null,
   });
 
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: 1,
-      playerId: "system",
-      playerName: "시스템",
-      message: "평어 노래 맞추기 게임이 시작됩니다!",
-      time: "10:00",
-      isSystem: true,
-    },
-  ]);
-
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // 1. 게임이 끝났다고 상태를 설정하고
-  // 2. 플레이어들의 점수를 정리해서
-  // 3. 결과를 부모 컴포넌트(onGameEnd)로 알려주는 함수
-  const endGame = useCallback(() => {
-    setGameOver(true);
-    setShowResults(true);
-
-    const results = players
-      .map((player) => ({
-        id: player.id,
-        nickname: player.nickname,
-        avatar: player.avatar,
-        score: gameState.scores[player.id] || 0,
-      }))
-      .sort((a, b) => b.score - a.score);
-
-    onGameEnd(results);
-  }, [players, gameState.scores, onGameEnd]);
-
-  // 게임의 다음 라운드를 시작하고,
-  //랜덤노래 정보를 가져오고
-  // 상태를 초기화하고
-  // 시스템 메시지를 보여주고
-  // 3초후 TTS를 재생하는 함수입니다.
-  const startNewRound = useCallback(async () => {
-    if (gameState.currentRound > gameState.totalRounds) {
-      endGame();
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/song/random");
-      const song: Song = await response.json();
-
-      console.log("받아온 곡 정보:", song);
-      console.log("🔥 startRound() called");
-
-      setGameState((prev) => ({
-        ...prev,
-        currentSong: song,
-        timeLeft: 60,
-        correctAnswer: null,
-        correctArtist: null,
-        roundWinner: null,
-        isReading: false,
-      }));
-
-      const systemMessage: ChatMessage = {
-        id: Date.now(),
-        playerId: "system",
-        playerName: "시스템",
-        message: `라운드 ${gameState.currentRound} 시작! 가사를 들어보세요.`,
-        time: new Date().toLocaleTimeString("ko-KR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        isSystem: true,
-      };
-      setChatMessages((prev) => [...prev, systemMessage]);
-
-      setTimeout(() => {
-        playTTS(song.id);
-      }, 3000);
-    } catch (error) {
-      console.error("Error fetching random song:", error);
-      // Handle error appropriately
-    }
-  }, [endGame, gameState.totalRounds, gameState.currentRound]);
 
   useEffect(() => {
+    if (!room || !room.roomId) return;
+  
     // 1. 초기 점수 설정
     const initialScores = players.reduce((acc, player) => {
       acc[player.id] = 0;
       return acc;
     }, {} as { [key: string]: number });
+    setGameState((prev) => ({ ...prev, scores: initialScores }));
+  
+    // 2. 게임 시작 POST 요청
+   
+  }, [room?.roomId]);
 
-    const welcomeMessage: ChatMessage = {
+  const handleRoundStart = (payload: any) => {
+    const songData = payload;
+    console.log("song 데이터", songData)
+    const song = songData.id;
+    const roundNumber = songData.round
+
+    setGameState((prev) => ({
+      ...prev,
+      currentRound: roundNumber,
+      currentSong: song,
+      timeLeft: 60,
+      correctAnswer: null,
+      correctArtist: null,
+      roundWinner: null,
+      isReading: true,
+    }));
+
+    const systemMessage: ChatMessage = {
       id: Date.now(),
       playerId: "system",
       playerName: "시스템",
-      message: "🎵 게임을 시작합니다! 곧 첫 번째 가사가 나옵니다.",
-      time: new Date().toLocaleTimeString("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      message: `라운드 ${roundNumber} 시작! 가사를 들어보세요.`,
+      time: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
       isSystem: true,
     };
+    setChatMessages((prev) => [...prev, systemMessage]);
 
-    setGameState((prev) => ({ ...prev, scores: initialScores }));
-    setChatMessages((prev) => [...prev, welcomeMessage]);
-
-    // 3. 첫 라운드 시작 트리거
-    setTimeout(() => {
-      setGameState((prev) => ({ ...prev, currentRound: 1 }));
-    }, 2000);
-  }, []); // 의존성 배열을 비워 한 번만 실행되도록 수정
-
-  // currentRound가 변경될 때마다 새로운 라운드를 시작하는 유일한 통로
-  useEffect(() => {
-    if (gameState.currentRound > 0 && gameState.currentRound <= gameState.totalRounds) {
-      startNewRound();
-    }
-  }, [gameState.currentRound, startNewRound, gameState.totalRounds]);
-
-  const handleRoundEnd = useCallback((winnerId: string | null, points: number = 0) => {
-    stopTTS();
-
-    if (winnerId) {
-      setGameState((prev) => ({
-        ...prev,
-        roundWinner: winnerId,
-        correctAnswer: prev.currentSong?.title || "",
-        correctArtist: prev.currentSong?.artist || "",
-        scores: {
-          ...prev.scores,
-          [winnerId]: prev.scores[winnerId] + points,
-        },
-        isReading: false,
-      }));
-
-      const winner = players.find((p) => p.id === winnerId);
-      const systemMessage: ChatMessage = {
-        id: Date.now(),
-        playerId: "system",
-        playerName: "시스템",
-        message: `🎉 ${winner?.nickname}님이 정답을 맞췄습니다! 정답: "${gameState.currentSong?.title}" - ${gameState.currentSong?.artist} (+${points}점)`,
-        time: new Date().toLocaleTimeString("ko-KR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        isSystem: true,
-      };
-      setChatMessages((prev) => [...prev, systemMessage]);
-    } else {
-      setGameState((prev) => ({
-        ...prev,
-        correctAnswer: prev.currentSong?.title || "",
-        correctArtist: prev.currentSong?.artist || "",
-        isReading: false,
-      }));
-
-      const systemMessage: ChatMessage = {
-        id: Date.now() + 1,
-        playerId: "system",
-        playerName: "시스템",
-        message: `⏰ 시간 종료! 정답: "${gameState.currentSong?.title}" - ${gameState.currentSong?.artist}`,
-        time: new Date().toLocaleTimeString("ko-KR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        isSystem: true,
-      };
-      setChatMessages((prev) => [...prev, systemMessage]);
-    }
-
-    setTimeout(() => {
-      if (gameState.currentRound >= gameState.totalRounds) {
-        endGame();
-      } else {
-        setGameState((prev) => ({ ...prev, currentRound: prev.currentRound + 1 }));
-      }
-    }, 3000);
-  }, [endGame, players, gameState.currentSong, gameState.totalRounds, gameState.currentRound]);
-
-  
-  useEffect(() => {
-    if (gameState.timeLeft > 0 && gameState.isReading) {
-      intervalRef.current = setTimeout(() => {
-        setGameState((prev) => ({ ...prev, timeLeft: prev.timeLeft - 1 }));
-      }, 1000);
-    } else if (gameState.timeLeft === 0 && gameState.isReading) {
-      handleRoundEnd(null);
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearTimeout(intervalRef.current);
-      }
-    };
-  }, [gameState.timeLeft, gameState.isReading, handleRoundEnd]);
-
-  const playTTS = (songId: number) => {
-    if (audio) {
-      audio.pause();
-    }
-    const newAudio = new Audio(`/api/song/tts?songId=${songId}`);
+    const newAudio = new Audio(`/api/song/tts?songId=${songData.id}`);
     newAudio.oncanplaythrough = () => {
-        newAudio.play();
-        setGameState((prev) => ({ ...prev, isReading: true }));
-    }
-    newAudio.onended = () => {
-      setGameState((prev) => ({ ...prev, isReading: false }));
-      if (!gameState.roundWinner) {
-        handleRoundEnd(null);
-      }
+      console.log("🎵 오디오 준비 완료 - 재생 시도");
+      newAudio.play().then(() => {
+        console.log("✅ 오디오 재생 시작됨");
+      }).catch((err) => {
+        console.error("❌ 오디오 재생 실패", err);
+      });
     };
+    newAudio.onended = () => {
+      console.log("🎵 오디오 재생 종료됨"); // 이게 나오는지 확인!!
+      setGameState((prev) => ({ ...prev, isReading: false }));
+      notifyTtsFinished(room.roomId);
+    };
+  
+      // ✅ TTS 재생이 끝났음을 서버에 알림
+      // notifyTtsFinished();
+    
     setAudio(newAudio);
   };
 
-  const stopTTS = () => {
-    if (audio) {
-      audio.pause();
-      setAudio(null);
-    }
-    setGameState((prev) => ({ ...prev, isReading: false }));
+  const notifyTtsFinished = (roomId : Number) => {
+  fetch(`/api/ai-game/${room.roomId}/tts-finished`, {
+    method: "POST",
+  })
+    .then(() => console.log("✅ TTS 종료 알림 전송됨"))
+    .catch((err) => console.error("❌ TTS 종료 알림 실패", err));
+};
+
+  const handleAnswerCorrect = (data: any) => {
+    const { playerId, playerName, title, artist, score } = data;
+
+    setGameState((prev) => ({
+      ...prev,
+      roundWinner: playerId,
+      correctAnswer: title,
+      correctArtist: artist,
+      isReading: false,
+      scores: {
+        ...prev.scores,
+        [playerId]: (prev.scores[playerId] || 0) + score,
+      },
+    }));
+
+    const systemMessage: ChatMessage = {
+      id: Date.now(),
+      playerId: "system",
+      playerName: "시스템",
+      message: `🎉 ${playerName}님 정답! "${title}" - ${artist} (+${score}점)`,
+      time: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
+      isSystem: true,
+    };
+    setChatMessages((prev) => [...prev, systemMessage]);
   };
 
-  const handleChatSubmit = () => {
-    if (!chatInput.trim() || !gameState.currentSong || !gameState.isReading)
-      return;
+  const handleGameEnd = (data: any) => {
+    setGameOver(true);
+    setShowResults(true);
+    onGameEnd(data);
+  };
 
-    const isCorrect =
-      chatInput
-        .trim()
-        .toLowerCase()
-        .includes(gameState.currentSong.title.toLowerCase()) ||
-      gameState.currentSong.title
-        .toLowerCase()
-        .includes(chatInput.trim().toLowerCase());
+  useEffect(() => {
+    if (!room || !room.roomId) return;
 
-    const newMessage: ChatMessage = {
-      id: Date.now(),
-      playerId: user.id,
-      playerName: user.nickname,
-      message: chatInput.trim(),
-      time: new Date().toLocaleTimeString("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      isCorrect,
+    const initialScores = players.reduce((acc, player) => {
+      acc[player.id] = 0;
+      return acc;
+    }, {} as { [key: string]: number });
+
+    setGameState((prev) => ({ ...prev, scores: initialScores }));
+
+    const callbacks = {
+      onConnect: () => {
+        fetch(`/api/ai-game/${room.roomId}/start`, {
+          method: "POST",
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error("게임 시작 실패");
+            console.log("✅ 게임 시작 요청 성공");
+          })
+          .catch((err) => {
+            console.error("❌ 게임 시작 실패", err);
+          });
+      },
+      onMessage: (data: any) => {
+        console.log("[WebSocket 수신]", data);
+        const msg: ChatMessage = {
+          id: Date.now(),
+          playerId: data.senderId,
+          playerName: data.senderName,
+          message: data.message,
+          time: new Date(data.timestamp).toLocaleTimeString("ko-KR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          isSystem: false,
+        };
+        setChatMessages((prev) => [...prev, msg]);
+      },
+      onRoundStart: handleRoundStart,
+      onAnswerCorrect: handleAnswerCorrect,
+      onGameEnd: handleGameEnd,
+      onError: (err: any) => console.error("소켓 오류", err),
+      onGameStartCountdown: (res: any) => console.log("카운트다운 시작", res),
     };
 
-    setChatMessages((prev) => [...prev, newMessage]);
+    connectGameSocket(room.roomId.toString(), callbacks, true);
+    return () => disconnectGameSocket();
+  }, [room?.roomId]);
 
-    if (isCorrect && !gameState.roundWinner) {
-      const points = Math.ceil((gameState.timeLeft / 60) * 100);
-      handleRoundEnd(user.id, points);
-    }
-
+  const handleChatSubmit = () => {
+    if (!chatInput.trim()) return;
+  
+    // 유틸 함수로 전송 처리 위임
+    sendGameMessage(
+      room.roomId,
+      user.id,
+      user.nickname,
+      chatInput.trim(),
+      true
+    );
+  
     setChatInput("");
   };
 
@@ -338,7 +247,6 @@ const FlatLyricsGame = ({
           isReading={gameState.isReading}
           onBack={onBack}
         />
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <GameChat
@@ -349,7 +257,6 @@ const FlatLyricsGame = ({
               onChatSubmit={handleChatSubmit}
             />
           </div>
-
           <div>
             <GameScoreboard players={playersWithScores} />
             <GameInfo
@@ -360,7 +267,6 @@ const FlatLyricsGame = ({
             />
           </div>
         </div>
-
         <GameResultModal
           isOpen={showResults}
           players={playersWithScores}
@@ -372,4 +278,3 @@ const FlatLyricsGame = ({
 };
 
 export default FlatLyricsGame;
-
