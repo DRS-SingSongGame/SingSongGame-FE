@@ -18,6 +18,7 @@ export interface Player {
 
 export interface Room {
   roomId: string;
+  name: string;
   players: Player[];
   // Add other room properties if known, e.g., name, status, etc.
 }

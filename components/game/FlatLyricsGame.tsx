@@ -122,8 +122,6 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
       notifyTtsFinished(room.roomId);
     };
   
-      // ✅ TTS 재생이 끝났음을 서버에 알림
-      // notifyTtsFinished();
     
     setAudio(newAudio);
   };
@@ -138,6 +136,14 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
 
   const handleAnswerCorrect = (data: any) => {
     const { playerId, playerName, title, artist, score } = data;
+
+    if (audio) {
+      audio.onended = null;
+      audio.pause();
+      console.log(audio.paused)
+      audio.currentTime = 0;
+      notifyTtsFinished(room.roomId); // TTS 종료 알림
+    }
 
     setGameState((prev) => ({
       ...prev,
@@ -219,6 +225,8 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
 
   const handleChatSubmit = () => {
     if (!chatInput.trim()) return;
+
+    const trimmedMessage = chatInput.trim();
   
     // 유틸 함수로 전송 처리 위임
     sendGameMessage(
@@ -228,6 +236,16 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
       chatInput.trim(),
       true
     );
+
+    fetch(`/api/ai-game/${room.roomId}/answer`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ answer: trimmedMessage }),
+    }).catch((err) => {
+      console.error("❌ 정답 제출 실패:", err);
+    })
   
     setChatInput("");
   };
