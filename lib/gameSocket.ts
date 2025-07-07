@@ -59,6 +59,9 @@ export const connectGameSocket = (
           console.error('[:빨간색_원: JSON 파싱 오류]', e, response.body);
         }
       });
+      stompClient?.subscribe(`/topic/ai-room/${roomId}/game-start`, (response) => {
+        // router.push(`/room/${roomId}/aisonggame/FlatLyricsGame`); // This line was not in the original file, so it's not added.
+      });
       
     },
     onStompError: (error) => {
