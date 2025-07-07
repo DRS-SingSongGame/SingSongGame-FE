@@ -40,7 +40,13 @@ export default function LobbyPage() {
     <GameLobby
       user={user}
       onCreateRoom={() => router.push('/createroom')}
-      onJoinRoom={(room) => router.push(`/room/${room.roomId}`)}
+      onJoinRoom={(room) => {
+        if (room.roomType == "KEY_SING_YOU") {
+          router.push(`/keysingyou_room/${room.roomId}`);
+        } else {
+          router.push(`/room/${room.roomId}`);
+        }
+      }}
       onLogout={async () => {
         await fetch(`/api/auth/logout`, {
           method: "POST",
