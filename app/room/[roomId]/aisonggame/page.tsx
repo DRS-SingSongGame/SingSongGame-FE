@@ -176,7 +176,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
 
   const handleLeaveRoom = async () => {
     try {
-      await api.post(`/api/room/${room.roomId}/leave`);
+      await api.delete(`/api/room/${room.roomId}/leave`);
       router.push('/lobby');
     } catch (error) {
       console.error("방 나가기 실패:", error);
