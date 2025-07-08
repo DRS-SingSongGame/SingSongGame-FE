@@ -4,7 +4,7 @@ let webSocket: Socket | null = null;
 
 export const getSocket = () => {
   if (!webSocket) {
-    webSocket = io(process.env.NEXT_PUBLIC_FASTAPI_ORIGIN!, {
+    webSocket = io("https://singsonggame.store", {
       path: `/fast/socket.io`,
       transports: ["websocket"],
     });
