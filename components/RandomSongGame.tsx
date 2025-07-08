@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from 'framer-motion';
 import api from "@/lib/api";
 import { Button } from "@/components/ui/Button";
+import KeywordSelector from "@/components/KeywordSelector";
 import {
   Card,
   CardContent,
@@ -32,6 +34,7 @@ import {
 import { connectGameSocket, disconnectGameSocket, sendGameMessage } from "@/lib/gameSocket";
 import ChatBox, { ChatMessage } from "./chat/ChatBox";
 import axios from "axios";
+import { PREDEFINED_TAGS } from "@/lib/tags";
 
 interface RandomSongGameProps {
   user: any;
@@ -39,6 +42,20 @@ interface RandomSongGameProps {
   players: any[];
   onBack: () => void;
   onGameEnd: (results: any[]) => void;
+  onGameStart?: () => void; 
+  isAISongGame?: boolean;  
+}
+
+interface GameSessionType {
+  currentRound: number;
+  currentSong?: {
+    title: string;
+    hint: string;
+    audioUrl: string;
+  };
+  roundDuration: number;
+  playerScores: Record<string, number>;
+  winner?: string;
 }
 
 type Phase = "waiting" | "countdown" | "playing" | "final";
@@ -49,9 +66,11 @@ const RandomSongGame = ({
   players,
   onBack,
   onGameEnd,
+  isAISongGame,
+  onGameStart,
 }: RandomSongGameProps) => {
   const [chatMessage, setChatMessage] = useState("");
-  const [gameSession, setGameSession] = useState<any>(null);
+  const [gameSession, setGameSession] = useState<GameSessionType | null>(null);
   const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState<Phase>("waiting"); // Initial phase is waiting
   const [countdown, setCountdown] = useState<number>(0); // Countdown for game start
@@ -59,7 +78,6 @@ const RandomSongGame = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const roundTimerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [isComposing, setIsComposing] = useState(false);
   const [nextRoundCountdown, setNextRoundCountdown] = useState<number>(0); // New state for next round countdown
   const nextRoundIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref for next round interval
   const [hasUserInteractedForAudio, setHasUserInteractedForAudio] =
@@ -69,15 +87,101 @@ const RandomSongGame = ({
     winnerNickname: string;
     correctAnswer: string;
     correctTitle: string;
+    scoreGain: number;
   } | null>(null);
   const currentRoundRef = useRef<number>(0);
   const totalRoundsRef = useRef<number>(0);
   const phaseRef = useRef<Phase>("waiting");
   const router = useRouter();
-  const [gameEndResults, setGameEndResults] = useState<any[]>([]);
+  const [gameEndResults, setGameEndResults] = useState<
+  { userId: string; score: number }[]
+>([]);
   const [showGameEndModal, setShowGameEndModal] = useState(false);
+  const [showNoAnswerModal, setShowNoAnswerModal] = useState(false);
+  const [noAnswerModalContent, setNoAnswerModalContent] = useState<{
+    title: string;
+    subtitle: string;
+  }>({ title: "", subtitle: "" });
+  const [progress, setProgress] = useState(0);
+  const [winnerAnimatedScore, setWinnerAnimatedScore] = useState(0);
+  const isHost = user.id === room.hostId;
+  
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 
 
+  useEffect(() => {
+    if (phase === 'playing') {
+      setTimeout(() => {
+        inputRef.current?.focus(); // ✅ ref가 null 아닌 시점에만
+      }, 100); // 💡 delay를 주면 리렌더 타이밍 문제 해결
+    }
+  }, [phase]);
+
+  // 정답자가 없는 경우 프로그레스바 애니메이션 //
+
+  
+
+  useEffect(() => {
+    if (!showNoAnswerModal) return;
+  
+    let frameId: number;
+    const duration = 2500; // 3초
+    let startTime: number | null = null;
+  
+    const step = (timestamp: number) => {
+      if (startTime === null) startTime = timestamp;
+  
+      const elapsed = timestamp - startTime;
+      const value = Math.min((elapsed / duration) * 100, 100);
+      setProgress(value);
+  
+      if (elapsed < duration) {
+        frameId = requestAnimationFrame(step);
+      }
+    };
+  
+    // 강제 초기화 후 시작
+    setProgress(0);
+    frameId = requestAnimationFrame(step);
+  
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, [showNoAnswerModal]);
+  
+  // 정답자가 없는 경우 프로그레스바 애니메이션 //
+
+
+
+  const handleCloseNoAnswerModal = () => {
+    setShowNoAnswerModal(false);
+    setProgress(0);
+  };
+
+  const winner = players.find(
+    (p) => p.nickname === answerModalData?.winnerNickname
+  );
+  const winnerScore = gameSession?.playerScores?.[winner?.id] ?? 0;
+
+  useEffect(() => {
+  if (showAnswerModal && winnerScore > 0 && winner) {
+    const start = winner.score ?? 0;
+    const end = winnerScore;
+
+    let current = start;
+    const step = Math.ceil((end - start) / 15);
+    const interval = setInterval(() => {
+      current += step;
+      if (current >= end) {
+        current = end;
+        clearInterval(interval);
+      }
+      setWinnerAnimatedScore(current);
+    }, 30);
+  }
+}, [showAnswerModal, winnerScore, winner]);
 
   useEffect(() => {
     setLoading(true);
@@ -92,6 +196,19 @@ const RandomSongGame = ({
         console.error("WebSocket Error:", error);
         setLoading(false);
         // Handle error, e.g., show error message to user
+      },
+      onMessage: (msg) => {
+        // 게임 관련 메시지 처리 (예: 플레이어 목록 업데이트, 게임 상태 변경 등)
+        console.log('Game WebSocket Message:', msg);
+        // 플레이어 목록 업데이트
+        if (msg.type === 'PLAYER_UPDATE') {
+          // 플레이어 정보 업데이트 로직이 필요하다면 여기에 추가
+          console.log('Player update received:', msg.players);
+        }
+        // 채팅 메시지 (게임 내 채팅)
+        else if (msg.messageType === 'TALK' || msg.messageType === 'ENTER' || msg.messageType === 'LEAVE') {
+          setChatMessages((prev) => [...prev, msg]);
+        }
       },
       onGameStartCountdown: (response) => {
         console.log("Game Start Countdown:", response);
@@ -111,6 +228,7 @@ const RandomSongGame = ({
       },
       onRoundStart: (response) => {
         console.log("Round Start:", response);
+        
 
         currentRoundRef.current = response.round;
         totalRoundsRef.current = response.totalRounds;
@@ -163,8 +281,22 @@ const RandomSongGame = ({
           winnerNickname: response.winnerNickname,
           correctAnswer: response.correctAnswer,
           correctTitle: response.correctTitle,
+          scoreGain: response.scoreGain ?? 0,
         });
         setShowAnswerModal(true);
+
+        if (response.updatedScores) {
+          setGameSession((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              playerScores: {
+                ...prev.playerScores,
+                ...response.updatedScores, // 업데이트된 점수 반영
+              },
+            };
+          });
+        }
 
         // Hide modal after 5 seconds (matching backend's ANSWER_REVEAL_DURATION_SECONDS)
         setTimeout(() => {
@@ -189,21 +321,29 @@ const RandomSongGame = ({
         }, 5000);
       },
       
+      onRoundFailed: (data) => {
+        // 예: { title: "아이유 - 너랑 나" }
+        setNoAnswerModalContent({
+          title: "정답자가 없습니다 😢",
+          subtitle: `제목: ${data.title}`,
+        });
+        setShowNoAnswerModal(true);
+      
+        setTimeout(() => {
+          setShowNoAnswerModal(false);
+        }, 3000);
+      },
+
       onGameEnd: (response) => {
         console.log("Game End:", response);
-        setPhase("final");
         if (roundTimerIntervalRef.current) {
           clearInterval(roundTimerIntervalRef.current);
         }
-        // Call onGameEnd prop to handle navigation/results display
+        setGameEndResults(response.finalResults || []);
         setPhase("final");
         setShowGameEndModal(true);
-      // setGameEndResults(response.finalResults || []);
       },
-      onMessage: (msg) => {
-        console.log("📩 받은 채팅 메시지:", msg);
-        setChatMessages((prev) => [...prev, msg]);
-      },
+
     });
 
     return () => {
@@ -262,38 +402,36 @@ const RandomSongGame = ({
     phaseRef.current = phase;
   }, [phase]);
 
-  // 2. 카운트다운 계산 (백엔드 roundStartTime 기준) - This is now handled by WebSocket callback
-  // useEffect(() => {
-  //   if (phase === 'countdown' && gameSession?.roundStartTime) {
-  //     const interval = setInterval(() => {
-  //       const now = Date.now();
-  //       const start = new Date(gameSession.roundStartTime).getTime();
-  //       const left = Math.max(0, 10 - Math.floor((now - start) / 1000));
-  //       setCountdown(left);
-  //     }, 200);
-  //     return () => clearInterval(interval);
-  //   }
-  // }, [phase, gameSession?.roundStartTime]);
+  // players 상태를 내부에서 관리
+  const [playersState, setPlayersState] = useState(players);
+  useEffect(() => {
+    setPlayersState(players);
+  }, [players]);
 
-  // 3. 오디오 자동 재생 - This is now handled by WebSocket callback
-  // useEffect(() => {
-  //   if (phase === 'playing' && audioRef.current && gameSession?.currentSong?.audioUrl) {
-  //     audioRef.current.currentTime = 0;
-  //     audioRef.current.play();
-  //   }
-  // }, [phase, gameSession?.currentSong?.audioUrl]);
+  // 대기실에서만 2초마다 플레이어 목록 새로고침
+  useEffect(() => {
+    if (phase !== 'waiting') return;
+    const fetchPlayers = async () => {
+      try {
+        const res = await api.get(`/api/room/${room.roomId}`);
+        setPlayersState((res.data as any).data.players);
+      } catch (e) {}
+    };
+    const interval = setInterval(fetchPlayers, 2000);
+    return () => clearInterval(interval);
+  }, [phase, room.roomId]);
 
   // 4. 정답 제출
-  const handleSendMessage = async () => {
-    const trimmed = chatMessage.trim();
+  const handleSendMessage = async (message: string) => {
+    const trimmed = message.trim();
     if (!trimmed) return;
   
     console.log("📝 입력된 메시지:", trimmed);
   
-    // 1. 채팅 메시지 전송
+    // 1. 채팅 메시지 전송 (웹소켓)
     sendGameMessage(room.roomId, user.id, user.nickname, trimmed);
   
-    // 2. 정답 제출
+    // 2. 정답 제출 (HTTP API)
     if (phase === "playing") {
       try {
         await api.post(`/api/game-session/${room.roomId}/answer`, {
@@ -311,10 +449,23 @@ const RandomSongGame = ({
         }
       }
     }
-  
-    setChatMessage("");
   };
   
+  
+  const handleLeaveRoom = async () => {
+    // TODO: 백엔드에 방 나가기 요청 (HTTP)
+
+    //router.push('/lobby');
+
+    try {
+      await api.delete(`/api/room/${room.roomId}/leave`);
+      router.push('/lobby');
+    } catch (error) {
+      alert('방 나가기에 실패했습니다.');
+      router.push('/lobby');
+    }
+
+  };
   
 
   const handlePlayAudio = () => {
@@ -333,14 +484,21 @@ const RandomSongGame = ({
 
   const handleStartGame = async () => {
     console.log("Attempting to start game...");
+  
+    // id → name 매핑
+    const keywordNames = selectedTagIds
+      .map((id) => PREDEFINED_TAGS.find((tag) => tag.id === id)?.name)
+      .filter((name): name is string => !!name); // string[] 보장
+  
     try {
-      // This API call initiates the game on the backend, which then sends WebSocket messages
-      await api.post(`/api/game-session/${room.roomId}/start`);
+      await api.post(`/api/game-session/${room.roomId}/start`, {
+        keywords: keywordNames,
+      });
       console.log("Game start API call successful.");
-      setLoading(false); // Assuming game start will lead to WebSocket updates
+      setLoading(false);
     } catch (error) {
       console.error("Failed to start game:", error);
-      // Handle error, e.g., show a toast
+      // TODO: 에러 처리 (토스트 등)
     }
   };
 
@@ -349,11 +507,12 @@ const RandomSongGame = ({
   // phase별 화면
   if (phase === "waiting") {
     return (
-      <div className="min-h-screen p-4 bg-gradient-to-br from-cyan-400 via-blue-500 via-purple-500 to-pink-500">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen p-4 bg-gradient-to-br from-cyan-400 via-blue-500 via-purple-500 to-pink-500 flex flex-col">
+        <div className="max-w-4xl mx-auto flex-1">
           <Button
             variant="outline"
-            onClick={onBack}
+            //onClick={onBack}
+            onClick={handleLeaveRoom}
             className="mb-4 bg-white/90 backdrop-blur-sm"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -362,15 +521,17 @@ const RandomSongGame = ({
           <Card className="bg-white/90 backdrop-blur-sm">
             <CardHeader className="text-center">
               <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-                🎵 랜덤 노래 맞추기
+                {isAISongGame ? "🤖 AI 노래 맞추기" : "🎵 랜덤 노래 맞추기"}
               </CardTitle>
               <CardDescription className="text-lg">
-                노래를 듣고 제목을 가장 빨리 맞춰보세요!
+                {isAISongGame
+                  ? "AI가 부른 노래를 듣고 제목을 맞춰보세요!"
+                  : "노래를 듣고 제목을 가장 빨리 맞춰보세요!"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {players.map((player) => (
+                {playersState.map((player) => (
                   <div
                     key={player.id}
                     className="text-center p-4 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200"
@@ -380,22 +541,100 @@ const RandomSongGame = ({
                       <AvatarFallback>{player.nickname[0]}</AvatarFallback>
                     </Avatar>
                     <h3 className="font-semibold">{player.nickname}</h3>
-                    <Badge className="mt-1 bg-blue-500">
-                      점수: {player.score}점
-                    </Badge>
+
                   </div>
                 ))}
               </div>
-              <div className="text-center">
-                <Button
-                  onClick={handleStartGame}
-                  size="lg"
-                  className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 text-white font-bold text-xl px-12 py-6"
-                >
-                  <Play className="w-6 h-6 mr-3" />
-                  게임 시작!
-                </Button>
-              </div>
+              {phase === "waiting" && (
+                <div className="text-center">
+                  {isHost ? (
+                    <Button
+                    onClick={handleStartGame}
+                    disabled={selectedTagIds.length === 0} // 최소 1개 선택되어야 버튼 활성화
+                    size="lg"
+                    className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 text-white font-bold text-xl px-12 py-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Play className="w-6 h-6 mr-3" />
+                    게임 시작!
+                  </Button>
+                   ) : ( 
+                    <p className="text-lg font-semibold text-black/90 mt-4">
+                      ⏳ 방장이 게임을 시작할 때까지 기다려주세요...
+                    </p>
+                   )} 
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        {isHost && (
+          <div className="max-w-4xl mx-auto w-full mt-6">
+            <Card className="bg-white/90 backdrop-blur-sm p-4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-semibold text-gray-800">
+                  🎯 키워드 최대 3개를 선택하세요
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+              <KeywordSelector
+                tags={PREDEFINED_TAGS}
+                selected={selectedTagIds}
+                onChange={setSelectedTagIds}
+              />
+                <div className="text-center">
+                  {/* <Button
+                    disabled={selectedTagIds.length === 0}
+                    onClick={() => {
+                      console.log("선택된 키워드 ID:", selectedTagIds);
+                      // TODO: 이 키워드를 백엔드에 보내는 로직 추가 예정
+                    }}
+                    className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 text-white px-6 py-3 rounded-lg font-semibold"
+                  >
+                    🎮 키워드로 게임 시작
+                  </Button> */}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        {!isHost && selectedTagIds.length > 0 && (
+          <div className="max-w-4xl mx-auto w-full mt-6">
+            <Card className="bg-white/80 backdrop-blur-sm p-4">
+              <CardHeader>
+                <CardTitle className="text-md font-semibold text-gray-700">
+                  선택된 키워드
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex gap-2 flex-wrap">
+                {selectedTagIds.map((id) => {
+                  const tag = PREDEFINED_TAGS.find((t) => t.id === id);
+                  return (
+                    <span
+                      key={id}
+                      className="px-3 py-1 bg-purple-200 text-purple-800 rounded-full text-sm"
+                    >
+                      #{tag?.name}
+                    </span>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        <div className="max-w-4xl mx-auto w-full mt-6">
+          <Card className="bg-white/90 backdrop-blur-sm flex flex-col">
+            <CardHeader>
+              <CardTitle className="text-pink-700">채팅</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col flex-1">
+              <ChatBox
+                user={user}
+                messages={chatMessages}
+                onSend={handleSendMessage}
+                autoScrollToBottom={true}
+                chatType="room"
+              />
             </CardContent>
           </Card>
         </div>
@@ -493,7 +732,7 @@ const RandomSongGame = ({
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {players
+                  {playersState
                     .map((player) => ({
                       ...player,
                       score: gameSession?.playerScores?.[player.id] || 0,
@@ -527,32 +766,20 @@ const RandomSongGame = ({
               </CardContent>
             </Card>
             <div className="lg:col-span-2">
-            <Card className="bg-white/90 backdrop-blur-sm flex-1 flex flex-col">
-              <CardHeader>
-                <CardTitle className="text-pink-700">채팅</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col flex-1">
-                <div className="flex-1 overflow-y-auto">
-                  <ChatBox user={user} messages={chatMessages} autoScrollToBottom={true} hideInput={true} />
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <Input
-                    placeholder="메시지를 입력하세요..."
-                    value={chatMessage}
-                    onChange={(e) => setChatMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isComposing) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    onCompositionStart={() => setIsComposing(true)}
-                    onCompositionEnd={() => setIsComposing(false)}
+              <Card className="bg-white/90 backdrop-blur-sm flex-1 flex flex-col">
+                <CardHeader>
+                  <CardTitle className="text-pink-700">게임 채팅</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col flex-1">
+                  <ChatBox 
+                    user={user} 
+                    messages={chatMessages} 
+                    onSend={handleSendMessage} 
+                    autoScrollToBottom={true} 
+                    chatType="room" 
                   />
-                  <Button onClick={handleSendMessage}>전송</Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
             </div>
           </div>
           {/* Audio element is controlled by ref and WebSocket updates */}
@@ -560,35 +787,96 @@ const RandomSongGame = ({
         </div>
         {showAnswerModal && answerModalData && (
           <Dialog open={showAnswerModal} onOpenChange={setShowAnswerModal}>
-            <DialogContent
-              className="sm:max-w-[425px] text-center"
-              aria-describedby="answer-modal-description"
+          <DialogContent className="sm:max-w-[425px] text-center">
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.4 }}
+              className="flex flex-col items-center"
             >
-              <DialogHeader>
-                <DialogTitle>
-                  <span className="text-3xl font-bold text-green-600">
-                    🎉 정답입니다! 🎉
-                  </span>
-                </DialogTitle>
-                <p
-                  id="answer-modal-description"
-                  className="text-lg text-gray-700"
-                >
-                  <span className="font-semibold">
-                    {answerModalData.winnerNickname}
-                  </span>
-                  님이 정답을 맞췄습니다!
-                </p>
-              </DialogHeader>
-              <div className="text-2xl font-bold text-blue-700 mt-4">
-                정답: {answerModalData.correctTitle}
+              <div className="text-4xl font-bold text-green-600 mb-2">
+                🎉 정답입니다!
               </div>
-              <p className="text-sm text-gray-500 mt-2">
-                다음 라운드로 이동 중...
-              </p>
-            </DialogContent>
-          </Dialog>
+              {winner && (
+                <div className="flex flex-col items-center gap-2">
+                  <Avatar className="w-20 h-20">
+                    <AvatarImage src={winner.avatar} />
+                    <AvatarFallback>{winner.nickname[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="text-xl font-semibold text-purple-800">
+                    {winner.nickname} 님이 정답을 맞췄어요!
+                  </div>
+                  <div className="flex flex-col items-center gap-2 relative">
+                    <motion.div
+                      key="score-change"
+                      initial={{ opacity: 1, y: 0, scale: 1 }}
+                      animate={{ opacity: 0, y: -40, scale: 1.3 }}
+                      transition={{ duration: 2.0, ease: "easeOut" }}
+                      className="absolute -top-8 ml-[150px] text-xl font-bold text-yellow-400 drop-shadow-md z-10"
+                    >
+                      +{answerModalData?.scoreGain ?? 0}점!
+                    </motion.div>
+
+                    <div className="text-2xl font-bold text-blue-700">
+                      현재 점수:{" "}
+                      <motion.span
+                        key={winnerAnimatedScore}
+                        initial={{ y: 10, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ duration: 0.4 }}
+                        className="inline-block"
+                      >
+                        {winnerAnimatedScore}점
+                      </motion.span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="mt-4 text-lg text-gray-700">
+                정답: "{answerModalData?.correctTitle}"
+              </div>
+              <p className="text-sm text-gray-500 mt-2">다음 라운드로 이동 중...</p>
+            </motion.div>
+          </DialogContent>
+        </Dialog>        
         )}
+        {showNoAnswerModal && (
+      <Dialog open={showNoAnswerModal} onOpenChange={handleCloseNoAnswerModal}>
+      <DialogContent className="sm:max-w-[425px] text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <motion.div
+            className="text-4xl mb-2"
+            animate={{ y: [0, -5, 0] }}
+            transition={{
+              duration: 1,
+              repeat: Infinity,
+              repeatType: "loop",
+              ease: "easeInOut",
+            }}
+          >
+            😢
+          </motion.div>
+          <h2 className="text-xl font-bold text-red-600">정답자가 없습니다!</h2>
+          <p className="text-md text-gray-600 mt-2">
+            정답: "<span className="text-blue-600 font-semibold">{noAnswerModalContent.subtitle}</span>"
+          </p>
+    
+          {/* ⏳ 3초 Progress Bar */}
+          <div className="mt-6">
+              {/* <Progress
+                value={progress}
+                className="h-2 transition-[width] duration-200 ease-out rounded-full"
+              /> */}
+            <p className="text-sm text-gray-500 mt-1">3초 후 다음 라운드로 이동합니다...</p>
+          </div>
+        </motion.div>
+      </DialogContent>
+    </Dialog>
+    )}
       </div>
     );
   }
@@ -598,25 +886,71 @@ const RandomSongGame = ({
       {/* 기존 게임 화면 (waiting / countdown / playing 등) 렌더링 */}
   
       {/* 🎉 게임 종료 모달 */}
-      <Dialog open={phase === "final"} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-[425px] text-center">
-          <DialogHeader>
-            <DialogTitle>
-              <span className="text-3xl font-bold text-purple-600">
-                🎉 게임 종료 🎉
-              </span>
-            </DialogTitle>
-            <p className="text-gray-700 mt-4">게임이 종료되었습니다!</p>
-            <p className="text-sm text-gray-500">추후에 결과 기능이 추가될 예정입니다.</p>
-          </DialogHeader>
-          <div className="mt-6 flex gap-4 justify-center">
-            <Button onClick={() => router.push("/lobby")}>로비로 이동</Button>
-            <Button variant="secondary" onClick={() => router.push(`/room/${room.roomId}`)}>
-              대기방으로 이동
-            </Button>
-          </div>
+      <Dialog open={phase === "final"}>
+        <DialogContent className="sm:max-w-[500px] text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <div className="text-4xl font-bold text-purple-600">🎉 게임 종료 🎉</div>
+            <p className="text-gray-600 mt-2">최종 순위를 확인하세요!</p>
+
+            <ul className="mt-6 space-y-3">
+              {gameEndResults
+                .sort((a, b) => b.score - a.score)
+                .map((result, index) => {
+                  const player = playersState.find((p) => p.id === result.userId);
+                  if (!player) return null;
+
+                  const isFirst = index === 0;
+
+                  return (
+                    <li
+                      key={player.id}
+                      className={`flex items-center justify-between bg-white border rounded-xl p-3 shadow-sm ${
+                        isFirst ? "border-yellow-400 bg-yellow-50" : "bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={player.avatar} />
+                          <AvatarFallback>{player.nickname[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="text-left">
+                          <div className="font-semibold text-gray-800">
+                            #{index + 1} {player.nickname}
+                            {isFirst && <span className="ml-2 text-yellow-500">🥇</span>}
+                          </div>
+                          {/* 정답 수 등을 표시하고 싶다면 여기에 */}
+                        </div>
+                      </div>
+                      <div className="text-blue-600 font-bold text-lg">
+                        {result.score}점
+                      </div>
+                    </li>
+                  );
+                })}
+            </ul>
+
+            <div className="mt-6 flex gap-3 justify-center">
+              {/* <Button onClick={() => router.push("/lobby")}>:house: 로비로</Button> */}
+              <Button onClick={handleLeaveRoom}>로비로 이동</Button>
+              <Button variant="secondary" onClick={() => {
+                // 💡 모든 상태를 초기화하고 waiting phase로 돌입
+                setPhase("waiting");
+                setGameSession(null); // 이전 세션 제거
+                setWinnerAnimatedScore(0);
+                setAnswerModalData(null);
+                setChatMessages([]);  // (선택) 채팅 비우기
+              }}>
+                🔁 다시 하기
+              </Button>
+            </div>
+          </motion.div>
         </DialogContent>
       </Dialog>
+
     </div>
   );
   

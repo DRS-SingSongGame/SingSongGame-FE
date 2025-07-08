@@ -2,17 +2,19 @@
 
 import useRooms from '@/hooks/useRoom'; 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogTrigger } from '@/components/ui/dialog';
-import { Search, RefreshCw, LogOut, Settings, Zap, Play, X } from 'lucide-react';
+import { Search, RefreshCw, LogOut, Settings, Zap, Play, ArrowLeft, VolumeX, Volume2 } from 'lucide-react';
 import { useJoinRoom } from '@/hooks/useJoinRoom';
 import ChatBox from '@/components/chat/ChatBox';
 import { connectLobbySocket, disconnectLobbySocket, sendLobbyMessage } from '@/lib/lobbySocket';
+import SettingsModal from "./SettingsModal";
+import BGMPlayer from "./BGMPlayer";
 
 export interface ChatMessage {
   id: number;
@@ -50,7 +52,17 @@ const getGameModeLabel = (mode: string) => {
   }
 };
 
+const getGamePath = (roomId: string, roomType: string) => {
+  switch (roomType) {
+    case 'RANDOM_SONG': return `/room/${roomId}/randomsonggame`;
+    case 'KEY_SING_YOU': return `/room/${roomId}/keysingyougame`;
+    case 'PLAIN_SONG': return `/room/${roomId}/aisonggame`;
+    default: return `/room/${roomId}`;
+  }
+};
+
 const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps) => {
+  const router = useRouter();
   const { mutate: joinRoom, isLoading: joining } = useJoinRoom();
   const [searchTerm, setSearchTerm] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([{
@@ -63,6 +75,19 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     timestamp: new Date().toISOString(),
     time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
   }]);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [settings, setSettings] = useState({
+    standardFilter: true,
+    bgmVolume: 50,
+    effectVolume: 50,
+    bgmType: "acoustic",
+    autoReady: false,
+    shakeEffect: true,
+  });
+  const [isBgmPlaying, setIsBgmPlaying] = useState(true);
+
+  const handleBgmPlay = () => setIsBgmPlaying(true);
+  const handleBgmPause = () => setIsBgmPlaying(false);
 
   useEffect(() => {
     connectLobbySocket(user.id, user.nickname, (msg: ChatMessage) => {
@@ -78,8 +103,6 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
   };
 
   const { rooms, loading, refetch } = useRooms();
-  const [selectedRoom, setSelectedRoom] = useState<any>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -95,8 +118,48 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
 
   const handleQuickMatch = () => console.log('Quick match started');
 
+  const handleRoomClick = (room: any) => {
+    // 방에 바로 입장하고 게임 페이지로 이동
+    joinRoom(
+      {
+        roomId: room.roomId,
+        password: room.isPrivate ? prompt('비밀번호를 입력하세요') ?? undefined : undefined
+      },
+      {
+        onSuccess: () => {
+          const gamePath = getGamePath(room.roomId, room.roomType);
+          if (room.roomType == "KEY_SING_YOU") {
+            router.push(`/keysingyou_room/${room.roomId}`);
+          } else {
+            router.push(gamePath);
+          }
+        },
+        onError: (error) => {
+          alert('방 참여 실패');
+          console.error(error);
+        }
+      }
+    );
+  };
+
+  const handleSettingsSave = (newSettings: any) => {
+    setSettings(newSettings);
+    setIsSettingsModalOpen(false);
+  };
+
+  // 로비 진입 시 BGM 자동 재생
+  useEffect(() => {
+    // 컴포넌트가 마운트되면 즉시 BGM 재생
+    const timer = setTimeout(() => {
+      setIsBgmPlaying(true);
+    }, 100); // 약간의 지연을 두어 컴포넌트가 완전히 마운트된 후 재생
+    
+    return () => clearTimeout(timer);
+  }, []); // 빈 의존성 배열로 컴포넌트 마운트 시 한 번만 실행
+
   return (
     <div className="min-h-screen py-4 px-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 overflow-y-auto">
+      <BGMPlayer bgmVolume={settings.bgmVolume} isPlaying={isBgmPlaying} setIsPlaying={setIsBgmPlaying} />
       <div className="max-w-screen-2xl mx-auto grid grid-cols-3 gap-4">
         <div className="col-span-2 space-y-3">
           <Card className="bg-white/90 backdrop-blur-sm">
@@ -111,66 +174,29 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[430px]">
-                {loading ? (
-                  <div className="text-center text-sm text-gray-500">방 목록 불러오는 중...</div>
-                ) : (
                   <div className="grid grid-cols-2 gap-3">
                     {filteredRooms.map((room) => (
-                      <Dialog key={room.roomId} open={selectedRoom?.roomId === room.roomId && isDialogOpen} onOpenChange={(open) => { setSelectedRoom(open ? room : null); setIsDialogOpen(open); }}>
-                        <DialogTrigger asChild>
-                          <Card className="cursor-pointer h-[130px]">
-                            <CardContent className="p-4">
-                              <div className="flex justify-between items-start mb-2">
-                                <h3 className="font-semibold text-base truncate whitespace-nowrap overflow-hidden max-w-[50%]">{room.roomName}</h3>
-                                <div className="flex items-center gap-2">
-                                  {room.isPrivate && <Badge variant="secondary">🔒</Badge>}
-                                  <Badge className={getGameModeColor(room.roomType)}>{getGameModeLabel(room.roomType)}</Badge>
-                                </div>
-                              </div>
-                              <div className="flex justify-between items-center text-sm text-gray-500 mb-1">
-                                <span>{1} / {room.maxPlayer}</span>
-                                <span>방장: {room.hostName}</span>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>방 정보</DialogTitle>
-                            <DialogClose asChild>
-                              <Button variant="ghost" className="absolute right-2 top-2"><X className="w-4 h-4" /></Button>
-                            </DialogClose>
-                          </DialogHeader>
-                          <div className="flex flex-col gap-2">
-                            <p><strong>방 이름:</strong> {room.roomName}</p>
-                            <p><strong>게임 종류:</strong> {getGameModeLabel(room.roomType)}</p>
-                            <Button
-                              disabled={joining}
-                              onClick={() => {
-                                joinRoom(
-                                  {
-                                    roomId: room.roomId,
-                                    password: room.isPrivate ? prompt('비밀번호를 입력하세요') ?? undefined : undefined
-                                  },
-                                  {
-                                    onSuccess: () => { onJoinRoom(room); },
-                                    onError: (error) => {
-                                      alert('방 참여 실패');
-                                      console.error(error);
-                                    }
-                                  }
-                                );
-                              }}
-                              className="w-full text-lg py-2 bg-gradient-to-r from-green-400 to-green-600 text-white mt-2 disabled:opacity-50"
-                            >
-                              {joining ? '참여 중...' : '참여하기'}
-                            </Button>
+                      <Card 
+                        key={room.roomId} 
+                        className="cursor-pointer h-[130px] hover:shadow-lg transition-shadow"
+                        onClick={() => handleRoomClick(room)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-semibold text-base truncate whitespace-nowrap overflow-hidden max-w-[50%]">{room.roomName}</h3>
+                            <div className="flex items-center gap-2">
+                              {room.isPrivate && <Badge variant="secondary">🔒</Badge>}
+                              <Badge className={getGameModeColor(room.roomType)}>{getGameModeLabel(room.roomType)}</Badge>
+                            </div>
                           </div>
-                        </DialogContent>
-                      </Dialog>
+                          <div className="flex justify-between items-center text-sm text-gray-500 mb-1">
+                            <span>{1} / {room.maxPlayer}</span>
+                            <span>방장: {room.hostName}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
-                )}
               </ScrollArea>
             </CardContent>
           </Card>
@@ -194,7 +220,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1"><Settings className="w-4 h-4 mr-2" /> 설정</Button>
+                <Button variant="outline" size="sm" onClick={() => setIsSettingsModalOpen(true)}><Settings className="w-4 h-4 mr-2" /> 설정</Button>
                 <Button variant="outline" size="sm" onClick={onLogout}><LogOut className="w-4 h-4 mr-2" /> 로그아웃</Button>
               </div>
             </CardContent>
@@ -223,6 +249,40 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
       <div className="mt-4">
         <ChatBox user={user} messages={chatMessages} onSend={handleSendMessage} autoScrollToBottom={true} chatType="lobby" />
       </div>
+
+      {/* 화면 오른쪽 하단 음악 제어 버튼 */}
+      <div className="fixed bottom-4 right-4 z-40">
+        {isBgmPlaying ? (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleBgmPause}
+            className="bg-red-50 border-red-200 text-red-600 hover:bg-red-100 opacity-30 hover:opacity-100 text-xs px-2 py-1 h-6 shadow-lg"
+          >
+            <VolumeX className="w-3 h-3 mr-1" /> 끄기
+          </Button>
+        ) : (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleBgmPlay}
+            className="bg-green-50 border-green-200 text-green-600 hover:bg-green-100 opacity-30 hover:opacity-100 text-xs px-2 py-1 h-6 shadow-lg"
+          >
+            <Volume2 className="w-3 h-3 mr-1" /> 켜기
+          </Button>
+        )}
+      </div>
+
+      {isSettingsModalOpen && (
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          onSave={handleSettingsSave}
+          isPlaying={isBgmPlaying}
+          onPlay={handleBgmPlay}
+          onPause={handleBgmPause}
+        />
+      )}
     </div>
   );
 };
