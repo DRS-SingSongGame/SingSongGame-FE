@@ -14,6 +14,7 @@ import { useJoinRoom } from '@/hooks/useJoinRoom';
 import ChatBox from '@/components/chat/ChatBox';
 import { connectLobbySocket, disconnectLobbySocket, sendLobbyMessage } from '@/lib/lobbySocket';
 import SettingsModal from "./SettingsModal";
+import BGMPlayer from "./BGMPlayer";
 
 export interface ChatMessage {
   id: number;
@@ -83,6 +84,10 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     autoReady: false,
     shakeEffect: true,
   });
+  const [isBgmPlaying, setIsBgmPlaying] = useState(true);
+
+  const handleBgmPlay = () => setIsBgmPlaying(true);
+  const handleBgmPause = () => setIsBgmPlaying(false);
 
   useEffect(() => {
     connectLobbySocket(user.id, user.nickname, (msg: ChatMessage) => {
@@ -144,6 +149,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
 
   return (
     <div className="min-h-screen py-4 px-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 overflow-y-auto">
+      <BGMPlayer bgmVolume={settings.bgmVolume} isPlaying={isBgmPlaying} setIsPlaying={setIsBgmPlaying} />
       <div className="max-w-screen-2xl mx-auto grid grid-cols-3 gap-4">
         <div className="col-span-2 space-y-3">
           <Card className="bg-white/90 backdrop-blur-sm">
@@ -239,6 +245,9 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
           isOpen={isSettingsModalOpen}
           onClose={() => setIsSettingsModalOpen(false)}
           onSave={handleSettingsSave}
+          isPlaying={isBgmPlaying}
+          onPlay={handleBgmPlay}
+          onPause={handleBgmPause}
         />
       )}
     </div>
