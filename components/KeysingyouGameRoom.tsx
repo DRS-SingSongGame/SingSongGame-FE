@@ -288,11 +288,11 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
   const isHost = users.find((u) => u.nickname === nickname)?.isHost;
 
   /* ───── 채팅 보내기 ───── */
-  function sendChat() {
-    if (!chatInput.trim()) return;
+  function sendChat(msg: string) {
+    if (!msg.trim()) return;
     socket.current?.emit("room_chat", {
       roomId,
-      message: `${nickname}: ${chatInput}`,
+      message: `${nickname}: ${msg.trim()}`,
     });
     setChatInput("");
   }
@@ -357,7 +357,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter" && !isComposing) sendChat();
+                          if (e.key === "Enter" && !isComposing) sendChat(chatInput);
                         }}
                         onCompositionStart={() => setIsComposing(true)}
                         onCompositionEnd={() => setIsComposing(false)}
@@ -366,7 +366,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                         style={{boxShadow: 'none'}}
                       />
                       <button
-                        onClick={sendChat}
+                        onClick={() => sendChat(chatInput)}
                         className="rounded-xl bg-[#1439e4] hover:bg-[#102db3] text-white font-bold text-base px-8 py-3 transition-colors"
                         style={{minWidth: '90px'}}
                       >
@@ -453,7 +453,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
         return (
           <div className="text-center space-y-8">
             <div className="text-6xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent animate-bounce">
-              🎤
+              ��
             </div>
             <div className="space-y-4">
               <h2 className="text-3xl font-bold text-gray-900">게임 시작!</h2>
