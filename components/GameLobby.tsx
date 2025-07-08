@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, RefreshCw, LogOut, Settings, Zap, Play, ArrowLeft } from 'lucide-react';
+import { Search, RefreshCw, LogOut, Settings, Zap, Play, ArrowLeft, VolumeX, Volume2 } from 'lucide-react';
 import { useJoinRoom } from '@/hooks/useJoinRoom';
 import ChatBox from '@/components/chat/ChatBox';
 import { connectLobbySocket, disconnectLobbySocket, sendLobbyMessage } from '@/lib/lobbySocket';
@@ -147,6 +147,16 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     setIsSettingsModalOpen(false);
   };
 
+  // 로비 진입 시 BGM 자동 재생
+  useEffect(() => {
+    // 컴포넌트가 마운트되면 즉시 BGM 재생
+    const timer = setTimeout(() => {
+      setIsBgmPlaying(true);
+    }, 100); // 약간의 지연을 두어 컴포넌트가 완전히 마운트된 후 재생
+    
+    return () => clearTimeout(timer);
+  }, []); // 빈 의존성 배열로 컴포넌트 마운트 시 한 번만 실행
+
   return (
     <div className="min-h-screen py-4 px-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 overflow-y-auto">
       <BGMPlayer bgmVolume={settings.bgmVolume} isPlaying={isBgmPlaying} setIsPlaying={setIsBgmPlaying} />
@@ -238,6 +248,29 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
 
       <div className="mt-4">
         <ChatBox user={user} messages={chatMessages} onSend={handleSendMessage} autoScrollToBottom={true} chatType="lobby" />
+      </div>
+
+      {/* 화면 오른쪽 하단 음악 제어 버튼 */}
+      <div className="fixed bottom-4 right-4 z-40">
+        {isBgmPlaying ? (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleBgmPause}
+            className="bg-red-50 border-red-200 text-red-600 hover:bg-red-100 opacity-30 hover:opacity-100 text-xs px-2 py-1 h-6 shadow-lg"
+          >
+            <VolumeX className="w-3 h-3 mr-1" /> 끄기
+          </Button>
+        ) : (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleBgmPlay}
+            className="bg-green-50 border-green-200 text-green-600 hover:bg-green-100 opacity-30 hover:opacity-100 text-xs px-2 py-1 h-6 shadow-lg"
+          >
+            <Volume2 className="w-3 h-3 mr-1" /> 켜기
+          </Button>
+        )}
       </div>
 
       {isSettingsModalOpen && (

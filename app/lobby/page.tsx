@@ -32,7 +32,6 @@ export default function LobbyPage() {
   
     checkLogin();
   }, []);
-  
 
   if (!user) return null; // 초기 렌더 방지
 

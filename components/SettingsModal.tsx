@@ -126,4 +126,4 @@ export default function SettingsModal({ isOpen, onClose, onSave, isPlaying, onPl
       </div>
     </div>
   );
-} 
+}
