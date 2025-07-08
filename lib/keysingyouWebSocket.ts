@@ -4,7 +4,7 @@ let webSocket: Socket | null = null;
 
 export const getSocket = () => {
   if (!webSocket) {
-    webSocket = io("https://singsonggame.store", {
+    webSocket = io("wss://singsonggame.store", {
       path: `/fast/socket.io`,
       transports: ["websocket"],
     });
