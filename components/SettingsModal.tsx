@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 const musicOptions = [
   { value: "acoustic", label: "어쿠스틱" },
-  { value: "jazz", label: "재즈" },
+  { value: "jazz", label: "기본음악" },
   { value: "pop", label: "팝" },
 ];
 
