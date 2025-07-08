@@ -13,6 +13,8 @@ import { Search, RefreshCw, LogOut, Settings, Zap, Play, ArrowLeft } from 'lucid
 import { useJoinRoom } from '@/hooks/useJoinRoom';
 import ChatBox from '@/components/chat/ChatBox';
 import { connectLobbySocket, disconnectLobbySocket, sendLobbyMessage } from '@/lib/lobbySocket';
+import SettingsModal from "./SettingsModal";
+import BGMPlayer from "./BGMPlayer";
 
 export interface ChatMessage {
   id: number;
@@ -73,6 +75,19 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     timestamp: new Date().toISOString(),
     time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
   }]);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [settings, setSettings] = useState({
+    standardFilter: true,
+    bgmVolume: 50,
+    effectVolume: 50,
+    bgmType: "acoustic",
+    autoReady: false,
+    shakeEffect: true,
+  });
+  const [isBgmPlaying, setIsBgmPlaying] = useState(true);
+
+  const handleBgmPlay = () => setIsBgmPlaying(true);
+  const handleBgmPause = () => setIsBgmPlaying(false);
 
   useEffect(() => {
     connectLobbySocket(user.id, user.nickname, (msg: ChatMessage) => {
@@ -127,8 +142,14 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     );
   };
 
+  const handleSettingsSave = (newSettings: any) => {
+    setSettings(newSettings);
+    setIsSettingsModalOpen(false);
+  };
+
   return (
     <div className="min-h-screen py-4 px-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 overflow-y-auto">
+      <BGMPlayer bgmVolume={settings.bgmVolume} isPlaying={isBgmPlaying} setIsPlaying={setIsBgmPlaying} />
       <div className="max-w-screen-2xl mx-auto grid grid-cols-3 gap-4">
         <div className="col-span-2 space-y-3">
           <Card className="bg-white/90 backdrop-blur-sm">
@@ -189,7 +210,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1"><Settings className="w-4 h-4 mr-2" /> 설정</Button>
+                <Button variant="outline" size="sm" onClick={() => setIsSettingsModalOpen(true)}><Settings className="w-4 h-4 mr-2" /> 설정</Button>
                 <Button variant="outline" size="sm" onClick={onLogout}><LogOut className="w-4 h-4 mr-2" /> 로그아웃</Button>
               </div>
             </CardContent>
@@ -218,6 +239,17 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
       <div className="mt-4">
         <ChatBox user={user} messages={chatMessages} onSend={handleSendMessage} autoScrollToBottom={true} chatType="lobby" />
       </div>
+
+      {isSettingsModalOpen && (
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          onSave={handleSettingsSave}
+          isPlaying={isBgmPlaying}
+          onPlay={handleBgmPlay}
+          onPause={handleBgmPause}
+        />
+      )}
     </div>
   );
 };

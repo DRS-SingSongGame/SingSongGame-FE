@@ -1,8 +1,8 @@
-import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/Progress';
-import { ArrowLeft, Volume2 } from 'lucide-react';
+import { Button } from "@/components/ui/Button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/Progress";
+import { ArrowLeft, Volume2 } from "lucide-react";
 
 interface GameHeaderProps {
   currentRound: number;
@@ -10,9 +10,17 @@ interface GameHeaderProps {
   timeLeft: number;
   isReading: boolean;
   onBack: () => void;
+  hintText: string | null;
 }
 
-const GameHeader = ({ currentRound, totalRounds, timeLeft, isReading, onBack }: GameHeaderProps) => {
+const GameHeader = ({
+  currentRound,
+  totalRounds,
+  timeLeft,
+  isReading,
+  onBack,
+  hintText
+}: GameHeaderProps) => {
   return (
     <div className="mb-6">
       <Button variant="outline" onClick={onBack} className="mb-4">
@@ -33,19 +41,21 @@ const GameHeader = ({ currentRound, totalRounds, timeLeft, isReading, onBack }: 
                 <div className="flex items-center gap-2">
                   <Volume2 className="w-4 h-4" />
                   <span className="text-sm">
-                    {isReading ? 'TTS 읽는 중...' : '대기 중'}
+                    {isReading ? "TTS 읽는 중..." : "대기 중"}
                   </span>
                 </div>
               </div>
+              <div className="mt-2">
+                  <Badge variant="secondary" className="text-base px-3 py-1">
+                    힌트: {hintText}
+                  </Badge>
+                </div>
             </div>
             <div className="text-right">
               <div className="text-3xl font-bold text-blue-600">
                 {timeLeft}초
               </div>
-              <Progress 
-                value={(timeLeft / 60) * 100} 
-                className="w-32 mt-2"
-              />
+              <Progress value={(timeLeft / 60) * 100} className="w-32 mt-2" />
             </div>
           </div>
         </CardHeader>
