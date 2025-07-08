@@ -22,7 +22,7 @@
     messages: ChatMessage[];
     onSend?: (message: string) => void;
     autoScrollToBottom?: boolean;
-    chatType?: "lobby" | "room";
+    chatType?: "lobby" | "room" | "game";
     hideInput?: boolean;
   }
 
@@ -55,7 +55,7 @@
     return (
       <Card className="bg-white/90 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>{chatType === "room" ? "방 채팅" : "로비 채팅"}</CardTitle>
+          <div className="text-3xl font-extrabold text-black mb-4 text-left">{chatType === "room" ? "방 채팅" : chatType === "game" ? "게임 채팅" : "로비 채팅"}</div>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[200px] mb-2 pr-2">
