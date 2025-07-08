@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { motion } from 'framer-motion';
 import api from "@/lib/api";
 import { Button } from "@/components/ui/Button";
+import KeywordSelector from "@/components/KeywordSelector";
 import {
   Card,
   CardContent,
@@ -33,6 +34,7 @@ import {
 import { connectGameSocket, disconnectGameSocket, sendGameMessage } from "@/lib/gameSocket";
 import ChatBox, { ChatMessage } from "./chat/ChatBox";
 import axios from "axios";
+import { PREDEFINED_TAGS } from "@/lib/tags";
 
 interface RandomSongGameProps {
   user: any;
@@ -105,6 +107,9 @@ const RandomSongGame = ({
   const isHost = user.id === room.hostId;
   
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+
 
   useEffect(() => {
     if (phase === 'playing') {
@@ -479,14 +484,21 @@ const RandomSongGame = ({
 
   const handleStartGame = async () => {
     console.log("Attempting to start game...");
+  
+    // id → name 매핑
+    const keywordNames = selectedTagIds
+      .map((id) => PREDEFINED_TAGS.find((tag) => tag.id === id)?.name)
+      .filter((name): name is string => !!name); // string[] 보장
+  
     try {
-      // This API call initiates the game on the backend, which then sends WebSocket messages
-      await api.post(`/api/game-session/${room.roomId}/start`);
+      await api.post(`/api/game-session/${room.roomId}/start`, {
+        keywords: keywordNames,
+      });
       console.log("Game start API call successful.");
-      setLoading(false); // Assuming game start will lead to WebSocket updates
+      setLoading(false);
     } catch (error) {
       console.error("Failed to start game:", error);
-      // Handle error, e.g., show a toast
+      // TODO: 에러 처리 (토스트 등)
     }
   };
 
@@ -529,9 +541,7 @@ const RandomSongGame = ({
                       <AvatarFallback>{player.nickname[0]}</AvatarFallback>
                     </Avatar>
                     <h3 className="font-semibold">{player.nickname}</h3>
-                    <Badge className="mt-1 bg-blue-500">
-                      점수: {player.score}점
-                    </Badge>
+
                   </div>
                 ))}
               </div>
@@ -539,13 +549,14 @@ const RandomSongGame = ({
                 <div className="text-center">
                   {isHost ? (
                     <Button
-                      onClick={handleStartGame}
-                      size="lg"
-                      className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 text-white font-bold text-xl px-12 py-6"
-                    >
-                      <Play className="w-6 h-6 mr-3" />
-                      게임 시작!
-                    </Button>
+                    onClick={handleStartGame}
+                    disabled={selectedTagIds.length === 0} // 최소 1개 선택되어야 버튼 활성화
+                    size="lg"
+                    className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 text-white font-bold text-xl px-12 py-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Play className="w-6 h-6 mr-3" />
+                    게임 시작!
+                  </Button>
                    ) : ( 
                     <p className="text-lg font-semibold text-black/90 mt-4">
                       ⏳ 방장이 게임을 시작할 때까지 기다려주세요...
@@ -556,6 +567,61 @@ const RandomSongGame = ({
             </CardContent>
           </Card>
         </div>
+        {isHost && (
+          <div className="max-w-4xl mx-auto w-full mt-6">
+            <Card className="bg-white/90 backdrop-blur-sm p-4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-semibold text-gray-800">
+                  🎯 키워드 최대 3개를 선택하세요
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+              <KeywordSelector
+                tags={PREDEFINED_TAGS}
+                selected={selectedTagIds}
+                onChange={setSelectedTagIds}
+              />
+                <div className="text-center">
+                  {/* <Button
+                    disabled={selectedTagIds.length === 0}
+                    onClick={() => {
+                      console.log("선택된 키워드 ID:", selectedTagIds);
+                      // TODO: 이 키워드를 백엔드에 보내는 로직 추가 예정
+                    }}
+                    className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 text-white px-6 py-3 rounded-lg font-semibold"
+                  >
+                    🎮 키워드로 게임 시작
+                  </Button> */}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        {!isHost && selectedTagIds.length > 0 && (
+          <div className="max-w-4xl mx-auto w-full mt-6">
+            <Card className="bg-white/80 backdrop-blur-sm p-4">
+              <CardHeader>
+                <CardTitle className="text-md font-semibold text-gray-700">
+                  선택된 키워드
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex gap-2 flex-wrap">
+                {selectedTagIds.map((id) => {
+                  const tag = PREDEFINED_TAGS.find((t) => t.id === id);
+                  return (
+                    <span
+                      key={id}
+                      className="px-3 py-1 bg-purple-200 text-purple-800 rounded-full text-sm"
+                    >
+                      #{tag?.name}
+                    </span>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         <div className="max-w-4xl mx-auto w-full mt-6">
           <Card className="bg-white/90 backdrop-blur-sm flex flex-col">
             <CardHeader>
