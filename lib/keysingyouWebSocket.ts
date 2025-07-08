@@ -4,7 +4,10 @@ let webSocket: Socket | null = null;
 
 export const getSocket = () => {
   if (!webSocket) {
-    webSocket = io("http://localhost:8000/");
+    webSocket = io(process.env.NEXT_PUBLIC_FASTAPI_ORIGIN!, {
+      path: `/fast/socket.io`,
+      transports: ["websocket"],
+    });
   }
   return webSocket;
 };
