@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko">
       <body className="min-h-screen flex flex-col bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100">
         <Providers>
-          <main className="flex-1 w-full max-w-screen-xl mx-auto px-4 py-6">
+          <main className="flex-1 w-full max-w-screen-xl mx-auto px-4">
             {children}
           </main>
         </Providers>
