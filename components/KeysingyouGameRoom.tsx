@@ -1,22 +1,22 @@
-import { Key, useEffect, useRef, useState } from "react";
-import { useSearchParams, useParams, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
-import { Mic, Crown, Play, CheckCircle, Circle, LogOut, Trophy, ArrowLeft } from "lucide-react";
+import { Mic, Crown, Play, Circle, LogOut, Trophy, ArrowLeft } from "lucide-react";
 import { getSocket, disconnectSocket } from "@/lib/keysingyouWebSocket";
 import { CardContent } from "./ui/Card";
 import { CardTitle } from "./ui/Card";
 import { CardHeader } from "./ui/Card";
 import { Card } from "./ui/Card";
-import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
-import ChatBox from "@/components/chat/ChatBox";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import KeysingyouChatBox from "@/components/chat/KeysingyouChatBox";
 import api from "@/lib/api";
-import RandomSongGame from "./RandomSongGame";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/badge";
-import { sendGameMessage } from "@/lib/gameSocket";
 import KeysingyouPlayerSlots from "@/components/ui/KeysingyouPlayerSlots";
 import { TimerCircle } from "./ui/TimerCircle";
 import { Progress } from "./ui/Progress";
+import AudioVisualizer from "./ui/AudioVisualizer";
+import { getSharedAudioCtx } from "@/lib/sharedAudioCtx";
 
 interface GameRoomProps {
   user: any;
@@ -77,12 +77,13 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     score: number;
   } | null>(null);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const [analysisStep, setAnalysisStep] = useState<"분석중" | "대조중">("분석중");
   const [scores, setScores] = useState<Record<string, number>>({});
   const [finalScores, setFinalScores] = useState<
     | {
-        nickname: string;
-        score: number;
-      }[]
+      nickname: string;
+      score: number;
+    }[]
     | null
   >(null);
   const [isComposing, setIsComposing] = useState(false);
@@ -95,6 +96,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
   const keywordRef = useRef<Keyword | null>(null);
   const turnRef = useRef<number>(0);
   const roomChatBoxRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   /* ───── 타이머 1초 감소 ───── */
   useEffect(() => {
@@ -108,6 +110,34 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       roomChatBoxRef.current.scrollTop = roomChatBoxRef.current.scrollHeight;
     }
   }, [chatMsgs]);
+
+  useEffect(() => {
+    if (audioSrc && audioRef.current) {
+      audioRef.current.load();
+
+      const tryPlay = async () => {
+        try {
+          // ① 같은 AudioContext를 얻어와서 resume
+          const audioCtx = getSharedAudioCtx();
+          await audioCtx.resume();
+
+          await audioRef.current!.play();   // ② 실제 재생
+        } catch (err) {
+          console.warn("Autoplay 재생 실패:", err);
+        }
+      };
+      tryPlay();
+    }
+  }, [audioSrc]);
+
+
+  useEffect(() => {
+    if (phase === "listen") {
+      setAnalysisStep("분석중");
+      const timer = setTimeout(() => setAnalysisStep("대조중"), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, audioSrc]);
 
   // 게임 모드 라벨 및 색상 함수 (기존과 동일)
   const getGameModeColor = (mode: string) => {
@@ -197,9 +227,9 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     sock.on("round_result", (data) => {
       setScores(prev => ({
         ...prev,
-        [currentPlayerNick]: (prev[currentPlayerNick] ?? 0) + data.score   // ⓒ 가산
+        [data.playerNick]: (prev[data.playerNick] ?? 0) + data.score
       }));
-      
+
       setMatchedResult(data); // 결과 상태 저장
       setPhase("result"); // result 화면으로 전환
       setTimer(5); // 5초 타이머
@@ -213,7 +243,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
         d.scores.forEach(({ nickname, score }) => (table[nickname] = score));
 
         setScores(table);
-        setFinalScores(d.scores.sort((a,b)=>b.score-a.score));
+        setFinalScores(d.scores.sort((a, b) => b.score - a.score));
         setPhase("final");
       }
     );
@@ -228,13 +258,6 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       disconnectSocket();
     };
   }, [roomId, nickname, user]);
-
-  const handleSendMessage = (message: string) => {
-    console.log("[상위 컴포넌트] 보내는 메시지:", message);
-    if (message.trim()) {
-      sendGameMessage(room.roomId, user.id, user.nickname, message.trim());
-    }
-  };
 
   const handleLeaveRoom = async () => {
     // TODO: 백엔드에 방 나가기 요청 (HTTP)
@@ -308,7 +331,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     switch (phase) {
       case 'ready':
         return (
-                <div className="min-h-[100vh] h-[800px] p-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100">
+          <div className="min-h-[100vh] h-[800px] p-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100">
             <div className="max-w-screen-xl mx-auto space-y-4 h-full">
               {/* ── 방 제목 ───────────────────────── */}
               <Card className="bg-white/90 backdrop-blur-sm">
@@ -363,12 +386,12 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                         onCompositionEnd={() => setIsComposing(false)}
                         placeholder="메시지를 입력하세요..."
                         className="flex-1 min-w-0 rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white text-gray-700"
-                        style={{boxShadow: 'none'}}
+                        style={{ boxShadow: 'none' }}
                       />
                       <button
                         onClick={() => sendChat(chatInput)}
                         className="rounded-xl bg-[#1439e4] hover:bg-[#102db3] text-white font-bold text-base px-8 py-3 transition-colors"
-                        style={{minWidth: '90px'}}
+                        style={{ minWidth: '90px' }}
                       >
                         전송
                       </button>
@@ -448,53 +471,78 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
             </div>
           </div>
         );
-        
+
       case 'intro':
         return (
-          <div className="text-center space-y-8">
-            <div className="text-6xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent animate-bounce">
-              ��
+          <div className="flex flex-col justify-center items-center min-h-[500px] h-full">
+            <div className="text-6xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent animate-bounce mb-6">
+              🎤
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4 mb-10 text-center">
               <h2 className="text-3xl font-bold text-gray-900">게임 시작!</h2>
-              <p className="text-xl text-gray-600">키워드 노래 게임이 곧 시작됩니다</p>
+              <p className="text-xl text-gray-600">
+                잠시 후 키싱유 게임이 시작됩니다.<br /><br />
+                각자 주어진 키워드가 들어간 노래를 <span className="font-bold text-pink-600">10초</span>동안 불러주세요!<br />
+                허밍도 가능하지만, 가사를 같이 부르면 성공 확률이 높아집니다.
+                <br /><br />성공 시 실제 노래와 비슷할수록 높을 점수를 획득합니다!
+              </p>
             </div>
-            <TimerCircle timeLeft={timer} duration={timer} size={100} />
+            <div className="mt-8">
+              <TimerCircle timeLeft={timer} duration={10} size={100} />
+            </div>
           </div>
         );
-        
+
       case 'keyword':
         return (
           <div className="text-center space-y-8">
-            <div className="bg-red-500 text-white rounded-lg p-8 transform hover:scale-105 transition-all shadow-xl">
-              <h2 className="text-4xl font-bold mb-2">키워드</h2>
+            <div className="bg-green-500 text-white rounded-lg p-8 transform hover:scale-105 transition-all shadow-xl w-auto inline-block">
+              <h2 className="text-4xl font-bold mb-2">{keyword?.type}</h2>
               <div className="text-6xl font-bold">{keyword?.name}</div>
             </div>
             <p className="text-xl text-gray-700">
               <span className="font-bold text-blue-600">{users.find((u) => u.sid === currentSid)?.nickname}</span> 님의 차례입니다
+              {currentSid === mySid.current && (
+                <span className="ml-2 text-green-600 font-bold">(내 차례)</span>
+              )}
             </p>
-            <TimerCircle timeLeft={timer} duration={timer} size={100} />
+            <TimerCircle timeLeft={timer} duration={5} size={100} />
           </div>
         );
-        
+
       case 'record':
-        return (
-          <div className="text-center space-y-8">
-            <div className="bg-red-500 text-white rounded-lg p-4 inline-block">
-              <h2 className="text-2xl font-bold">키워드: {keyword?.name}</h2>
-            </div>
-            
-            <div className="space-y-6">
-              <div className="relative">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center animate-pulse">
-                  <Mic className="w-16 h-16 text-white" />
+        // 현재 턴이 내 턴이 아닐 때 분기 렌더링
+        if (mySid.current !== currentSid) {
+          return (
+            <div className="flex flex-col justify-center items-center min-h-[500px] h-full">
+              <div className="bg-green-500 text-white rounded-lg p-4 mb-8">
+                <h2 className="text-2xl font-bold">{keyword?.type}: {keyword?.name}</h2>
+              </div>
+              <div className="space-y-6 flex flex-col items-center">
+                <div className="text-2xl font-semibold text-gray-800 mb-4">
+                  <span className="font-bold text-blue-600">{users.find((u) => u.sid === currentSid)?.nickname}</span>님이 녹음 중입니다.
                 </div>
-                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+                <TimerCircle timeLeft={timer} duration={10} size={80} />
+              </div>
+            </div>
+          );
+        }
+        // 내 턴일 때 기존 UI
+        return (
+          <div className="flex flex-col justify-center items-center min-h-[500px] h-full">
+            <div className="bg-green-500 text-white rounded-lg p-4 mb-8">
+              <h2 className="text-2xl font-bold">{keyword?.type} {keyword?.name}</h2>
+            </div>
+            <div className="space-y-6 flex flex-col items-center">
+              <div className="relative flex flex-col items-center">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center animate-pulse">
+                  <Mic className="w-12 h-12 text-white" />
+                </div>
+                <div className="mt-3">
                   <Badge className="bg-red-500 text-white">녹음 중</Badge>
                 </div>
               </div>
-              
-              <div className="space-y-4">
+              <div className="space-y-4 flex flex-col items-center">
                 <div className="text-3xl font-bold text-red-600">
                   {timer}초 남음
                 </div>
@@ -503,53 +551,66 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
             </div>
           </div>
         );
-        
+
       case 'listen':
         return (
           <div className="text-center space-y-8">
-            <div className="bg-blue-500 text-white rounded-lg p-6">
-              <h2 className="text-2xl font-bold mb-2">🎵 재생 중</h2>
-              <p className="text-xl">{users.find((u) => u.sid === currentSid)?.nickname} 님의 음성 분석중..</p>
+            <div className="bg-blue-500 text-white rounded-lg p-6 inline-block">
+              <h2 className="text-2xl font-bold mb-2">음성 분석 중</h2>
+              <p className="text-xl">{users.find((u) => u.sid === currentSid)?.nickname} 님의 녹음 재생중..</p>
             </div>
-            
-            <div className="bg-white rounded-lg p-6 shadow-lg">
-              <audio 
-                src="#" 
-                autoPlay 
-                controls 
-                className="w-full mb-4"
-              />
-            </div>
-
+            <audio
+              src={audioSrc ?? undefined}
+              ref={audioRef}
+              autoPlay
+              hidden
+              className="w-full mb-4"
+              onEnded={() =>
+                socket.current?.emit("listen_finished", { roomId })
+              }
+            />
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">실시간 음성 분석</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {analysisStep === "분석중" ? (
+                  <>
+                    녹음된 <span className="text-blue-600 font-bold">음성 파형</span>을 분석하고 있습니다..
+                  </>
+                ) : (
+                  <>
+                    <span className="text-blue-600 font-bold">실제 음원의 파형</span>과 대조 중입니다..
+                  </>
+                )}
+              </h3>
+              <AudioVisualizer audioRef={audioRef} />
             </div>
           </div>
         );
-        
+
       case 'result':
         if (!matchedResult) return null;
 
         const { matched, title, artist, score } = matchedResult;
-        const passed     = matched;
+        const passed = matched;
         const badgeColor = passed
           ? 'bg-gradient-to-r from-green-400 to-emerald-500'
           : 'bg-gradient-to-r from-red-400 to-pink-500';
-        const textColor  = passed
+        const textColor = passed
           ? 'bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent'
           : 'bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent';
-        
+
         return (
           <div className="text-center space-y-8">
             {/* ✔ / ✖ 아이콘 */}
-            <div className={`w-32 h-32 mx-auto rounded-full flex items-center justify-center ${badgeColor}`}>
+            <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center ${badgeColor}`}>
               <span className="text-6xl">{passed ? '✅' : '❌'}</span>
             </div>
 
             {/* 결과 텍스트 */}
             <div className="space-y-4">
               <h3 className={`text-2xl font-bold ${textColor}`}>
-                {passed ? `정답! +${score}점` : `아쉬워요! ${score}점`}
+                {passed
+                  ? `정답! +${score}점`
+                  : `아쉬워요! 다음 기회에!`}
               </h3>
 
               {/* 성공일 때만 노래 정보 보여주기 */}
@@ -563,59 +624,51 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
             {/* 원형 타이머 */}
             <TimerCircle
               timeLeft={timer}
-              duration={timer}
+              duration={5}
               size={80}
             />
           </div>
         );
-        
+
       case 'final':
-        const rankings = [
-          { player: 'TestPlayer', score: 85, rank: 1 },
-          { player: 'Player2', score: 72, rank: 2 },
-          { player: 'Player3', score: 68, rank: 3 }
-        ];
-        
         return (
           <div className="space-y-6">
             <div className="text-center">
               <div className="bg-yellow-500 text-white rounded-lg p-6 inline-block">
                 <Trophy className="w-12 h-12 mx-auto mb-2" />
-                <h1 className="text-3xl font-bold">🏆 최종 결과</h1>
+                <h1 className="text-3xl font-bold">최종 결과</h1>
               </div>
             </div>
 
             <div className="space-y-3 max-h-64 overflow-y-auto">
-              {rankings.map((ranking, index) => (
+              {finalScores && finalScores.map((ranking, index) => (
                 <div
-                  key={ranking.player}
-                  className={`flex items-center justify-between p-4 rounded-xl shadow-sm border ${
-                    index === 0
-                      ? 'bg-yellow-50 border-yellow-200'
-                      : index === 1
+                  key={ranking.nickname}
+                  className={`flex items-center justify-between p-4 rounded-xl shadow-sm border ${index === 0
+                    ? 'bg-yellow-50 border-yellow-200'
+                    : index === 1
                       ? 'bg-gray-50 border-gray-200'
                       : index === 2
-                      ? 'bg-orange-50 border-orange-200'
-                      : 'bg-white border-gray-100'
-                  }`}
+                        ? 'bg-orange-50 border-orange-200'
+                        : 'bg-white border-gray-100'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold ${
-                      index === 0
-                        ? 'bg-yellow-500 text-white'
-                        : index === 1
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold ${index === 0
+                      ? 'bg-yellow-500 text-white'
+                      : index === 1
                         ? 'bg-gray-400 text-white'
                         : index === 2
-                        ? 'bg-orange-400 text-white'
-                        : 'bg-blue-100 text-blue-600'
-                    }`}>
-                      {ranking.rank}
+                          ? 'bg-orange-400 text-white'
+                          : 'bg-blue-100 text-blue-600'
+                      }`}>
+                      {index + 1}
                     </div>
                     <span className="text-lg font-semibold text-gray-900">
-                      {ranking.player}
+                      {ranking.nickname}
                     </span>
                   </div>
-                  
+
                   <div className="text-xl font-bold text-gray-900">
                     {ranking.score}점
                   </div>
@@ -633,7 +686,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
             </div>
           </div>
         );
-        
+
       default:
         return <div>Loading...</div>;
     }
@@ -656,27 +709,40 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
 
   // 게임 진행 중 레이아웃 (스케치 참고)
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-pink-400 via-purple-500 via-blue-500 to-cyan-400">
-      {/* 상단 헤더 */}
-      <div className="w-full max-w-6xl mx-auto flex flex-col gap-2 pt-6 px-4">
-        <div className="flex items-center justify-between mb-2">
-          <Button variant="outline" onClick={handleLeaveRoom} className="bg-white/90">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            나가기
-          </Button>
-          <div className="flex-1 flex flex-col items-center">
-            <div className="text-2xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
-              키싱유 - 키워드로 노래 부르기!
-            </div>
-          </div>
-          <div className="text-lg font-semibold whitespace-nowrap">라운드 1/1</div>
+    <div className="min-h-screen p-4 bg-gradient-to-br from-pink-400 via-purple-500 via-blue-500 to-cyan-400">
+      <div className="max-w-6xl mx-auto">
+        {/* 헤더 */}
+        <div className="mb-4 w-full px-4">
+          <Card className="bg-white/90 backdrop-blur-sm border-0 w-full h-[80px]">
+            <CardHeader className="h-full px-6 py-0">
+              <div className="h-full flex flex-row items-center w-full gap-4">
+                {/* 왼쪽: 게임 나가기 버튼 */}
+                <Button
+                  variant="outline"
+                  onClick={handleLeaveRoom}
+                  className="bg-white/90 flex-shrink-0"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  게임 나가기
+                </Button>
+                {/* 가운데: 타이틀 */}
+                <div className="mx-auto text-xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  키싱유 - 키워드로 노래 부르기!
+                </div>
+                {/* 오른쪽: 라운드 */}
+                <div className="flex-shrink-0 text-lg font-semibold text-gray-800">
+                  라운드 1/1
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
         </div>
       </div>
 
       {/* 메인 영역: 게임(3) : 점수판(1) */}
-      <div className="flex-1 w-full max-w-6xl mx-auto flex flex-row gap-6 px-4 pb-4">
+      <div className="flex-1 w-full max-w-6xl mx-auto flex flex-row gap-4 px-4 pb-4">
         {/* 게임 영역 */}
-        <div className="flex-1 flex items-center justify-center bg-white/90 rounded-2xl min-h-[400px] mr-2">
+        <div className="flex-1 flex items-center justify-center bg-white/90 rounded-2xl min-h-[448px] mr-2">
           {/* 실제 게임 내용 */}
           <div className="w-full flex flex-col items-center justify-center">
             {renderGamePhase()}
@@ -684,32 +750,90 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
         </div>
         {/* 점수판 영역 */}
         <div className="w-[320px] min-w-[260px] max-w-[340px] flex flex-col">
-          <div className="bg-white/90 rounded-2xl p-4 flex-1 flex flex-col">
-            <div className="text-xl font-bold mb-2">점수판</div>
-            <KeysingyouPlayerSlots users={users} maxPlayer={room.maxPlayer} vertical={true} slotHeight={70} showStatus={false} highlightId={currentSid} />
-          </div>
+          <Card className="bg-white/90 backdrop-blur-sm border-0 flex flex-col">
+            <CardHeader>
+              <CardTitle className="text-xl">🏆 점수판</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col justify-center">
+              <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, idx) => {
+                  const user = users[idx];
+                  const slotClass =
+                    "rounded-lg border-2 flex items-center min-h-[64px] py-3 px-5 transition-all";
+                  if (user) {
+                    return (
+                      <div
+                        key={user.id}
+                        className={
+                          slotClass +
+                          ' ' +
+                          (currentPlayerNick === user.nickname
+                            ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-pink-50 ring-2 ring-purple-200'
+                            : 'border-gray-200 bg-gray-50')
+                        }
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage src={user.avatar} />
+                            <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
+                              {user.nickname[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{user.nickname}</span>
+                              {user.isHost && <Crown className="w-4 h-4 text-yellow-500" />}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                            {scores[user.nickname] || 0}점
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div
+                        key={"empty-" + idx}
+                        className={slotClass + " border-gray-200 bg-gray-100 justify-center text-gray-400 select-none"}
+                      >
+                        <span className="text-base font-semibold">빈 슬롯</span>
+                      </div>
+                    );
+                  }
+                })}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
       {/* 하단 채팅창 */}
       <div className="w-full max-w-6xl mx-auto px-4 pb-8">
-        <ChatBox
-          user={user}
-          messages={chatMsgs.map((c, i) => ({
-            id: i,
-            type: 'TALK',
-            roomId: room.roomId,
-            senderId: '',
-            senderName: c.message.split(":")[0],
-            message: c.message.split(":").slice(1).join(":"),
-            timestamp: '',
-            time: '',
-          }))}
-          onSend={sendChat}
-          autoScrollToBottom={true}
-          chatType="game"
-        />
+        <div className="bg-white/80 rounded-2xl p-4 max-h-[300px] overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-y-auto">
+            <KeysingyouChatBox
+              user={user}
+              messages={chatMsgs.map((c, i) => ({
+                id: i,
+                type: 'TALK',
+                roomId: room.roomId,
+                senderId: '',
+                senderName: c.message.split(":")[0],
+                message: c.message.split(":").slice(1).join(":"),
+                timestamp: '',
+                time: '',
+              }))}
+              onSend={sendChat}
+              autoScrollToBottom={true}
+              chatType="game"
+            />
+          </div>
+        </div>
       </div>
+
     </div>
   );
 };
