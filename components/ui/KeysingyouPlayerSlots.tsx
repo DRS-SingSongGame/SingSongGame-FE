@@ -18,11 +18,15 @@ interface User {
 interface PlayerSlotsProps {
   users: User[];
   maxPlayer: number;
+  vertical?: boolean;
+  slotHeight?: number; // 추가
 }
 
 export default function KeysingyouPlayerSlots({
   users,
   maxPlayer,
+  vertical = false,
+  slotHeight = 110, // 기본값 110
 }: PlayerSlotsProps) {
   // 6개 슬롯 고정
   const totalSlots = 6;
@@ -41,7 +45,7 @@ export default function KeysingyouPlayerSlots({
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 h-full pt-5">
+    <div className={vertical ? "flex flex-col gap-4 h-full pt-2" : "grid grid-cols-2 gap-4 h-full pt-2"}>
       {Array.from({ length: totalSlots }).map((_, idx) => {
         if (idx < maxPlayer) {
           // 유효 슬롯: 유저 or 비어있음
@@ -49,7 +53,8 @@ export default function KeysingyouPlayerSlots({
           return (
             <div
               key={user.id}
-              className="flex items-center gap-4 border p-4 rounded-lg bg-white/80 h-[110px]"
+              className={`flex items-center gap-4 border p-4 rounded-lg bg-white/80 w-full`} // h-[110px] 제거
+              style={{ height: slotHeight }}
             >
               {user.avatar ? (
                 <Avatar className="w-16 h-16">
@@ -99,7 +104,8 @@ export default function KeysingyouPlayerSlots({
           return (
             <div
               key={`disabled-${idx}`}
-              className="flex items-center gap-4 border p-4 rounded-lg h-[110px] bg-gray-200 relative overflow-hidden"
+              className={`flex items-center gap-4 border p-4 rounded-lg w-full bg-gray-200 relative overflow-hidden`} // h-[110px] 제거
+              style={{ height: slotHeight }}
             >
               <div className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center text-gray-400 text-base">
                 -

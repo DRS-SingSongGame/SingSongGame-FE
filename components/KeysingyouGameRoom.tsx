@@ -654,107 +654,62 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     return renderGamePhase();
   }
 
+  // 게임 진행 중 레이아웃 (스케치 참고)
   return (
-    <div className="min-h-screen p-4 bg-gradient-to-br from-pink-400 via-purple-500 via-blue-500 to-cyan-400">
-      <div className="max-w-6xl mx-auto">
-        {/* 헤더 */}
-        <div className="mb-6">
-          <Button variant="outline" onClick={handleLeaveRoom} className="mb-4 bg-white/90">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-pink-400 via-purple-500 via-blue-500 to-cyan-400">
+      {/* 상단 헤더 */}
+      <div className="w-full max-w-6xl mx-auto flex flex-col gap-2 pt-6 px-4">
+        <div className="flex items-center justify-between mb-2">
+          <Button variant="outline" onClick={handleLeaveRoom} className="bg-white/90">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            게임 나가기
+            나가기
           </Button>
-          
-          <Card className="bg-white/90 backdrop-blur-sm border-0">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
-                  키싱유 - 키워드로 노래 부르기!
-                </CardTitle>
-                <div className="text-right">
-                  {/* 추후 최대 라운드에 맞게 수정할 것 */}
-                  <div className="text-lg font-semibold">라운드 1/1</div>
-                </div>
-              </div>
-              
-            </CardHeader>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* 게임 진행 영역 */}
-          <div className="lg:col-span-2">
-            <Card className="bg-white/90 backdrop-blur-sm min-h-[600px] border-0">
-              <CardContent className="p-8 h-full flex flex-col justify-center items-center">
-                {renderGamePhase()}
-              </CardContent>
-            </Card>
+          <div className="flex-1 flex flex-col items-center">
+            <div className="text-2xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
+              키싱유 - 키워드로 노래 부르기!
+            </div>
           </div>
+          <div className="text-lg font-semibold whitespace-nowrap">라운드 1/1</div>
+        </div>
+      </div>
 
-          {/* 플레이어 점수판 */}
-          <div>
-            <Card className="bg-white/90 backdrop-blur-sm border-0">
-              <CardHeader>
-                <CardTitle className="text-xl">🏆 점수판</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {users.map((user, index) => (
-                    <div
-                      key={user.id}
-                      className={`p-3 rounded-lg border-2 transition-all ${
-                        currentPlayerNick === user.nickname
-                          ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-pink-50 ring-2 ring-purple-200'
-                          : 'border-gray-200 bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="w-10 h-10">
-                            <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
-                              {user.nickname[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">{user.nickname}</span>
-                              {user.isHost && <Crown className="w-4 h-4 text-yellow-500" />}
-                              {currentPlayerNick === user.nickname && (
-                                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-xs">현재 차례</Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                            {scores[user.nickname] || 0}점
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 게임 규칙 */}
-            <Card className="bg-white/90 backdrop-blur-sm mt-4 border-0">
-              <CardHeader>
-                <CardTitle className="text-lg">📋 게임 규칙</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-gray-600 space-y-2">
-                  <p>• 주어진 키워드가 들어간 노래를 불러주세요</p>
-                  <p>• 10초간 녹음되며, AI가 채점합니다</p>
-                  <p>• 성공 시 점수 획득, 실패 시 -10점</p>
-                  <p>• 성공하면 다음 사람, 실패하면 다시 도전</p>
-                </div>
-              </CardContent>
-            </Card>
+      {/* 메인 영역: 게임(3) : 점수판(1) */}
+      <div className="flex-1 w-full max-w-6xl mx-auto flex flex-row gap-6 px-4 pb-4">
+        {/* 게임 영역 */}
+        <div className="flex-1 flex items-center justify-center bg-white/90 rounded-2xl min-h-[400px] mr-2">
+          {/* 실제 게임 내용 */}
+          <div className="w-full flex flex-col items-center justify-center">
+            {renderGamePhase()}
+          </div>
+        </div>
+        {/* 점수판 영역 */}
+        <div className="w-[320px] min-w-[260px] max-w-[340px] flex flex-col">
+          <div className="bg-white/90 rounded-2xl p-4 flex-1 flex flex-col">
+            <div className="text-xl font-bold mb-2">점수판</div>
+            <KeysingyouPlayerSlots users={users} maxPlayer={room.maxPlayer} vertical={true} slotHeight={70} />
           </div>
         </div>
       </div>
 
-      {/* Chat Component */}
+      {/* 하단 채팅창 */}
+      <div className="w-full max-w-6xl mx-auto px-4 pb-8">
+        <ChatBox
+          user={user}
+          messages={chatMsgs.map((c, i) => ({
+            id: i,
+            type: 'TALK',
+            roomId: room.roomId,
+            senderId: '',
+            senderName: c.message.split(":")[0],
+            message: c.message.split(":").slice(1).join(":"),
+            timestamp: '',
+            time: '',
+          }))}
+          onSend={sendChat}
+          autoScrollToBottom={true}
+          chatType="game"
+        />
+      </div>
     </div>
   );
 };
