@@ -49,7 +49,7 @@ export default function FlatLyricsGamePage({ params }: { params: { roomId: strin
   return (
     <FlatLyricsGame
       user={user}
-      room={{ roomId: Number(params.roomId), name: room.name }}
+      room={ room }
       players={players}
       onBack={handleBack}
       onGameEnd={handleGameEnd}

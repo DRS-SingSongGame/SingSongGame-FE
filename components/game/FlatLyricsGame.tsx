@@ -21,6 +21,7 @@ interface Song {
   id: number;
   title: string;
   artist: string;
+  hint?: string;
 }
 
 interface GameState {
@@ -65,6 +66,7 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (!room || !room.roomId) return;
@@ -80,12 +82,26 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
    
   }, [room?.roomId]);
 
-  const handleRoundStart = (payload: any) => {
-    const songData = payload;
-    console.log("song 데이터", songData)
-    const song = songData.id;
-    const roundNumber = songData.round
+  useEffect(() => {
+    if (!gameState.isReading || gameState.timeLeft <= 0) return;
+  
+    const interval = setInterval(() => {
+      setGameState(prev => ({
+        ...prev,
+        timeLeft: prev.timeLeft - 1,
+      }));
+    }, 1000);
+  
+    return () => clearInterval(interval);
+  }, [gameState.isReading, gameState.timeLeft]);
 
+  const handleRoundStart = (payload: any) => {
+    console.log("payload 데이터", payload)
+    const song = payload.song;
+    console.log(song)
+    const roundNumber = song.round;
+    const playbackStartTime = payload.playbackStartTime;
+  
     setGameState((prev) => ({
       ...prev,
       currentRound: roundNumber,
@@ -96,7 +112,7 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
       roundWinner: null,
       isReading: true,
     }));
-
+  
     const systemMessage: ChatMessage = {
       id: Date.now(),
       playerId: "system",
@@ -106,24 +122,35 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
       isSystem: true,
     };
     setChatMessages((prev) => [...prev, systemMessage]);
-
-    const newAudio = new Audio(`/api/song/tts?songId=${songData.id}`);
+  
+    // 🔁 기존 setAudio() 대신 ref 사용
+    const newAudio = new Audio(`/api/song/tts?songId=${song.id}`);
+    audioRef.current = newAudio;
+  
     newAudio.oncanplaythrough = () => {
-      console.log("🎵 오디오 준비 완료 - 재생 시도");
-      newAudio.play().then(() => {
-        console.log("✅ 오디오 재생 시작됨");
-      }).catch((err) => {
-        console.error("❌ 오디오 재생 실패", err);
-      });
-    };
-    newAudio.onended = () => {
-      console.log("🎵 오디오 재생 종료됨"); // 이게 나오는지 확인!!
-      setGameState((prev) => ({ ...prev, isReading: false }));
-      notifyTtsFinished(room.roomId);
+      
+      const delay = playbackStartTime - Date.now();
+      console.log('playbackStartTime:', playbackStartTime);
+      console.log('현재 시간:', Date.now());
+      console.log('계산된 delay:', delay);
+      
+      if (delay > 0) {
+        console.log(`⏱️ ${delay}ms 후 오디오 재생`);
+        setTimeout(() => {
+          newAudio.play().then(() => console.log("✅ 오디오 재생 시작됨"));
+        }, delay);
+      } else {
+        newAudio.play().then(() => console.log("✅ 오디오 재생 시작됨"));
+      }
     };
   
-    
-    setAudio(newAudio);
+    newAudio.onended = () => {
+      console.log("🎵 오디오 재생 종료됨");
+      setGameState((prev) => ({ ...prev, isReading: false }));
+      if (user.id === room.hostId) {
+        notifyTtsFinished(room.roomId);
+      }
+    };
   };
 
   const notifyTtsFinished = (roomId : Number) => {
@@ -136,14 +163,20 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
 
   const handleAnswerCorrect = (data: any) => {
     const { playerId, playerName, title, artist, score } = data;
+   
+   
+      // ✅ 정답자는 오디오 멈추기
+      if (audioRef.current) {
+        window.speechSynthesis.cancel();
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current.onended = null;
+        audioRef.current.src = "";
+      }
 
-    if (audio) {
-      audio.onended = null;
-      audio.pause();
-      console.log(audio.paused)
-      audio.currentTime = 0;
-      notifyTtsFinished(room.roomId); // TTS 종료 알림
-    }
+      if (user.id === room.hostId) {
+        notifyTtsFinished(room.roomId);
+      }
 
     setGameState((prev) => ({
       ...prev,
@@ -171,31 +204,40 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
   const handleGameEnd = (data: any) => {
     setGameOver(true);
     setShowResults(true);
-    onGameEnd(data);
+    // onGameEnd(data);
+  };
+
+  const handleCloseResult = () => {
+    setShowResults(false);
+    onGameEnd(playersWithScores); // ✅ 로비 이동 또는 부모에게 알림
   };
 
   useEffect(() => {
-    if (!room || !room.roomId) return;
-
+  
     const initialScores = players.reduce((acc, player) => {
       acc[player.id] = 0;
       return acc;
     }, {} as { [key: string]: number });
-
+  
     setGameState((prev) => ({ ...prev, scores: initialScores }));
-
+  
     const callbacks = {
       onConnect: () => {
-        fetch(`/api/ai-game/${room.roomId}/start`, {
-          method: "POST",
-        })
-          .then((res) => {
-            if (!res.ok) throw new Error("게임 시작 실패");
-            console.log("✅ 게임 시작 요청 성공");
+        if (user.id === room.hostId) {
+          console.log("👑 현재 유저가 방장입니다. 게임 시작 요청을 보냅니다.");
+          fetch(`/api/ai-game/${room.roomId}/start`, {
+            method: "POST",
           })
-          .catch((err) => {
-            console.error("❌ 게임 시작 실패", err);
-          });
+            .then((res) => {
+              if (!res.ok) throw new Error("게임 시작 실패");
+              console.log("✅ 게임 시작 요청 성공");
+            })
+            .catch((err) => {
+              console.error("❌ 게임 시작 실패", err);
+            });
+        } else {
+          console.log("🚫 방장이 아니므로 게임 시작 요청을 보내지 않음");
+        }
       },
       onMessage: (data: any) => {
         console.log("[WebSocket 수신]", data);
@@ -218,9 +260,13 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
       onError: (err: any) => console.error("소켓 오류", err),
       onGameStartCountdown: (res: any) => console.log("카운트다운 시작", res),
     };
-
+  
     connectGameSocket(room.roomId.toString(), callbacks, true);
-    return () => disconnectGameSocket();
+  
+    return () => {
+      console.log("🛑 disconnectGameSocket 호출됨");
+      disconnectGameSocket();
+    };
   }, [room?.roomId]);
 
   const handleChatSubmit = () => {
@@ -242,7 +288,7 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ answer: trimmedMessage }),
+      body: JSON.stringify({ answer: trimmedMessage, timeLeft: gameState.timeLeft }),
     }).catch((err) => {
       console.error("❌ 정답 제출 실패:", err);
     })
@@ -264,6 +310,7 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
           timeLeft={gameState.timeLeft}
           isReading={gameState.isReading}
           onBack={onBack}
+          hintText={gameState.currentSong?.hint || "없음"}
         />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
@@ -288,7 +335,7 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
         <GameResultModal
           isOpen={showResults}
           players={playersWithScores}
-          onClose={() => setShowResults(false)}
+          onClose={handleCloseResult}
         />
       </div>
     </div>
