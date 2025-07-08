@@ -19,14 +19,18 @@ interface PlayerSlotsProps {
   users: User[];
   maxPlayer: number;
   vertical?: boolean;
-  slotHeight?: number; // 추가
+  slotHeight?: number;
+  showStatus?: boolean;
+  highlightId?: string;
 }
 
 export default function KeysingyouPlayerSlots({
   users,
   maxPlayer,
   vertical = false,
-  slotHeight = 110, // 기본값 110
+  slotHeight = 110,
+  showStatus = true,
+  highlightId,
 }: PlayerSlotsProps) {
   // 6개 슬롯 고정
   const totalSlots = 6;
@@ -50,11 +54,12 @@ export default function KeysingyouPlayerSlots({
         if (idx < maxPlayer) {
           // 유효 슬롯: 유저 or 비어있음
           const user = filledSlots[idx];
+          const isHighlight = highlightId && user.sid === highlightId;
           return (
             <div
               key={user.id}
-              className={`flex items-center gap-4 border p-4 rounded-lg bg-white/80 w-full`} // h-[110px] 제거
-              style={{ height: slotHeight }}
+              className={`flex items-center gap-4 border p-4 rounded-lg bg-white/80 w-full transition-all duration-300 ${isHighlight ? 'ring-4 ring-purple-400 animate-pulse scale-[1.07] z-10' : ''}`}
+              style={{ height: isHighlight ? slotHeight + 20 : slotHeight }}
             >
               {user.avatar ? (
                 <Avatar className="w-16 h-16">
@@ -71,31 +76,33 @@ export default function KeysingyouPlayerSlots({
                   <h4 className="font-semibold text-purple-700 text-lg">
                     {user.nickname}
                   </h4>
-                  {user.isHost && <span>👑</span>}
-                  {user.nickname !== "비어있음" && (
+                  {showStatus && user.isHost && <span>👑</span>}
+                  {showStatus && user.nickname !== "비어있음" && (
                     user.mic ? <Mic className="text-green-500" /> : <MicOff className="text-red-500" />
                   )}
                 </div>
-                <div
-                  className={
-                    "text-sm " +
-                    (user.nickname === "비어있음"
-                      ? "text-gray-500"
+                {showStatus && (
+                  <div
+                    className={
+                      "text-sm " +
+                      (user.nickname === "비어있음"
+                        ? "text-gray-500"
+                        : user.isHost
+                        ? "text-gray-500"
+                        : user.ready
+                        ? "text-green-600 font-bold"
+                        : "text-gray-500")
+                    }
+                  >
+                    {user.nickname === "비어있음"
+                      ? ""
                       : user.isHost
-                      ? "text-gray-500"
+                      ? "방장"
                       : user.ready
-                      ? "text-green-600 font-bold"
-                      : "text-gray-500")
-                  }
-                >
-                  {user.nickname === "비어있음"
-                    ? ""
-                    : user.isHost
-                    ? "방장"
-                    : user.ready
-                    ? "준비 완료"
-                    : "대기 중"}
-                </div>
+                      ? "준비 완료"
+                      : "대기 중"}
+                  </div>
+                )}
               </div>
             </div>
           );

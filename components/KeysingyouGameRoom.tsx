@@ -686,7 +686,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
         <div className="w-[320px] min-w-[260px] max-w-[340px] flex flex-col">
           <div className="bg-white/90 rounded-2xl p-4 flex-1 flex flex-col">
             <div className="text-xl font-bold mb-2">점수판</div>
-            <KeysingyouPlayerSlots users={users} maxPlayer={room.maxPlayer} vertical={true} slotHeight={70} />
+            <KeysingyouPlayerSlots users={users} maxPlayer={room.maxPlayer} vertical={true} slotHeight={70} showStatus={false} highlightId={currentSid} />
           </div>
         </div>
       </div>
