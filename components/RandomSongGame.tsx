@@ -674,8 +674,12 @@ const RandomSongGame = ({
               <div className="flex justify-between items-center">
                 <div>
                   <CardTitle className="text-2xl font-bold">
-                    Round {gameSession?.currentRound} / 10
-                    
+                    Round {gameSession?.currentRound} / 2
+                    {gameSession?.currentRound === 2 && (
+                      <span className="text-red-500">
+                        🎉 마지막 라운드입니다!
+                      </span>
+                    )}
                   </CardTitle>
                   <CardDescription className="text-lg">
                     힌트:{" "}

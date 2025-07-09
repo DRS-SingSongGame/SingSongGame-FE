@@ -49,7 +49,7 @@ interface ChatMessage {
 const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGameProps) => {
   const [gameState, setGameState] = useState<GameState>({
     currentRound: 0,
-    totalRounds: 5,
+    totalRounds: 2,
     timeLeft: 60,
     isReading: false,
     currentSong: null,
