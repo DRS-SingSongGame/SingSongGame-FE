@@ -669,7 +669,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                     </span>
                   </div>
 
-                  <div className="text-xl font-bold text-gray-900">
+                  <div className="text-xl font-bold text-gray-900 ml-8">
                     {ranking.score}점
                   </div>
                 </div>

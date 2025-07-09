@@ -8,6 +8,10 @@ export const getSocket = () => {
       path: `/fast/socket.io`,
       transports: ["websocket"],
     });
+    // webSocket = io("http://localhost:8000", {
+    //   path: `/fast/socket.io`,
+    //   transports: ["websocket"],
+    // });
   }
   return webSocket;
 };
