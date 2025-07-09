@@ -157,10 +157,7 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
               <SelectContent>
                 {gameModes.map((mode) => (
                   <SelectItem key={mode.value} value={mode.value}>
-                    <div>
-                      <div className="font-semibold">{mode.label}</div>
-                      <div className="text-sm text-gray-500">{mode.description}</div>
-                    </div>
+                    {mode.label}
                   </SelectItem>
                 ))}
               </SelectContent>
