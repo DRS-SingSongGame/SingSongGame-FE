@@ -55,6 +55,11 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
     fetchData();
   }, [params.roomId]);
 
+  useEffect(() => {
+    const audio = new Audio('/audio/entersound.wav');
+    audio.play();
+  }, []);
+
   // 플레이어 목록만 2초마다 새로고침
   useEffect(() => {
     const fetchPlayers = async () => {

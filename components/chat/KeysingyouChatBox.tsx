@@ -53,7 +53,7 @@
     }, [messages, autoScrollToBottom]);
 
     return (
-      <Card className="bg-white/90 backdrop-blur-sm">
+      <Card className="relative z-20 bg-white/90 backdrop-blur-sm">
         <CardContent>
           {/* 스크롤은 이 안쪽 div에만 생기고, 숨겨짐 */}
           <div

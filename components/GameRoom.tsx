@@ -62,6 +62,10 @@ const GameRoom = ({ user, room, onBack }: GameRoomProps) => {
     }
   };
   useEffect(() => {
+    const audio = new Audio('/audio/entersound.wav');
+    audio.play();
+  }, []);
+  useEffect(() => {
     // 초기 방 정보 및 플레이어 목록 로딩
     const fetchRoomDetails = async () => {
       try {
