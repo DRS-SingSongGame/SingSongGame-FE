@@ -61,6 +61,12 @@ const getGamePath = (roomId: string, roomType: string) => {
   }
 };
 
+const playButtonSound = () => {
+  const audio = new Audio('/audio/buttonclick.wav');
+  audio.volume = 0.7;
+  audio.play();
+};
+
 const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps) => {
   const router = useRouter();
   const { mutate: joinRoom, isLoading: joining } = useJoinRoom();
@@ -179,7 +185,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                       <Card 
                         key={room.roomId} 
                         className="cursor-pointer h-[130px] hover:shadow-lg transition-shadow"
-                        onClick={() => handleRoomClick(room)}
+                        onClick={() => { playButtonSound(); handleRoomClick(room); }}
                       >
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start mb-2">

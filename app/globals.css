@@ -145,8 +145,18 @@
     @apply border-border;
   }
 
+  html {
+    cursor: url('/cursor/mic.png') 0 0, auto !important;
+  }
+
   body {
     @apply bg-background text-foreground;
+    cursor: url('/cursor/mic.png') 0 0, auto !important;
+  }
+
+  /* 모든 요소에 커서 적용 */
+  *, *::before, *::after {
+    cursor: url('/cursor/mic.png') 0 0, auto !important;
   }
 }
 
