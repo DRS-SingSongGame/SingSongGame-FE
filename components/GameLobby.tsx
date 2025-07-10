@@ -15,6 +15,7 @@ import ChatBox from '@/components/chat/ChatBox';
 import { connectLobbySocket, disconnectLobbySocket, sendLobbyMessage } from '@/lib/lobbySocket';
 import SettingsModal from "./SettingsModal";
 import BGMPlayer from "./BGMPlayer";
+import { OnlineUser } from '@/types/online';
 
 export interface ChatMessage {
   id: number;
@@ -68,6 +69,7 @@ const playButtonSound = () => {
 };
 
 const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps) => {
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const router = useRouter();
   const { mutate: joinRoom, isLoading: joining } = useJoinRoom();
   const [searchTerm, setSearchTerm] = useState('');
@@ -98,6 +100,8 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
   useEffect(() => {
     connectLobbySocket(user.id, user.nickname, (msg: ChatMessage) => {
       setChatMessages((prev) => [...prev, msg]);
+    }, (users: any[]) => {
+      setOnlineUsers(users);
     });
     return () => {
       disconnectLobbySocket(user.id);
@@ -166,8 +170,40 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
   return (
     <div className="min-h-screen py-4 px-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 overflow-y-auto">
       <BGMPlayer bgmVolume={settings.bgmVolume} isPlaying={isBgmPlaying} setIsPlaying={setIsBgmPlaying} />
-      <div className="max-w-screen-2xl mx-auto grid grid-cols-3 gap-4">
-        <div className="col-span-2 space-y-3">
+  
+      <div className="max-w-screen-2xl mx-auto grid grid-cols-6 gap-4">
+        {/* 접속 유저 */}
+        <div className="col-span-1">
+          <Card className="bg-white/90 backdrop-blur-sm h-full">
+            <CardHeader>
+              <CardTitle>로비 유저</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-y-auto max-h-[700px] space-y-3 px-3">
+              {onlineUsers.map((u) => (
+                <div
+                  key={u.userId}
+                  className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm transition hover:shadow-md hover:bg-purple-50 cursor-pointer"
+                >
+                  <Avatar>
+                    <AvatarImage src={u.imageUrl} />
+                    <AvatarFallback>{u.username[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col justify-center">
+                    <span className="font-medium text-sm text-gray-800">{u.username}</span>
+                    <span className="text-xs text-green-500">
+                      {u.location === "ROOM" ? "게임 중" : "로비"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+
+          </Card>
+        </div>
+
+  
+        {/* 게임 방 */}
+        <div className="col-span-3 space-y-3">
           <Card className="bg-white/90 backdrop-blur-sm">
             <CardHeader className="pb-1">
               <CardTitle className="text-xl font-semibold">게임 방 검색</CardTitle>
@@ -207,37 +243,46 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
             </CardContent>
           </Card>
         </div>
-
-        <div className="space-y-4">
+  
+        {/* 내 정보 + 빠른 대전 */}
+        <div className="col-span-2 space-y-4">
           <Card className="bg-white/90 backdrop-blur-sm h-[240px]">
             <CardHeader><CardTitle className="text-lg">내 정보</CardTitle></CardHeader>
             <CardContent>
               <div className="flex items-center gap-4 mb-4">
                 <Avatar className="w-16 h-16 ring-4 ring-pink-500">
                   <AvatarImage src={user.avatar} />
-                  <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">{user.nickname[0]}</AvatarFallback>
+                  <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
+                    {user.nickname[0]}
+                  </AvatarFallback>
                 </Avatar>
                 <div>
                   <h3 className="font-semibold text-lg">{user.nickname}</h3>
                   <p className="text-gray-600 text-sm">레벨 1 • 새내기 🎵</p>
                   <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div className="bg-gradient-to-r from-pink-500 to-purple-500 h-2 rounded-full" style={{ width: '30%' }}></div>
+                    <div className="bg-gradient-to-r from-pink-500 to-purple-500 h-2 rounded-full" style={{ width: '30%' }} />
                   </div>
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsSettingsModalOpen(true)}><Settings className="w-4 h-4 mr-2" /> 설정</Button>
-                <Button variant="outline" size="sm" onClick={onLogout}><LogOut className="w-4 h-4 mr-2" /> 로그아웃</Button>
+                <Button variant="outline" size="sm" onClick={() => setIsSettingsModalOpen(true)}>
+                  <Settings className="w-4 h-4 mr-2" /> 설정
+                </Button>
+                <Button variant="outline" size="sm" onClick={onLogout}>
+                  <LogOut className="w-4 h-4 mr-2" /> 로그아웃
+                </Button>
               </div>
             </CardContent>
           </Card>
-
+  
           <Card className="flex flex-col justify-between bg-gradient-to-r from-purple-500/90 via-pink-500/90 to-orange-500/90 backdrop-blur-sm border-0 text-white h-[300px]">
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center gap-2">
                 <Zap className="w-6 h-6 text-yellow-300" /> ⚡ 빠른 대전
               </CardTitle>
-              <CardDescription className="text-purple-100">즉시 매칭으로 빠르게 게임을 시작하세요!</CardDescription>
+              <CardDescription className="text-purple-100">
+                즉시 매칭으로 빠르게 게임을 시작하세요!
+              </CardDescription>
             </CardHeader>
             <CardContent className="pb-4">
               <Button
@@ -251,26 +296,33 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
           </Card>
         </div>
       </div>
-
+  
+      {/* 채팅 */}
       <div className="mt-4">
-        <ChatBox user={user} messages={chatMessages} onSend={handleSendMessage} autoScrollToBottom={true} chatType="lobby" />
+        <ChatBox
+          user={user}
+          messages={chatMessages}
+          onSend={handleSendMessage}
+          autoScrollToBottom={true}
+          chatType="lobby"
+        />
       </div>
-
-      {/* 화면 오른쪽 하단 음악 제어 버튼 */}
+  
+      {/* 음악 컨트롤 버튼 */}
       <div className="fixed bottom-4 right-4 z-40">
         {isBgmPlaying ? (
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleBgmPause}
             className="bg-red-50 border-red-200 text-red-600 hover:bg-red-100 opacity-30 hover:opacity-100 text-xs px-2 py-1 h-6 shadow-lg"
           >
             <VolumeX className="w-3 h-3 mr-1" /> 끄기
           </Button>
         ) : (
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleBgmPlay}
             className="bg-green-50 border-green-200 text-green-600 hover:bg-green-100 opacity-30 hover:opacity-100 text-xs px-2 py-1 h-6 shadow-lg"
           >
@@ -278,7 +330,8 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
           </Button>
         )}
       </div>
-
+  
+      {/* 설정 모달 */}
       {isSettingsModalOpen && (
         <SettingsModal
           isOpen={isSettingsModalOpen}
@@ -291,6 +344,8 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
       )}
     </div>
   );
-};
+  
+}
+
 
 export default GameLobby;
