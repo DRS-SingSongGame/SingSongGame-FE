@@ -10,6 +10,7 @@ interface Room {
   maxPlayer: number;
   gameStatus: string;
   hostName: string;
+  players: Array<{ id: number; nickname: string; avatar?: string }>;
 }
 
 interface ApiResponse<T> {

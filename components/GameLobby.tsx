@@ -15,6 +15,7 @@ import ChatBox from '@/components/chat/ChatBox';
 import { connectLobbySocket, disconnectLobbySocket, sendLobbyMessage } from '@/lib/lobbySocket';
 import SettingsModal from "./SettingsModal";
 import BGMPlayer from "./BGMPlayer";
+import api from '@/lib/api';
 import { OnlineUser } from '@/types/online';
 
 export interface ChatMessage {
@@ -68,6 +69,8 @@ const playButtonSound = () => {
   audio.play();
 };
 
+// RoomPlayerCount 컴포넌트 및 관련 코드 제거
+
 const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps) => {
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const router = useRouter();
@@ -93,6 +96,9 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     shakeEffect: true,
   });
   const [isBgmPlaying, setIsBgmPlaying] = useState(true);
+  const [input, setInput] = useState('');
+  const [isComposing, setIsComposing] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const handleBgmPlay = () => setIsBgmPlaying(true);
   const handleBgmPause = () => setIsBgmPlaying(false);
@@ -107,6 +113,12 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
       disconnectLobbySocket(user.id);
     };
   }, [user.id, user.nickname]);
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages]);
 
   const handleSendMessage = (message: string) => {
     sendLobbyMessage(user.id, user.nickname, message);
@@ -171,141 +183,204 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     <div className="min-h-screen py-4 px-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 overflow-y-auto">
       <BGMPlayer bgmVolume={settings.bgmVolume} isPlaying={isBgmPlaying} setIsPlaying={setIsBgmPlaying} />
   
-      <div className="max-w-screen-2xl mx-auto grid grid-cols-6 gap-4">
-        {/* 접속 유저 */}
-        <div className="col-span-1">
-          <Card className="bg-white/90 backdrop-blur-sm h-full">
-            <CardHeader>
-              <CardTitle>로비 유저</CardTitle>
-            </CardHeader>
-            <CardContent className="overflow-y-auto max-h-[700px] space-y-3 px-3">
-              {onlineUsers.map((u) => (
-                <div
-                  key={u.userId}
-                  className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-sm transition hover:shadow-md hover:bg-purple-50 cursor-pointer"
+      <div className="max-w-screen-2xl mx-auto grid grid-cols-12 gap-x-6 min-h-screen">
+        <div className="col-span-9">
+          <Card className="bg-white/90 backdrop-blur-sm h-[900px] w-full p-0 text-xl flex flex-col justify-between">
+            <CardHeader className="pb-1 w-full max-w-full">
+              <div className="flex gap-3 mt-0 px-0 pt-2 w-full max-w-full min-h-[100px]">
+                <Input placeholder="방 제목이나 게임 모드로 검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="text-xl py-6 px-8 w-full max-w-full" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => refetch()}
+                  className="glow-hover bg-gradient-to-br from-blue-500 via-blue-400 to-cyan-400 text-white font-bold shadow-xl border-2 border-blue-300 text-xl px-8 py-6 w-full max-w-[48px]"
                 >
-                  <Avatar>
-                    <AvatarImage src={u.imageUrl} />
-                    <AvatarFallback>{u.username[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col justify-center">
-                    <span className="font-medium text-sm text-gray-800">{u.username}</span>
-                    <span className="text-xs text-green-500">
-                      {u.location === "ROOM" ? "게임 중" : "로비"}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-
-          </Card>
-        </div>
-
-  
-        {/* 게임 방 */}
-        <div className="col-span-3 space-y-3">
-          <Card className="bg-white/90 backdrop-blur-sm">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-xl font-semibold">게임 방 검색</CardTitle>
-              <div className="flex gap-2 mt-2">
-                <Input placeholder="방 제목이나 게임 모드로 검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                <Button variant="outline" size="icon"><Search className="w-4 h-4" /></Button>
-                <Button variant="outline" size="icon" onClick={() => refetch()}><RefreshCw className="w-4 h-4" /></Button>
-                <Button size="sm" onClick={onCreateRoom} className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">방 만들기</Button>
+                  <RefreshCw className="w-6 h-6" />
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={onCreateRoom}
+                  className="glow-hover bg-gradient-to-br from-blue-500 via-blue-400 to-cyan-400 text-white font-bold shadow-xl border-2 border-blue-300 text-xl px-10 py-6 w-full max-w-[180px]"
+                >
+                  방 만들기
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleQuickMatch}
+                  className="glow-hover bg-gradient-to-br from-red-500 via-red-400 to-red-300 text-white font-bold shadow-xl border-2 border-red-300 text-xl px-10 py-6 w-full max-w-[180px]"
+                >
+                  빠른 대전
+                </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[430px]">
-                  <div className="grid grid-cols-2 gap-3">
+            <CardContent className="px-0 pb-0 w-full max-w-full flex-1">
+              <ScrollArea className="h-full w-full max-w-full">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4 px-3">
                     {filteredRooms.map((room) => (
                       <Card 
                         key={room.roomId} 
-                        className="cursor-pointer h-[130px] hover:shadow-lg transition-shadow"
-                        onClick={() => { playButtonSound(); handleRoomClick(room); }}
+                        className={`relative flex rounded-xl border-4 overflow-hidden px-4 py-3 min-h-[100px] w-[96%] text-base mb-2 shadow-lg transition-shadow 
+    ${room.gameStatus === "IN_PROGRESS" ? "pointer-events-none opacity-60 bg-neutral-900 border-gray-700" : "cursor-pointer glow-hover bg-cyan-100 border-blue-400"}`}
+                        onClick={() => {
+                          if (room.gameStatus !== "IN_PROGRESS") {
+                            playButtonSound();
+                            handleRoomClick(room);
+                          }
+                        }}
                       >
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-semibold text-base truncate whitespace-nowrap overflow-hidden max-w-[50%]">{room.roomName}</h3>
+                        {/* 워터마크 */}
+                        <span
+                          className={`absolute right-2 bottom-2 text-[80px] font-extrabold select-none pointer-events-none
+    ${room.gameStatus === "IN_PROGRESS" ? "text-white/20" : "text-gray-300/40"}`}
+                          style={{
+                            transform: "rotate(-25deg)",
+                            lineHeight: 1,
+                            userSelect: "none",
+                            zIndex: 1,
+                            letterSpacing: "2px"
+                          }}
+                        >
+                          {room.gameStatus === "IN_PROGRESS" ? "Play" : "Wait"}
+                        </span>
+                        {/* 방 번호/노란점 */}
+                        <div className="flex flex-col items-center justify-center mr-4 z-10 min-w-[40px]">
+                          <span className="text-3xl font-extrabold text-gray-800">{room.roomId}</span>
+                          <span className="w-2 h-2 rounded-full bg-yellow-300 mt-1"></span>
+                        </div>
+                        {/* 방 정보 */}
+                        <div className="flex-1 z-10">
+                          <div className="flex justify-between items-center">
+                            <span
+                              className={`font-bold text-lg ${room.gameStatus === "IN_PROGRESS" ? "text-black" : "text-gray-900"} truncate`}
+                              style={{ maxWidth: '40%' }}
+                            >
+                              {room.roomName}
+                            </span>
                             <div className="flex items-center gap-2">
-                              {room.isPrivate && <Badge variant="secondary">🔒</Badge>}
-                              <Badge className={getGameModeColor(room.roomType)}>{getGameModeLabel(room.roomType)}</Badge>
+                              <span className="text-gray-700 text-sm">{room.players.length} / {room.maxPlayer}</span>
+                              {room.isPrivate && <span className="inline-block"><svg width="20" height="20" fill="currentColor" className="text-black"><path d="M10 2a4 4 0 0 0-4 4v2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1V6a4 4 0 0 0-4-4zm-2 4a2 2 0 1 1 4 0v2H8V6zm-3 4h10v6H5v-6z"/></svg></span>}
                             </div>
                           </div>
-                          <div className="flex justify-between items-center text-sm text-gray-500 mb-1">
-                            <span>{1} / {room.maxPlayer}</span>
-                            <span>방장: {room.hostName}</span>
-                          </div>
-                        </CardContent>
+                          <div className={`text-sm ${room.gameStatus === "IN_PROGRESS" ? "text-black" : "text-gray-700"}`}>{room.roomType}</div>
+                          <div className={`text-xs ${room.gameStatus === "IN_PROGRESS" ? "text-black" : "text-gray-500"}`}>방장: {room.hostName}</div>
+                        </div>
                       </Card>
                     ))}
                   </div>
               </ScrollArea>
             </CardContent>
-          </Card>
-        </div>
-  
-        {/* 내 정보 + 빠른 대전 */}
-        <div className="col-span-2 space-y-4">
-          <Card className="bg-white/90 backdrop-blur-sm h-[240px]">
-            <CardHeader><CardTitle className="text-lg">내 정보</CardTitle></CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4 mb-4">
-                <Avatar className="w-16 h-16 ring-4 ring-pink-500">
-                  <AvatarImage src={user.avatar} />
-                  <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
-                    {user.nickname[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold text-lg">{user.nickname}</h3>
-                  <p className="text-gray-600 text-sm">레벨 1 • 새내기 🎵</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                    <div className="bg-gradient-to-r from-pink-500 to-purple-500 h-2 rounded-full" style={{ width: '30%' }} />
-                  </div>
+            {/* 카드 내부 하단 채팅창 */}
+            <div className="w-full px-6 pb-6 pt-2">
+              <div className="bg-transparent rounded-lg p-0 w-full flex flex-col">
+                <div className="mb-2 space-y-1 h-[60px] overflow-y-auto">
+                  {chatMessages.map((msg) => (
+                    <div key={msg.id} className="flex items-center text-xs">
+                      <span className="font-semibold text-purple-600 mr-1">
+                        {(msg.type === 'ENTER' || msg.type === 'LEAVE') ? '시스템' : msg.senderName}:
+                      </span>
+                      <span className="ml-1 flex-1">{msg.message}</span>
+                      <span className="text-gray-400 text-xs ml-2">{msg.time}</span>
+                    </div>
+                  ))}
+                  <div ref={chatEndRef} />
+                </div>
+                <div className="flex flex-row gap-2">
+                  <Input
+                    placeholder="메시지를 입력하세요..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onCompositionStart={() => setIsComposing(true)}
+                    onCompositionEnd={() => setIsComposing(false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !isComposing) {
+                        e.preventDefault();
+                        if (input.trim()) {
+                          setInput('');
+                          handleSendMessage(input.trim());
+                        }
+                      }
+                    }}
+                    className="flex-1 text-base px-4 py-3 rounded-lg border border-blue-200 shadow-none bg-white/80"
+                  />
+                  <Button
+                    onClick={() => {
+                      if (input.trim()) {
+                        setInput('');
+                        handleSendMessage(input.trim());
+                      }
+                    }}
+                    className="glow-hover bg-gradient-to-br from-blue-500 via-blue-400 to-cyan-400 text-white font-bold shadow-xl border-2 border-blue-300 text-lg px-8 py-2 rounded-lg"
+                  >
+                    전송
+                  </Button>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsSettingsModalOpen(true)}>
+            </div>
+          </Card>
+        </div>
+        <div className="col-span-3 flex flex-col gap-0 items-stretch mt-0 pt-0">
+          <Card className="bg-white/90 backdrop-blur-sm w-full mb-0 mt-0 pt-0 pb-0">
+            <CardHeader className="border-b p-0 pb-0 mt-0 mb-0 pl-6">
+              <CardTitle className="text-2xl font-bold">내 정보</CardTitle>
+              <div className="flex items-center gap-4 mt-4">
+                <Avatar className="w-16 h-16 ring-4 ring-pink-500">
+                  {user.profileImage ? (
+                    <AvatarImage src={user.profileImage} alt="프로필 이미지" />
+                  ) : (
+                    <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
+                      {user.nickname?.[0] || "?"}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-lg truncate">{user.nickname}</h3>
+                  <p className="text-gray-600 text-sm truncate">레벨 1 • 새내기 🎵</p>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setIsSettingsModalOpen(true)}
+                  className="glow-hover bg-gradient-to-br from-blue-500 via-blue-400 to-cyan-400 text-white font-bold shadow-xl border-2 border-blue-300"
+                >
                   <Settings className="w-4 h-4 mr-2" /> 설정
                 </Button>
-                <Button variant="outline" size="sm" onClick={onLogout}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onLogout}
+                  className="glow-hover bg-gradient-to-br from-blue-500 via-blue-400 to-cyan-400 text-white font-bold shadow-xl border-2 border-blue-300"
+                >
                   <LogOut className="w-4 h-4 mr-2" /> 로그아웃
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-  
-          <Card className="flex flex-col justify-between bg-gradient-to-r from-purple-500/90 via-pink-500/90 to-orange-500/90 backdrop-blur-sm border-0 text-white h-[300px]">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold flex items-center gap-2">
-                <Zap className="w-6 h-6 text-yellow-300" /> ⚡ 빠른 대전
-              </CardTitle>
-              <CardDescription className="text-purple-100">
-                즉시 매칭으로 빠르게 게임을 시작하세요!
-              </CardDescription>
             </CardHeader>
-            <CardContent className="pb-4">
-              <Button
-                size="lg"
-                onClick={handleQuickMatch}
-                className="w-full h-20 bg-yellow-400 hover:bg-yellow-500 text-black font-bold text-xl"
-              >
-                <Play className="w-5 h-5 mr-2" /> 빠른 대전 시작
-              </Button>
-            </CardContent>
+          </Card>
+          <div className="mt-4" />
+          <Card className="bg-white/90 backdrop-blur-sm w-full h-[740px] flex flex-col p-0">
+            <div className="p-6 flex-1 flex flex-col">
+              <div className="text-xl font-bold mb-2">로비 유저</div>
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                {onlineUsers.map((u) => (
+                  <div
+                    key={u.userId}
+                    className="flex items-center gap-2 p-2 bg-white rounded-xl border border-gray-200 shadow-sm hover:bg-purple-50 cursor-pointer"
+                  >
+                    <Avatar className="w-7 h-7">
+                      <AvatarImage src={u.imageUrl} />
+                      <AvatarFallback>{u.username[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium text-xs text-gray-800">{u.username}</span>
+                    <span className="text-xs text-green-500 ml-auto">
+                      {u.location === "ROOM" ? "게임 중" : "로비"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </Card>
         </div>
-      </div>
-  
-      {/* 채팅 */}
-      <div className="mt-4">
-        <ChatBox
-          user={user}
-          messages={chatMessages}
-          onSend={handleSendMessage}
-          autoScrollToBottom={true}
-          chatType="lobby"
-        />
       </div>
   
       {/* 음악 컨트롤 버튼 */}
@@ -342,6 +417,9 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
           onPause={handleBgmPause}
         />
       )}
+
+      {/* 카드 바깥, 전체 배경 하단에 고정된 채팅 입력창/버튼 추가 */}
+      {/* This div is now empty as the content is moved to the col-span-3 card */}
     </div>
   );
   
