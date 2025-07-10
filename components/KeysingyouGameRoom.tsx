@@ -64,6 +64,8 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
   const [phase, setPhase] = useState<Phase>("ready");
   const [users, setUsers] = useState<User[]>([]);
   const [timer, setTimer] = useState(0);
+  const [round, setRound] = useState(1);
+  const [maxRound, setMaxRound] = useState(1);
   const [keyword, setKeyword] = useState<Keyword | null>(null);
   const [currentSid, setCurrentSid] = useState<string>(""); // 차례 SID
   const [currentPlayerNick, setCurrentPlayerNick] = useState("");
@@ -188,17 +190,22 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     sock.on("room_update", (d: { users: User[] }) => setUsers(d.users));
     sock.on("start_failed", (d: { reason: string }) => alert(d.reason));
 
-    /* ① 전체 게임 인트로 10s */
-    sock.on("game_intro", () => {
+    /* 전체 게임 인트로 10s */
+    sock.on("game_intro", (d: { round?: number; maxRounds?: number }) => {
+      if (d.round) setRound(d.round);
+      if (d.maxRounds) setMaxRound(d.maxRounds);
+
       setScores({});
       setPhase("intro");
       setTimer(10);
     });
 
-    /* ② 키워드 공개 5s */
+    /* 키워드 공개 5s */
     sock.on(
       "keyword_phase",
-      (d: { playerSid: string; playerNick: string; keyword: Keyword }) => {
+      (d) => {
+        setRound(d.round)
+        setMaxRound(d.maxRounds);
         setKeyword(d.keyword);
         keywordRef.current = d.keyword;
         setCurrentSid(d.playerSid);
@@ -208,7 +215,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       }
     );
 
-    /* ③ 녹음 10s */
+    /* 녹음 10s */
     sock.on("record_begin", (d: { playerSid: string; turn: number }) => {
       setCurrentSid(d.playerSid);
       setPhase("record");
@@ -260,7 +267,6 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
   }, [roomId, nickname, user]);
 
   const handleLeaveRoom = async () => {
-    // TODO: 백엔드에 방 나가기 요청 (HTTP)
     try {
       await api.delete(`/api/room/${room.roomId}/leave`);
       router.push("/lobby");
@@ -442,7 +448,8 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                           }
                           className="bg-blue-600 hover:bg-blue-700 text-white w-full h-[50px] text-lg"
                           onClick={() =>
-                            socket.current?.emit("start_game", { roomId })
+                            // 향후 room에 maxRound 추가 시 수정 필요
+                            socket.current?.emit("start_game", { roomId, maxRounds: 2 })
                           }
                         >
                           <Play className="w-4 h-4 mr-2" /> 게임 시작
@@ -731,7 +738,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                 </div>
                 {/* 오른쪽: 라운드 */}
                 <div className="flex-shrink-0 text-lg font-semibold text-gray-800">
-                  라운드 1/1
+                  라운드 {round}/{maxRound}
                 </div>
               </div>
             </CardHeader>
