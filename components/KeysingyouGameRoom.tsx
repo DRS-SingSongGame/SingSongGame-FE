@@ -259,6 +259,11 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     };
   }, [roomId, nickname, user]);
 
+  useEffect(() => {
+    const audio = new Audio('/audio/entersound.wav');
+    audio.play();
+  }, []);
+
   const handleLeaveRoom = async () => {
     // TODO: 백엔드에 방 나가기 요청 (HTTP)
     try {
@@ -331,7 +336,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     switch (phase) {
       case 'ready':
         return (
-          <div className="min-h-[100vh] h-[800px] p-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100">
+          <div className="min-h-[100vh] h-[800px] p-4">
             <div className="max-w-screen-xl mx-auto space-y-4 h-full">
               {/* ── 방 제목 ───────────────────────── */}
               <Card className="bg-white/90 backdrop-blur-sm">
@@ -704,13 +709,25 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
 
   if (phase === "ready") {
     // ready 페이즈는 전체 페이지를 차지
-    return renderGamePhase();
+    return (
+      <div className="relative min-h-screen p-4">
+        {/* 배경 레이어 */}
+        <div className="absolute inset-0 bg-gradient-to-br from-pink-400 via-purple-500 via-blue-500 to-cyan-400 opacity-0 pointer-events-none" />
+        {/* 실제 컨텐츠 */}
+        <div className="relative z-10">
+          {renderGamePhase()}
+        </div>
+      </div>
+    );
   }
 
   // 게임 진행 중 레이아웃 (스케치 참고)
   return (
-    <div className="min-h-screen p-4 bg-gradient-to-br from-pink-400 via-purple-500 via-blue-500 to-cyan-400">
-      <div className="max-w-6xl mx-auto">
+    <div className="relative min-h-screen p-4">
+      {/* 배경 레이어 */}
+      <div className="absolute inset-0 bg-gradient-to-br from-pink-400 via-purple-500 via-blue-500 to-cyan-400 opacity-0 pointer-events-none" />
+      {/* 실제 컨텐츠 */}
+      <div className="relative z-10 max-w-6xl mx-auto">
         {/* 헤더 */}
         <div className="mb-4 w-full px-4">
           <Card className="bg-white/90 backdrop-blur-sm border-0 w-full h-[80px]">
@@ -737,103 +754,102 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
             </CardHeader>
           </Card>
         </div>
-      </div>
 
-      {/* 메인 영역: 게임(3) : 점수판(1) */}
-      <div className="flex-1 w-full max-w-6xl mx-auto flex flex-row gap-4 px-4 pb-4">
-        {/* 게임 영역 */}
-        <div className="flex-1 flex items-center justify-center bg-white/90 rounded-2xl min-h-[448px] mr-2">
-          {/* 실제 게임 내용 */}
-          <div className="w-full flex flex-col items-center justify-center">
-            {renderGamePhase()}
+        {/* 메인 영역: 게임(3) : 점수판(1) */}
+        <div className="flex-1 w-full max-w-6xl mx-auto flex flex-row gap-4 px-4 pb-4">
+          {/* 게임 영역 */}
+          <div className="flex-1 flex items-center justify-center bg-white/90 rounded-2xl min-h-[448px] mr-2">
+            {/* 실제 게임 내용 */}
+            <div className="w-full flex flex-col items-center justify-center">
+              {renderGamePhase()}
+            </div>
           </div>
-        </div>
-        {/* 점수판 영역 */}
-        <div className="w-[320px] min-w-[260px] max-w-[340px] flex flex-col">
-          <Card className="bg-white/90 backdrop-blur-sm border-0 flex flex-col">
-            <CardHeader>
-              <CardTitle className="text-xl">🏆 점수판</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col justify-center">
-              <div className="space-y-3">
-                {Array.from({ length: 6 }).map((_, idx) => {
-                  const user = users[idx];
-                  const slotClass =
-                    "rounded-lg border-2 flex items-center min-h-[64px] py-3 px-5 transition-all";
-                  if (user) {
-                    return (
-                      <div
-                        key={user.id}
-                        className={
-                          slotClass +
-                          ' ' +
-                          (currentPlayerNick === user.nickname
-                            ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-pink-50 ring-2 ring-purple-200'
-                            : 'border-gray-200 bg-gray-50')
-                        }
-                      >
-                        <div className="flex items-center gap-3 flex-1">
-                          <Avatar className="w-10 h-10">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
-                              {user.nickname[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">{user.nickname}</span>
-                              {user.isHost && <Crown className="w-4 h-4 text-yellow-500" />}
+          {/* 점수판 영역 */}
+          <div className="w-[320px] min-w-[260px] max-w-[340px] flex flex-col">
+            <Card className="bg-white/90 backdrop-blur-sm border-0 flex flex-col">
+              <CardHeader>
+                <CardTitle className="text-xl">🏆 점수판</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col justify-center">
+                <div className="space-y-3">
+                  {Array.from({ length: 6 }).map((_, idx) => {
+                    const user = users[idx];
+                    const slotClass =
+                      "rounded-lg border-2 flex items-center min-h-[64px] py-3 px-5 transition-all";
+                    if (user) {
+                      return (
+                        <div
+                          key={user.id}
+                          className={
+                            slotClass +
+                            ' ' +
+                            (currentPlayerNick === user.nickname
+                              ? 'border-purple-500 bg-gradient-to-r from-purple-50 to-pink-50 ring-2 ring-purple-200'
+                              : 'border-gray-200 bg-gray-50')
+                          }
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage src={user.avatar} />
+                              <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
+                                {user.nickname[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold">{user.nickname}</span>
+                                {user.isHost && <Crown className="w-4 h-4 text-yellow-500" />}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                              {scores[user.nickname] || 0}점
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                            {scores[user.nickname] || 0}점
-                          </div>
+                      );
+                    } else {
+                      return (
+                        <div
+                          key={"empty-" + idx}
+                          className={slotClass + " border-gray-200 bg-gray-100 justify-center text-gray-400 select-none"}
+                        >
+                          <span className="text-base font-semibold">빈 슬롯</span>
                         </div>
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <div
-                        key={"empty-" + idx}
-                        className={slotClass + " border-gray-200 bg-gray-100 justify-center text-gray-400 select-none"}
-                      >
-                        <span className="text-base font-semibold">빈 슬롯</span>
-                      </div>
-                    );
-                  }
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                      );
+                    }
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
 
-      {/* 하단 채팅창 */}
-      <div className="w-full max-w-6xl mx-auto px-4 pb-8">
-        <div className="bg-white/80 rounded-2xl p-4 max-h-[300px] overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto">
-            <KeysingyouChatBox
-              user={user}
-              messages={chatMsgs.map((c, i) => ({
-                id: i,
-                type: 'TALK',
-                roomId: room.roomId,
-                senderId: '',
-                senderName: c.message.split(":")[0],
-                message: c.message.split(":").slice(1).join(":"),
-                timestamp: '',
-                time: '',
-              }))}
-              onSend={sendChat}
-              autoScrollToBottom={true}
-              chatType="game"
-            />
+        {/* 하단 채팅창 */}
+        <div className="w-full max-w-6xl mx-auto px-4 pb-8">
+          <div className="bg-white/80 rounded-2xl p-4 max-h-[300px] overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-y-auto">
+              <KeysingyouChatBox
+                user={user}
+                messages={chatMsgs.map((c, i) => ({
+                  id: i,
+                  type: 'TALK',
+                  roomId: room.roomId,
+                  senderId: '',
+                  senderName: c.message.split(":")[0],
+                  message: c.message.split(":").slice(1).join(":"),
+                  timestamp: '',
+                  time: '',
+                }))}
+                onSend={sendChat}
+                autoScrollToBottom={true}
+                chatType="game"
+              />
+            </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 };

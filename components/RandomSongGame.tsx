@@ -502,6 +502,11 @@ const RandomSongGame = ({
     }
   };
 
+  useEffect(() => {
+    const audio = new Audio('/audio/entersound.wav');
+    audio.play();
+  }, []);
+
   if (loading) return <div>로딩 중...</div>;
 
   // phase별 화면
