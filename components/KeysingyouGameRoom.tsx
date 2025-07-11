@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
-import { Mic, Crown, Play, Circle, LogOut, Trophy, ArrowLeft } from "lucide-react";
+import { Mic, Crown, Play, Circle, LogOut, Trophy, ArrowLeft, X, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
 import { getSocket, disconnectSocket } from "@/lib/keysingyouWebSocket";
 import { CardContent } from "./ui/Card";
 import { CardTitle } from "./ui/Card";
@@ -89,6 +89,9 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     | null
   >(null);
   const [isComposing, setIsComposing] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [imgIdx, setImgIdx] = useState(0);
+  const images = ["/score_guide1.jpg", "/score_guide2.jpg"];
 
   /* ───── refs ───── */
   const mySid = useRef<string>("");
@@ -342,7 +345,39 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     switch (phase) {
       case 'ready':
         return (
-          <div className="min-h-[100vh] h-[800px] p-4">
+          <div className="min-h-[800px] h-[800px] p-4">
+            {isModalOpen && (
+              <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+                <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-5xl w-full flex flex-col items-center">
+                  <button
+                    className="absolute top-4 right-4 text-gray-500 hover:text-black"
+                    onClick={() => setIsModalOpen(false)}
+                    type="button"
+                  >
+                    <X className="w-7 h-7" />
+                  </button>
+                  <img src={images[imgIdx]} alt="채점 기준" className="max-h-[75vh] rounded-xl" />
+                  <div className="flex justify-between w-full mt-4">
+                    <button
+                      onClick={() => setImgIdx((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
+                      className="p-2"
+                      type="button"
+                    >
+                      <ChevronLeft className="w-7 h-7" />
+                    </button>
+                    <button
+                      onClick={() => setImgIdx((prev) => (prev + 1) % images.length)}
+                      className="p-2"
+                      type="button"
+                    >
+                      <ChevronRight className="w-7 h-7" />
+                    </button>
+                  </div>
+                  {/* 페이지 표시 */}
+                  <div className="mt-2 text-gray-500 text-sm font-semibold">{imgIdx + 1} / {images.length}</div>
+                </div>
+              </div>
+            )}
             <div className="max-w-screen-xl mx-auto space-y-4 h-full">
               {/* ── 방 제목 ───────────────────────── */}
               <Card className="bg-white/90 backdrop-blur-sm">
@@ -369,7 +404,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                   {/* 채팅 */}
                   <div className="bg-white rounded-2xl flex flex-col w-full min-h-[300px] p-6">
                     {/* 상단 제목 */}
-                    <div className="text-2xl font-extrabold text-black mb-4 text-left">방 채팅</div>
+                    
                     {/* 채팅 메시지 영역 */}
                     <div className="flex-1 mb-4">
                       <div ref={roomChatBoxRef} className="flex flex-col justify-end h-[200px] min-h-[200px] max-h-[200px] overflow-y-auto scrollbar-hide bg-[#fafbfc] rounded-xl px-4 py-2 border border-[#f0f0f0]">
@@ -440,6 +475,18 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
 
                     {/* 액션 버튼 */}
                     <div className="flex flex-col gap-2 p-4">
+                      {/* 마이크 허용 버튼 위에 도움말 버튼 */}
+                      <div className="flex items-center mb-2">
+                        <button
+                          className="flex items-center gap-1 text-blue-600 font-bold hover:underline"
+                          onClick={() => setIsModalOpen(true)}
+                          type="button"
+                        >
+                          <HelpCircle className="w-5 h-5" />
+                          채점 기준
+                        </button>
+                      </div>
+                      {/* 기존 마이크 허용 버튼 아래에 그대로 */}
                       <Button
                         onClick={requestMicPermission}
                         className="w-full bg-green-600 hover:bg-green-700 text-white h-[50px] text-lg"
