@@ -92,6 +92,17 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
   const images = ["/score_guide1.jpg", "/score_guide2.jpg"];
+  // 1. 상태 추가
+  const [rollingKeyword, setRollingKeyword] = useState<string>("");
+  // 1. 후보 키워드 배열 및 상태 추가
+  const candidates = [
+    "아이유", "빅뱅", "지코", "에스파", "뉴진스", "BTS", "IVE", "세븐틴", "블랙핑크", "레드벨벳",
+    // 유명한 곡 제목 추가
+    "좋은날", "거짓말", "아무노래", "Next Level", "Hype Boy", "Dynamite", "LOVE DIVE", "HOT", "Kill This Love", "Psycho"
+  ];
+  const [rollingIndex, setRollingIndex] = useState(0);
+  const [rollingSpeed, setRollingSpeed] = useState(30);
+  const [showFinal, setShowFinal] = useState(false);
 
   /* ───── refs ───── */
   const mySid = useRef<string>("");
@@ -143,6 +154,51 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       return () => clearTimeout(timer);
     }
   }, [phase, audioSrc]);
+
+  // 2. 키워드 phase 진입 시 슬롯머신 애니메이션
+  useEffect(() => {
+    if (phase === "keyword" && keyword) {
+      // 키워드 룰렛 시작 시 사운드 재생
+      const keywordAudio = new Audio('/audio/keyword.wav');
+      keywordAudio.play().catch(error => {
+        console.log('키워드 사운드 재생 실패:', error);
+      });
+
+      setShowFinal(false);
+      setRollingSpeed(20);
+      let idx = 0;
+      let interval: NodeJS.Timeout;
+      let timeout1: NodeJS.Timeout;
+
+      // 룰렛 시작 후 3초 후에 keywordresult.mp3 재생
+      const resultTimeout = setTimeout(() => {
+        const resultAudio = new Audio('/audio/keywordresult.mp3');
+        resultAudio.play().catch(error => {
+          console.log('키워드 결과 사운드 재생 실패:', error);
+        });
+      }, 3000);
+
+      // 1. 3초간 빠르게 돌기
+      const fastRoll = () => {
+        setRollingIndex(idx % candidates.length);
+        idx++;
+        interval = setTimeout(fastRoll, 20);
+      };
+      fastRoll();
+
+      // 2. 3초 후 멈추고 실제 키워드 보여주기
+      timeout1 = setTimeout(() => {
+        clearTimeout(interval);
+        setShowFinal(true);
+      }, 3000);
+
+      return () => {
+        clearTimeout(interval);
+        clearTimeout(timeout1);
+        clearTimeout(resultTimeout);
+      };
+    }
+  }, [phase, keyword]);
 
   // 게임 모드 라벨 및 색상 함수 (기존과 동일)
   const getGameModeColor = (mode: string) => {
@@ -214,7 +270,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
         setCurrentSid(d.playerSid);
         setCurrentPlayerNick(d.playerNick);
         setPhase("keyword");
-        setTimer(5);
+        setTimer(8);
       }
     );
 
@@ -596,7 +652,23 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
           <div className="text-center space-y-8">
             <div className="bg-green-500 text-white rounded-lg p-8 transform hover:scale-105 transition-all shadow-xl w-auto inline-block">
               <h2 className="text-4xl font-bold mb-2">{keyword?.type}</h2>
-              <div className="text-6xl font-bold">{keyword?.name}</div>
+              <div className="relative h-20 overflow-hidden flex items-center justify-center" style={{height: '5rem', width: '12rem'}}>
+                {!showFinal ? (
+                  <div
+                    className="transition-transform duration-100"
+                    style={{
+                      transform: `translateY(-${rollingIndex * 3}rem)`,
+                      willChange: "transform"
+                    }}
+                  >
+                    {candidates.concat(candidates).map((name, i) => (
+                      <div key={i} className="text-5xl font-bold h-20 flex items-center justify-center">{name}</div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-6xl font-bold text-yellow-200 drop-shadow-lg transition-all duration-500">{keyword?.name}</div>
+                )}
+              </div>
             </div>
             <p className="text-xl text-gray-700">
               <span className="font-bold text-blue-600">{users.find((u) => u.sid === currentSid)?.nickname}</span> 님의 차례입니다
@@ -604,7 +676,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                 <span className="ml-2 text-green-600 font-bold">(내 차례)</span>
               )}
             </p>
-            <TimerCircle timeLeft={timer} duration={5} size={100} />
+            <TimerCircle timeLeft={timer} duration={10} size={100} />
           </div>
         );
 
