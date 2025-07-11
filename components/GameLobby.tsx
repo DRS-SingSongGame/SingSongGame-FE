@@ -17,6 +17,8 @@ import SettingsModal from "./SettingsModal";
 import BGMPlayer from "./BGMPlayer";
 import api from '@/lib/api';
 import { OnlineUser } from '@/types/online';
+import ErrorModal from "@/components/ErrorModal";
+
 
 export interface ChatMessage {
   id: number;
@@ -99,6 +101,8 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
   const [input, setInput] = useState('');
   const [isComposing, setIsComposing] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState({ open: false, message: "" });
+
 
   const handleBgmPlay = () => setIsBgmPlaying(true);
   const handleBgmPause = () => setIsBgmPlaying(false);
@@ -141,25 +145,28 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
   const handleQuickMatch = () => console.log('Quick match started');
 
   const handleRoomClick = (room: any) => {
-    // 방에 바로 입장하고 게임 페이지로 이동
     joinRoom(
       {
         roomId: room.roomId,
-        password: room.isPrivate ? prompt('비밀번호를 입력하세요') ?? undefined : undefined
+        password: room.isPrivate ? prompt("비밀번호를 입력하세요") ?? undefined : undefined,
       },
       {
         onSuccess: () => {
           const gamePath = getGamePath(room.roomId, room.roomType);
-          if (room.roomType == "KEY_SING_YOU") {
+          if (room.roomType === "KEY_SING_YOU") {
             router.push(`/keysingyou_room/${room.roomId}`);
           } else {
             router.push(gamePath);
           }
         },
         onError: (error) => {
-          alert('방 참여 실패');
-          console.error(error);
-        }
+          const axiosError = error as any;
+          const msg =
+            axiosError.response?.data?.body?.message ||  // ✅ 정답
+            "방 참여에 실패했습니다.";
+
+          setError({ open: true, message: msg });
+        },
       }
     );
   };
@@ -418,8 +425,13 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
         />
       )}
 
-      {/* 카드 바깥, 전체 배경 하단에 고정된 채팅 입력창/버튼 추가 */}
-      {/* This div is now empty as the content is moved to the col-span-3 card */}
+    {error.open && (
+      <ErrorModal
+      open={error.open}
+      message={error.message}
+      onClose={() => setError({ open: false, message: "" })}
+    />
+    )}
     </div>
   );
   

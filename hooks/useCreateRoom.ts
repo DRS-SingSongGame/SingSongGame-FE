@@ -8,6 +8,7 @@ export interface CreateRoomPayload {
   isPrivate: boolean;
   roomPassword: number;
   maxPlayer: number;
+  maxRound: number;
   hostId: number;
 }
 
@@ -17,6 +18,7 @@ export interface CreateRoomResponse {
   roomType: string;
   isPrivate: boolean;
   maxPlayer: number;
+  maxRound: number;
   hostId: number;
 }
 

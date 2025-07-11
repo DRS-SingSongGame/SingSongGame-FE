@@ -31,10 +31,12 @@ import {
   Timer,
   Users,
 } from "lucide-react";
-import { connectGameSocket, disconnectGameSocket, sendGameMessage } from "@/lib/gameSocket";
+import { connectGameSocket, disconnectGameSocket, sendGameMessage, sendKeywordConfirm } from "@/lib/gameSocket";
 import ChatBox, { ChatMessage } from "./chat/ChatBox";
 import axios from "axios";
 import { PREDEFINED_TAGS } from "@/lib/tags";
+import KeywordDisplay from "@/components/KeywordDisplay";
+
 
 interface RandomSongGameProps {
   user: any;
@@ -48,6 +50,7 @@ interface RandomSongGameProps {
 
 interface GameSessionType {
   currentRound: number;
+  maxRound: number;
   currentSong?: {
     title: string;
     hint: string;
@@ -90,7 +93,7 @@ const RandomSongGame = ({
     scoreGain: number;
   } | null>(null);
   const currentRoundRef = useRef<number>(0);
-  const totalRoundsRef = useRef<number>(0);
+  const maxRoundRef = useRef<number>(0);
   const phaseRef = useRef<Phase>("waiting");
   const router = useRouter();
   const [gameEndResults, setGameEndResults] = useState<
@@ -109,7 +112,6 @@ const RandomSongGame = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
-
 
   useEffect(() => {
     if (phase === 'playing') {
@@ -152,7 +154,6 @@ const RandomSongGame = ({
   }, [showNoAnswerModal]);
   
   // 정답자가 없는 경우 프로그레스바 애니메이션 //
-
 
 
   const handleCloseNoAnswerModal = () => {
@@ -210,6 +211,7 @@ const RandomSongGame = ({
           setChatMessages((prev) => [...prev, msg]);
         }
       },
+      
       onGameStartCountdown: (response) => {
         console.log("Game Start Countdown:", response);
         setPhase("countdown");
@@ -231,7 +233,7 @@ const RandomSongGame = ({
         
 
         currentRoundRef.current = response.round;
-        totalRoundsRef.current = response.totalRounds;
+        maxRoundRef.current = response.maxRound;
 
         setPhase("playing");
         setGameSession((prev: any) => ({
@@ -246,7 +248,7 @@ const RandomSongGame = ({
           roundStartTime: Date.now(), // Set client-side start time for timer
           roundDuration: 30, // Assuming 30 seconds as per backend InGameService
           playerScores: response.playerScores || prev?.playerScores,
-          totalRounds: response.totalRounds || prev?.totalRounds,
+          maxRound: response.maxRound || prev?.maxRound,
         }));
         // Start round timer
         if (roundTimerIntervalRef.current) {
@@ -304,19 +306,19 @@ const RandomSongGame = ({
           setAnswerModalData(null);
       
           // ✅ 마지막 라운드인 경우 강제 종료 fallback
-          const isLastRound =
-            currentRoundRef.current >= totalRoundsRef.current;
+          // const isLastRound =
+          //   currentRoundRef.current >= maxRoundRef.current;
 
-          if (isLastRound && phaseRef.current !== "final") {
-            console.log("🚨 마지막 라운드 종료 fallback 실행");
-            setPhase("final");
-            onGameEnd(
-              Object.entries(gameSession?.playerScores || {}).map(([id, score]) => ({
-                id,
-                score,
-              }))
-            );
-          }
+          // if (isLastRound && phaseRef.current !== "final") {
+          //   console.log("🚨 마지막 라운드 종료 fallback 실행");
+          //   setPhase("final");
+          //   onGameEnd(
+          //     Object.entries(gameSession?.playerScores || {}).map(([id, score]) => ({
+          //       id,
+          //       score,
+          //     }))
+          //   );
+          // }
       
         }, 5000);
       },
@@ -484,7 +486,7 @@ const RandomSongGame = ({
 
   const handleStartGame = async () => {
     console.log("Attempting to start game...");
-  
+    console.log("🎯 gameSession 데이터:", gameSession);
     // id → name 매핑
     const keywordNames = selectedTagIds
       .map((id) => PREDEFINED_TAGS.find((tag) => tag.id === id)?.name)
@@ -572,7 +574,8 @@ const RandomSongGame = ({
             </CardContent>
           </Card>
         </div>
-        {isHost && (
+        {isHost ? (
+          // 방장용 키워드 선택 UI
           <div className="max-w-4xl mx-auto w-full mt-6">
             <Card className="bg-white/90 backdrop-blur-sm p-4">
               <CardHeader className="pb-2">
@@ -581,50 +584,26 @@ const RandomSongGame = ({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-              <KeywordSelector
-                tags={PREDEFINED_TAGS}
-                selected={selectedTagIds}
-                onChange={setSelectedTagIds}
-              />
-                <div className="text-center">
-                  {/* <Button
+                <KeywordSelector
+                  tags={PREDEFINED_TAGS}
+                  selected={selectedTagIds}
+                  onChange={setSelectedTagIds}
+                />
+                <div className="flex justify-end mt-4">
+                  <Button
+                    onClick={() => sendKeywordConfirm(room.roomId, selectedTagIds)}
                     disabled={selectedTagIds.length === 0}
-                    onClick={() => {
-                      console.log("선택된 키워드 ID:", selectedTagIds);
-                      // TODO: 이 키워드를 백엔드에 보내는 로직 추가 예정
-                    }}
-                    className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 text-white px-6 py-3 rounded-lg font-semibold"
+                    className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-full shadow-md hover:bg-purple-700"
                   >
-                    🎮 키워드로 게임 시작
-                  </Button> */}
+                    키워드 확정
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           </div>
-        )}
-        {!isHost && selectedTagIds.length > 0 && (
-          <div className="max-w-4xl mx-auto w-full mt-6">
-            <Card className="bg-white/80 backdrop-blur-sm p-4">
-              <CardHeader>
-                <CardTitle className="text-md font-semibold text-gray-700">
-                  선택된 키워드
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex gap-2 flex-wrap">
-                {selectedTagIds.map((id) => {
-                  const tag = PREDEFINED_TAGS.find((t) => t.id === id);
-                  return (
-                    <span
-                      key={id}
-                      className="px-3 py-1 bg-purple-200 text-purple-800 rounded-full text-sm"
-                    >
-                      #{tag?.name}
-                    </span>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          </div>
+        ) : (
+          // 참여자용 키워드 미리보기 컴포넌트 (zustand 기반)
+          <KeywordDisplay />
         )}
 
         <div className="max-w-4xl mx-auto w-full mt-6">
@@ -678,14 +657,12 @@ const RandomSongGame = ({
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle className="text-2xl font-bold">
-                    Round {gameSession?.currentRound} / 2
-                    {gameSession?.currentRound === 2 && (
-                      <span className="text-red-500">
-                        🎉 마지막 라운드입니다!
-                      </span>
-                    )}
-                  </CardTitle>
+                <CardTitle className="text-2xl font-bold">
+                  Round {gameSession?.currentRound} / {gameSession?.maxRound}
+                  {gameSession?.currentRound === gameSession?.maxRound && (
+                    <span className="text-red-500 ml-2">🎉 마지막 라운드입니다!</span>
+                  )}
+                </CardTitle>
                   <CardDescription className="text-lg">
                     힌트:{" "}
                     <span className="font-bold text-blue-600">

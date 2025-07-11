@@ -28,6 +28,8 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
   const [maxPlayers, setMaxPlayers] = useState('6');
   const [isPrivate, setIsPrivate] = useState(false);
   const [password, setPassword] = useState('');
+  const [maxRounds, setMaxRounds] = useState('10'); // 기본값 10라운드
+
 
   const { mutate: createRoom, isLoading } = useCreateRoom();
   const { mutate: joinRoom, isLoading: isJoining } = useJoinRoom();
@@ -63,6 +65,7 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
       isPrivate,
       roomPassword: isPrivate ? Number(password) : 0,
       maxPlayer: parseInt(maxPlayers),
+      maxRound: parseInt(maxRounds),
       hostId: 2, // TODO: 나중에 user.id로 교체
     };
   
@@ -180,6 +183,20 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
               <SelectContent>
                 {[1, 2, 3, 4, 5, 6].map((num) => (
                   <SelectItem key={num} value={num.toString()}>{num}명</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="maxRounds">최대 라운드 수</Label>
+            <Select value={maxRounds} onValueChange={setMaxRounds}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="라운드 수 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                {[5, 10, 15, 20].map((num) => (
+                  <SelectItem key={num} value={num.toString()}>{num} 라운드</SelectItem>
                 ))}
               </SelectContent>
             </Select>
