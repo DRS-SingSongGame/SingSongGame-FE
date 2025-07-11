@@ -348,7 +348,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
           <div className="min-h-[800px] h-[800px] p-4">
             {isModalOpen && (
               <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-                <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-5xl w-full flex flex-col items-center">
+                <div className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-7xl w-full flex flex-col items-center">
                   <button
                     className="absolute top-4 right-4 text-gray-500 hover:text-black"
                     onClick={() => setIsModalOpen(false)}
