@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
-import { Mic, Crown, Play, Circle, LogOut, Trophy, ArrowLeft, X, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
+import { Mic, Crown, Play, Circle, LogOut, Trophy, ArrowLeft, X, ChevronLeft, ChevronRight, HelpCircle, MicOff } from "lucide-react";
 import { getSocket, disconnectSocket } from "@/lib/keysingyouWebSocket";
 import { CardContent } from "./ui/Card";
 import { CardTitle } from "./ui/Card";
@@ -393,11 +393,57 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                 <div className="col-span-3 h-full flex flex-col gap-4">
                   {/* 플레이어 슬롯 */}
                   <Card className="bg-white/90 backdrop-blur-sm flex-1">
-                    <CardContent>
-                      <KeysingyouPlayerSlots
-                        users={users}
-                        maxPlayer={room.maxPlayer}
-                      />
+                    <CardContent className="py-12">
+                      <div className="grid grid-cols-2 gap-4">
+                        {Array.from({ length: room.maxPlayer }).map((_, idx) => {
+                          const user = users[idx];
+                          if (user) {
+                            return (
+                              <div
+                                key={user.id}
+                                className="rounded-xl border-2 border-blue-400 bg-white/90 shadow-md flex items-center gap-4 p-4 transition-all h-24 w-full"
+                              >
+                                <Avatar className="w-12 h-12 flex-shrink-0">
+                                  <AvatarImage src={user.avatar} />
+                                  <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
+                                    {user.nickname[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-lg text-gray-900 truncate">{user.nickname}</span>
+                                    {user.isHost && <span>👑</span>}
+                                    {user.mic ? <Mic className="text-green-500 w-5 h-5" /> : <MicOff className="text-red-500 w-5 h-5" />}
+                                  </div>
+                                  <div className={
+                                    "text-sm " +
+                                    (user.isHost
+                                      ? "text-gray-500"
+                                      : user.ready
+                                      ? "text-green-600 font-bold"
+                                      : "text-gray-500")
+                                  }>
+                                    {user.isHost
+                                      ? "방장"
+                                      : user.ready
+                                      ? "준비 완료"
+                                      : "대기 중"}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div
+                                key={"empty-" + idx}
+                                className="rounded-xl border-2 border-blue-200 bg-white/40 shadow-md flex items-center justify-center p-4 opacity-60 border-dashed h-24 w-full"
+                              >
+                                <span className="text-base font-semibold text-gray-400 select-none">빈 슬롯</span>
+                              </div>
+                            );
+                          }
+                        })}
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -431,12 +477,12 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                         onCompositionStart={() => setIsComposing(true)}
                         onCompositionEnd={() => setIsComposing(false)}
                         placeholder="메시지를 입력하세요..."
-                        className="flex-1 min-w-0 rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white text-gray-700"
+                        className="flex-1 min-w-0 rounded-xl border-2 border-blue-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white/80 text-gray-700 shadow-md"
                         style={{ boxShadow: 'none' }}
                       />
                       <button
                         onClick={() => sendChat(chatInput)}
-                        className="rounded-xl bg-[#1439e4] hover:bg-[#102db3] text-white font-bold text-base px-8 py-3 transition-colors"
+                        className="rounded-xl bg-gradient-to-br from-blue-500 via-blue-400 to-cyan-400 hover:from-blue-600 hover:to-cyan-500 text-white font-bold text-base px-8 py-3 transition-colors shadow-xl border-2 border-blue-300"
                         style={{ minWidth: '90px' }}
                       >
                         전송
@@ -489,39 +535,32 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                       {/* 기존 마이크 허용 버튼 아래에 그대로 */}
                       <Button
                         onClick={requestMicPermission}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white h-[50px] text-lg"
+                        className="w-full bg-gradient-to-br from-green-600 via-green-500 to-green-400 hover:from-green-700 hover:to-green-500 text-white font-extrabold h-[54px] text-xl shadow-2xl border-2 border-green-300 rounded-2xl transition-all duration-150"
                       >
-                        <Mic className="mr-2 h-4 w-4" /> 마이크 허용
+                        <Mic className="mr-2 h-5 w-5" /> 마이크 허용
                       </Button>
                       {isHost ? (
                         <Button
-                          disabled={
-                            !users.every((u) => u.ready && u.mic) || users.length < 1
-                          }
-                          className="bg-blue-600 hover:bg-blue-700 text-white w-full h-[50px] text-lg"
-                          onClick={() =>
-                            // 향후 room에 maxRound 추가 시 수정 필요
-                            socket.current?.emit("start_game", { roomId, maxRounds: 2 })
-                          }
+                          disabled={!users.every((u) => u.ready && u.mic) || users.length < 1}
+                          className="bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 hover:from-blue-800 hover:to-cyan-600 text-white font-extrabold w-full h-[54px] text-xl shadow-2xl border-2 border-blue-300 rounded-2xl transition-all duration-150"
+                          onClick={() => socket.current?.emit("start_game", { roomId, maxRounds: 2 })}
                         >
-                          <Play className="w-4 h-4 mr-2" /> 게임 시작
+                          <Play className="w-5 h-5 mr-2" /> 게임 시작
                         </Button>
                       ) : (
                         <Button
-                          onClick={() =>
-                            socket.current?.emit("toggle_ready", { roomId })
-                          }
-                          className={`w-full h-[50px] text-lg bg-green-500 hover:bg-green-600 text-white`}
+                          onClick={() => socket.current?.emit("toggle_ready", { roomId })}
+                          className="w-full h-[54px] text-xl bg-gradient-to-br from-green-700 via-green-600 to-green-400 hover:from-green-800 hover:to-green-500 text-white font-extrabold shadow-2xl border-2 border-green-300 rounded-2xl transition-all duration-150"
                         >
-                          <Circle className="w-4 h-4 mr-2" /> 준비하기
+                          <Circle className="w-5 h-5 mr-2" /> 준비하기
                         </Button>
                       )}
 
                       <Button
-                        className="w-full h-[50px] bg-red-500 hover:bg-red-600 text-white text-lg"
+                        className="w-full h-[54px] bg-gradient-to-br from-red-700 via-red-600 to-red-400 hover:from-red-800 hover:to-red-500 text-white text-xl font-extrabold shadow-2xl border-2 border-red-300 rounded-2xl transition-all duration-150"
                         onClick={leaveRoom}
                       >
-                        <LogOut className="w-4 h-4 mr-2" /> 나가기
+                        <LogOut className="w-5 h-5 mr-2" /> 나가기
                       </Button>
                     </div>
                   </Card>
