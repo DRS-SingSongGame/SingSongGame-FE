@@ -1,5 +1,6 @@
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
+import { useGameStore } from "@/stores/useGameStore";
 let stompClient: Client | null = null;
 interface GameSocketCallbacks {
   onConnect: (frame: any) => void;
@@ -59,6 +60,16 @@ export const connectGameSocket = (
           console.error('[:빨간색_원: JSON 파싱 오류]', e, response.body);
         }
       });
+      
+      stompClient?.subscribe(`/topic/room/${roomId}/keywords`, (response) => {
+        try {
+          const keywordIds: number[] = JSON.parse(response.body);
+          console.log("🎯 키워드 수신:", keywordIds);
+          useGameStore.getState().setSelectedKeywords(keywordIds);
+        } catch (e) {
+          console.error("❌ 키워드 메시지 파싱 실패", e);
+        }
+      });
       // stompClient?.subscribe(`/topic/ai-room/${roomId}/game-start`, (response) => {
       //   // router.push(`/room/${roomId}/aisonggame/FlatLyricsGame`); // This line was not in the original file, so it's not added.
       // });
@@ -100,4 +111,19 @@ export const sendGameMessage = (
   } else {
     console.warn("STOMP client not connected, cannot send message.");
   }
+  
+};
+
+export const sendKeywordConfirm = (roomId: string, keywords: number[]) => {
+  if (!stompClient || !stompClient.connected) {
+    console.warn("❌ stompClient가 연결되지 않았습니다.");
+    return;
+  }
+
+  console.log("📤 키워드 전송 시도", { roomId, keywords });
+
+  stompClient.publish({
+    destination: "/api/keyword/confirm",
+    body: JSON.stringify({ roomId, keywords }),
+  });
 };

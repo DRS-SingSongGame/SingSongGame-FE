@@ -22,9 +22,12 @@ import {
   Brain,
   Music,
 } from 'lucide-react';
-import { connectGameSocket, disconnectGameSocket, sendGameMessage } from '@/lib/gameSocket';
+import { connectGameSocket, disconnectGameSocket, sendGameMessage, sendKeywordConfirm } from '@/lib/gameSocket';
 import ChatBox, { ChatMessage } from '@/components/chat/ChatBox';
 import { ApiResponse, User, Room } from '@/types/api';
+import KeywordSelector from '@/components/KeywordSelector';
+import { PREDEFINED_TAGS } from '@/lib/tags';
+import KeywordDisplay from '@/components/KeywordDisplay';
 
 export default function AISongGamePage({ params }: { params: { roomId: string } }) {
   const router = useRouter();
@@ -35,6 +38,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
   const [error, setError] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [gameStarted, setGameStarted] = useState(false);
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -173,6 +177,11 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
     }
   };
 
+  // const handleKeywordConfirm = () => {
+  //   if (selectedTagIds.length === 0 || !room?.roomId) return;
+  //   sendKeywordConfirm(room.roomId, selectedTagIds);
+  // };
+
   if (loading) return <div>게임 데이터를 불러오는 중...</div>;
   if (error) return <div>오류: {error}</div>;
   if (!user || !room) return <div>필요한 게임 정보가 부족합니다.</div>;
@@ -248,6 +257,40 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
           </CardContent>
         </Card>
       </div>
+
+      {/* {user.id === room.hostId ? (
+        // 방장용 키워드 선택 UI
+        <div className="max-w-4xl mx-auto w-full mt-6">
+          <Card className="bg-white/90 backdrop-blur-sm p-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-semibold text-gray-800">
+                🎯 키워드 최대 3개를 선택하세요
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <KeywordSelector
+                tags={PREDEFINED_TAGS}
+                selected={selectedTagIds}
+                onChange={setSelectedTagIds}
+              />
+              <div className="flex justify-end mt-4">
+                <Button
+                  onClick={handleKeywordConfirm}
+                  disabled={selectedTagIds.length === 0}
+                  className="px-6 py-2 bg-red-600 text-white font-semibold rounded-full shadow-md hover:bg-red-700"
+                >
+                  키워드 확정
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        // 참여자용 키워드 미리보기
+        <div className="max-w-4xl mx-auto w-full mt-6">
+          <KeywordDisplay />
+        </div>
+      )} */}
 
       {/* 채팅 영역 */}
       <div className="max-w-4xl mx-auto w-full mt-6">
