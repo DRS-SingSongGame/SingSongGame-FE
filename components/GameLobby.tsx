@@ -185,7 +185,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
   
       <div className="max-w-screen-2xl mx-auto grid grid-cols-12 gap-x-6 min-h-screen">
         <div className="col-span-9">
-          <Card className="bg-white/90 backdrop-blur-sm h-[900px] w-full p-0 text-xl flex flex-col justify-between">
+          <Card className="bg-white/80 backdrop-blur-sm h-[900px] w-full p-0 text-xl flex flex-col justify-between">
             <CardHeader className="pb-1 w-full max-w-full">
               <div className="flex gap-3 mt-0 px-0 pt-2 w-full max-w-full min-h-[100px]">
                 <Input placeholder="방 제목이나 게임 모드로 검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="text-xl py-6 px-8 w-full max-w-full" />
