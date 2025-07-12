@@ -77,6 +77,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     title: string | null;
     artist: string | null;
     score: number;
+    image: string | null;
   } | null>(null);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const [analysisStep, setAnalysisStep] = useState<"분석중" | "대조중">("분석중");
@@ -476,14 +477,14 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                                     (user.isHost
                                       ? "text-gray-500"
                                       : user.ready
-                                      ? "text-green-600 font-bold"
-                                      : "text-gray-500")
+                                        ? "text-green-600 font-bold"
+                                        : "text-gray-500")
                                   }>
                                     {user.isHost
                                       ? "방장"
                                       : user.ready
-                                      ? "준비 완료"
-                                      : "대기 중"}
+                                        ? "준비 완료"
+                                        : "대기 중"}
                                   </div>
                                 </div>
                               </div>
@@ -506,7 +507,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                   {/* 채팅 */}
                   <div className="bg-white rounded-2xl flex flex-col w-full min-h-[300px] p-6">
                     {/* 상단 제목 */}
-                    
+
                     {/* 채팅 메시지 영역 */}
                     <div className="flex-1 mb-4">
                       <div ref={roomChatBoxRef} className="flex flex-col justify-end h-[200px] min-h-[200px] max-h-[200px] overflow-y-auto scrollbar-hide bg-[#fafbfc] rounded-xl px-4 py-2 border border-[#f0f0f0]">
@@ -652,7 +653,12 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
           <div className="text-center space-y-8">
             <div className="bg-green-500 text-white rounded-lg p-8 transform hover:scale-105 transition-all shadow-xl w-auto inline-block">
               <h2 className="text-4xl font-bold mb-2">{keyword?.type}</h2>
-              <div className="relative h-20 overflow-hidden flex items-center justify-center" style={{height: '5rem', width: '12rem'}}>
+              <div className="relative overflow-hidden flex items-center justify-center" style={{
+                height: '5rem',
+                width: 'auto',
+                minWidth: '12rem',
+                maxWidth: '32rem'
+              }}>
                 {!showFinal ? (
                   <div
                     className="transition-transform duration-100"
@@ -662,11 +668,11 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                     }}
                   >
                     {candidates.concat(candidates).map((name, i) => (
-                      <div key={i} className="text-5xl font-bold h-20 flex items-center justify-center">{name}</div>
+                      <div key={i} className="text-4xl font-bold h-20 flex items-center justify-center px-4 whitespace-nowrap">{name}</div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-6xl font-bold text-yellow-200 drop-shadow-lg transition-all duration-500">{keyword?.name}</div>
+                  <div className="text-5xl font-bold text-yellow-200 drop-shadow-lg transition-all duration-500 px-4 whitespace-nowrap">{keyword?.name}</div>
                 )}
               </div>
             </div>
@@ -759,7 +765,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       case 'result':
         if (!matchedResult) return null;
 
-        const { matched, title, artist, score } = matchedResult;
+        const { matched, title, artist, score, image } = matchedResult;
         const passed = matched;
         const badgeColor = passed
           ? 'bg-gradient-to-r from-green-400 to-emerald-500'
@@ -770,9 +776,13 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
 
         return (
           <div className="text-center space-y-8">
-            {/* ✔ / ✖ 아이콘 */}
-            <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center ${badgeColor}`}>
-              <span className="text-6xl">{passed ? '✅' : '❌'}</span>
+            {/* ✔ / ✖ 아이콘 또는 앨범 이미지 */}
+            <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center ${badgeColor} overflow-hidden`}>
+              {passed && image ? (
+                <img src={image} alt="앨범 이미지" className="w-full h-full object-cover rounded-full" />
+              ) : (
+                <span className="text-6xl">{passed ? '✅' : '❌'}</span>
+              )}
             </div>
 
             {/* 결과 텍스트 */}
