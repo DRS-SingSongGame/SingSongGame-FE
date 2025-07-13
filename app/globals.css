@@ -145,8 +145,18 @@
     @apply border-border;
   }
 
+  html {
+    cursor: url('/cursor/mic.png') 0 0, auto !important;
+  }
+
   body {
     @apply bg-background text-foreground;
+    cursor: url('/cursor/mic.png') 0 0, auto !important;
+  }
+
+  /* 모든 요소에 커서 적용 */
+  *, *::before, *::after {
+    cursor: url('/cursor/mic.png') 0 0, auto !important;
   }
 }
 
@@ -160,4 +170,63 @@
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+.lobby-chat-messages::-webkit-scrollbar {
+  display: none;
+}
+.lobby-chat-messages {
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* IE, Edge */
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
+
+.outline-font {
+  color: white;
+  -webkit-text-stroke: 2px #2563eb; /* 파란색 외곽선 */
+  font-family: 'Orbitron', 'Audiowide', sans-serif;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 8px #60a5fa, 0 1px 0 #1e3a8a;
+}
+
+.glow-hover {
+  transition: box-shadow 0.2s, border-color 0.2s;
+  box-shadow: 0 2px 8px 0 #60a5fa80;
+}
+.glow-hover:hover, .glow-hover:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 4px #38bdf880, 0 2px 16px 0 #60a5fa;
+}
+
+/* ===== RAIN ANIMATION ===== */
+@keyframes rain {
+  0% {
+    transform: translateY(-100px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+.animate-rain {
+  animation: rain linear infinite;
+}
+
+.rain-container {
+  pointer-events: none;
+}
+
+.rain-drop {
+  position: absolute;
+  top: -20px;
 }

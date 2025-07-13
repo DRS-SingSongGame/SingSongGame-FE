@@ -2,6 +2,7 @@
 
 import { Providers } from "@/components/providers";
 import "./globals.css";
+import FloatingMicBackground from "@/components/FloatingMicBackground";
 
 export const metadata = {
   title: "SingSongGame",
@@ -11,7 +12,11 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body className="min-h-screen flex flex-col bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100">
+      <body 
+        className="min-h-screen flex flex-col bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100"
+        style={{ cursor: "url('/cursor/mic.png') 0 0, auto" }}
+      >
+        <FloatingMicBackground />
         <Providers>
           <main className="flex-1 w-full max-w-screen-xl mx-auto px-4">
             {children}

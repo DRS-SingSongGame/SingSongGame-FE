@@ -57,5 +57,9 @@ export default function GameRoomPage() {
 
   if (!user || !room) return <div>로딩 중...</div>;
 
-  return <KeysingyouGameRoom user={user} room={room} onBack={handleBack} />;
+  return (
+    <div className="relative z-10">
+      <KeysingyouGameRoom user={user} room={room} onBack={handleBack} />
+    </div>
+  );
 }
