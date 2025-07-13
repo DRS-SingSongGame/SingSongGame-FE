@@ -220,9 +220,9 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="px-0 pb-0 w-full max-w-full flex-1">
-              <ScrollArea className="h-full w-full max-w-full">
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-4 px-3">
+            <CardContent className="px-0 pb-0 w-full max-w-full flex-1 min-h-0">
+              <ScrollArea className="h-full w-full max-w-full flex-1 min-h-0">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4 px-3 max-h-[600px] overflow-y-auto">
                     {filteredRooms.map((room) => (
                       <Card 
                         key={room.roomId} 
