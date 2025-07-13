@@ -172,6 +172,14 @@
   display: none;
 }
 
+.lobby-chat-messages::-webkit-scrollbar {
+  display: none;
+}
+.lobby-chat-messages {
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* IE, Edge */
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap');
 
 .outline-font {
