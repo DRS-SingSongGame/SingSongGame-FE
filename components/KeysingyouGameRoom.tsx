@@ -61,7 +61,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
   const router = useRouter();
 
   /* ───── state ───── */
-  const [phase, setPhase] = useState<Phase>("ready");
+  const [phase, setPhase] = useState<Phase>("result");
   const [users, setUsers] = useState<User[]>([]);
   const [timer, setTimer] = useState(0);
   const [round, setRound] = useState(1);
@@ -171,13 +171,6 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       let interval: NodeJS.Timeout;
       let timeout1: NodeJS.Timeout;
 
-      // 룰렛 시작 후 3초 후에 keywordresult.mp3 재생
-      const resultTimeout = setTimeout(() => {
-        const resultAudio = new Audio('/audio/keywordresult.mp3');
-        resultAudio.play().catch(error => {
-          console.log('키워드 결과 사운드 재생 실패:', error);
-        });
-      }, 3000);
 
       // 1. 3초간 빠르게 돌기
       const fastRoll = () => {
@@ -196,10 +189,36 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       return () => {
         clearTimeout(interval);
         clearTimeout(timeout1);
-        clearTimeout(resultTimeout);
       };
     }
   }, [phase, keyword]);
+
+  // result 페이즈에서 정답 여부에 따른 사운드 재생
+  useEffect(() => {
+    if (phase === "result" && matchedResult) {
+      const { matched } = matchedResult;
+      
+      if (matched) {
+        // 정답일 때: clap.mp3와 wow.wav 동시 재생
+        const clapAudio = new Audio('/audio/clap.mp3');
+        const wowAudio = new Audio('/audio/wow.wav');
+        
+        clapAudio.play().catch(error => {
+          console.log('박수 사운드 재생 실패:', error);
+        });
+        
+        wowAudio.play().catch(error => {
+          console.log('와우 사운드 재생 실패:', error);
+        });
+      } else {
+        // 틀렸을 때: fail.mp3 재생
+        const failAudio = new Audio('/audio/fail.mp3');
+        failAudio.play().catch(error => {
+          console.log('실패 사운드 재생 실패:', error);
+        });
+      }
+    }
+  }, [phase, matchedResult]);
 
   // 게임 모드 라벨 및 색상 함수 (기존과 동일)
   const getGameModeColor = (mode: string) => {
@@ -763,9 +782,9 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
         );
 
       case 'result':
-        if (!matchedResult) return null;
-
-        const { matched, title, artist, score, image } = matchedResult;
+        // if (!matchedResult) return null;
+        // const { matched, title, artist, score, image } = matchedResult;
+        const { matched, title, artist, score, image } = { matched: true, title: "러시안 룰렛", artist: "레드벨벳", score: 100, image: "https://image.bugsm.co.kr/album/images/500/200545/20054544.jpg" };
         const passed = matched;
         const badgeColor = passed
           ? 'bg-gradient-to-r from-green-400 to-emerald-500'
@@ -775,9 +794,29 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
           : 'bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent';
 
         return (
-          <div className="text-center space-y-8">
+          <div className={`text-center space-y-8 relative ${!passed ? 'rain-effect' : ''} ${passed ? 'bg-white/90' : 'bg-blue-500'} rounded-2xl mx-auto w-full max-w-[900px] min-w-[400px] min-h-[480px] flex flex-col justify-center items-center p-10`}>
+            {/* 실패 시 비 효과 */}
+            {!passed && (
+              <>
+                <div className="absolute inset-0 bg-blue-200/50 rounded-lg -z-10"></div>
+                <div className="rain-container absolute inset-0 overflow-hidden rounded-lg">
+                  {[...Array(50)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="rain-drop absolute bg-blue-300/60 w-0.5 h-4 animate-rain"
+                      style={{
+                        left: `${Math.random() * 100}%`,
+                        animationDelay: `${Math.random() * 2}s`,
+                        animationDuration: `${0.5 + Math.random() * 0.5}s`
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+            
             {/* ✔ / ✖ 아이콘 또는 앨범 이미지 */}
-            <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center ${badgeColor} overflow-hidden`}>
+            <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center ${badgeColor} overflow-hidden relative z-10`}>
               {passed && image ? (
                 <img src={image} alt="앨범 이미지" className="w-full h-full object-cover rounded-full" />
               ) : (
@@ -786,7 +825,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
             </div>
 
             {/* 결과 텍스트 */}
-            <div className="space-y-4">
+            <div className="space-y-4 relative z-10">
               <h3 className={`text-2xl font-bold ${textColor}`}>
                 {passed
                   ? `정답! +${score}점`
