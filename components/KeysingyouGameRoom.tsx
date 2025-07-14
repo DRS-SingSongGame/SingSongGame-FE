@@ -277,6 +277,13 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       setScores({});
       setPhase("intro");
       setTimer(10);
+      
+      // intro 페이즈 시작 시 intro.mp3 재생
+      const introAudio = new Audio('/audio/intro.mp3');
+      introAudio.volume = 0.3; // 음량을 30%로 설정
+      introAudio.play().catch(error => {
+        console.log('인트로 사운드 재생 실패:', error);
+      });
     });
 
     /* 키워드 공개 5s */
@@ -331,6 +338,13 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
         setScores(table);
         setFinalScores(d.scores.sort((a, b) => b.score - a.score));
         setPhase("final");
+        
+        // final 페이즈 시작 시 final.wav 재생
+        const finalAudio = new Audio('/audio/final.wav');
+        finalAudio.volume = 0.5; // 음량을 50%로 설정
+        finalAudio.play().catch(error => {
+          console.log('파이널 사운드 재생 실패:', error);
+        });
       }
     );
 
