@@ -196,10 +196,10 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
               </SelectTrigger>
               <SelectContent>
                 {gameMode === '키싱유'
-                  ? [1, 3, 5].map((num) => (
+                  ? [1, 2, 3, 4, 5].map((num) => (
                     <SelectItem key={num} value={num.toString()}>{num} 라운드</SelectItem>
                   ))
-                  : [3, 5, 10, 15, 20].map((num) => (
+                  : [2, 5, 10, 20, 30, 50].map((num) => (
                     <SelectItem key={num} value={num.toString()}>{num} 라운드</SelectItem>
                   ))
                 }
