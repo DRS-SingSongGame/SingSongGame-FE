@@ -40,6 +40,8 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
   const [gameStarted, setGameStarted] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 
+  
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -143,10 +145,19 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
       console.error("room.roomId가 없습니다!");
       return;
     }
+
+    const keywordNames = selectedTagIds
+      .map((id) => PREDEFINED_TAGS.find((tag) => tag.id === id)?.name)
+      .filter((name): name is string => !!name);
+
+    console.log("변환된 키워드 이름들:", keywordNames);
     
     try {
       console.log(`/api/ai-game/${room.roomId}/start API 호출 시작`);
-      const response = await api.post(`/api/ai-game/${room.roomId}/start`);
+
+      const response = await api.post(`/api/ai-game/${room.roomId}/start`, {
+        keywords: keywordNames,
+      });
       console.log("API 응답:", response);
       console.log("AI 노래 맞추기 게임 시작 API 호출 성공.");
       setGameStarted(true);
@@ -177,10 +188,10 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
     }
   };
 
-  // const handleKeywordConfirm = () => {
-  //   if (selectedTagIds.length === 0 || !room?.roomId) return;
-  //   sendKeywordConfirm(room.roomId, selectedTagIds);
-  // };
+  const handleKeywordConfirm = () => {
+    if (selectedTagIds.length === 0 || !room?.roomId) return;
+    sendKeywordConfirm(room.roomId, selectedTagIds);
+  };
 
   if (loading) return <div>게임 데이터를 불러오는 중...</div>;
   if (error) return <div>오류: {error}</div>;
@@ -239,7 +250,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
                 >
                   <Button
                     onClick={handleStartGame}
-                    disabled={gameStarted}
+                    disabled={gameStarted || selectedTagIds.length === 0}
                     size="lg"
                     className="bg-red-500 hover:bg-red-600 text-white font-bold text-xl px-12 py-6"
                   >
@@ -250,6 +261,11 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
               ) : (
                 <div className="text-lg text-gray-700 font-semibold py-8">게임 시작을 기다리는 중...</div>
               )}
+              {selectedTagIds.length === 0 && !gameStarted && (
+                <p className="text-sm text-red-200 mt-2">
+                  ⚠️ 키워드를 최소 1개 선택해주세요
+                </p>
+              )}
               <p className="text-sm text-gray-600 mt-2">
                 버튼을 누르면 모든 참가자가 동시에 게임이 시작됩니다
               </p>
@@ -258,7 +274,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
         </Card>
       </div>
 
-      {/* {user.id === room.hostId ? (
+      {user.id === room.hostId ? (
         // 방장용 키워드 선택 UI
         <div className="max-w-4xl mx-auto w-full mt-6">
           <Card className="bg-white/90 backdrop-blur-sm p-4">
@@ -290,7 +306,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
         <div className="max-w-4xl mx-auto w-full mt-6">
           <KeywordDisplay />
         </div>
-      )} */}
+      )}
 
       {/* 채팅 영역 */}
       <div className="max-w-4xl mx-auto w-full mt-6">
