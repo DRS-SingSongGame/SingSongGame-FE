@@ -23,6 +23,25 @@ const GameHeader = ({
   onBack,
   hintText
 }: GameHeaderProps) => {
+  const [showHint, setShowHint] = useState(false);
+
+  useEffect(() => {
+    if (isReading && hintText) {
+      // 10초 후에 힌트 표시
+      const hintTimer = setTimeout(() => {
+        setShowHint(true);
+      }, 10000); // 10초
+  
+      return () => clearTimeout(hintTimer);
+    }
+  }, [isReading, hintText]);
+
+  useEffect(() => {
+    if (!isReading) {
+      setShowHint(false); // 게임이 끝나면 힌트 숨기기
+    }
+  }, [isReading]);
+
   return (
     <div className="mb-6">
       <Card className="pipe-metal-card rounded-2xl">
@@ -106,13 +125,13 @@ const GameHeader = ({
                   </Badge>
                 </motion.div>
 
-                {hintText && (
+                {hintText && showHint && (
                   <motion.div 
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6 }}
+                    initial={{ opacity: 0, x: -20, scale: 0.9 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    transition={{ duration: 0.5, type: "spring" }}
                   >
-                    <Badge variant="secondary" className="text-sm px-3 py-1 bg-gray-100 border-gray-300 rounded-xl">
+                    <Badge variant="secondary" className="text-sm px-3 py-1 bg-yellow-100 border-yellow-300 rounded-xl">
                       💡 힌트: {hintText}
                     </Badge>
                   </motion.div>

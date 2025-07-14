@@ -24,9 +24,10 @@
     autoScrollToBottom?: boolean;
     chatType?: "lobby" | "room" | "game";
     hideInput?: boolean;
+    compact? : boolean;
   }
 
-  const ChatBox = ({ user, messages, onSend, autoScrollToBottom, hideInput, chatType = "lobby" }: ChatBoxProps) => {
+  const ChatBox = ({ user, messages, onSend, autoScrollToBottom, hideInput, chatType = "lobby" , compact = false}: ChatBoxProps) => {
     const [input, setInput] = useState('');
     const [isComposing, setIsComposing] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -51,6 +52,45 @@
         scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       }
     }, [messages, autoScrollToBottom]);
+
+    if (compact) {
+      // Card 없이 컴팩트 버전
+      return (
+        <>
+          <div className="flex-1 overflow-y-auto mb-3 h-[700px] scrollbar-hide">
+            <div ref={scrollRef} className="space-y-2">
+              {messages.map((msg) => (
+                <div key={msg.id} className="mb-2">
+                  <div className="text-sm">
+                    <span className="text-purple-600 font-medium">
+                      {(msg.type === 'ENTER' || msg.type === 'LEAVE') ? '시스템' : msg.senderName}:
+                    </span>{' '}
+                    <span className="text-gray-700">{msg.message}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {!hideInput && (
+            <div className="flex gap-2">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onCompositionStart={() => setIsComposing(true)}
+                onCompositionEnd={() => setIsComposing(false)}
+                placeholder="메시지를 입력하세요..."
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl"
+              />
+              <Button onClick={handleSend} className="px-3 py-2 bg-purple-500 text-white text-sm rounded-xl">
+                전송
+              </Button>
+            </div>
+          )}
+        </>
+      );
+    }
+  
 
     return (
       <Card className="bg-white/90 backdrop-blur-sm">

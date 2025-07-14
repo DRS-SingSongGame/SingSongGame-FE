@@ -221,7 +221,19 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
               </div>
             </CardHeader>
             <CardContent className="px-0 pb-0 w-full max-w-full flex-1 min-h-0">
-              <ScrollArea className="h-full w-full max-w-full flex-1 min-h-0">
+              {/* 전체 배경 로고 워터마크 */}
+                <div 
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                  style={{
+                    backgroundImage: 'url("/singsonglogo.png")', // 로고 파일 경로
+                    backgroundSize: '800px', // 로고 크기
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    opacity: 0.40, // 
+                    zIndex: 1
+                  }}
+                />
+              <ScrollArea className="h-full w-full max-w-full flex-1 min-h-0 z-10">
                 <div className="grid grid-cols-2 gap-x-6 gap-y-4 px-3 max-h-[600px] overflow-y-auto">
                   {filteredRooms.map((room) => (
                     <Card
