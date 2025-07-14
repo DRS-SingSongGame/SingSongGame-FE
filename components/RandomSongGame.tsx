@@ -52,6 +52,7 @@ interface GameSessionType {
   currentRound: number;
   maxRound: number;
   currentSong?: {
+    artist: string;
     title: string;
     hint: string;
     audioUrl: string;
@@ -59,6 +60,7 @@ interface GameSessionType {
   roundDuration: number;
   playerScores: Record<string, number>;
   winner?: string;
+  serverStartTime: number;
 }
 
 type Phase = "waiting" | "countdown" | "playing" | "final";
@@ -245,7 +247,7 @@ const RandomSongGame = ({
             hint: response.hint, // Use hint from backend
             title: response.title,
           },
-          roundStartTime: Date.now(), // Set client-side start time for timer
+          serverStartTime: response.serverStartTime, // Set client-side start time for timer
           roundDuration: 30, // Assuming 30 seconds as per backend InGameService
           playerScores: response.playerScores || prev?.playerScores,
           maxRound: response.maxRound || prev?.maxRound,
@@ -487,11 +489,12 @@ const RandomSongGame = ({
   const handleStartGame = async () => {
     console.log("Attempting to start game...");
     console.log("🎯 gameSession 데이터:", gameSession);
+    console.log("🎯 선택된 태그 IDs:", selectedTagIds);
     // id → name 매핑
     const keywordNames = selectedTagIds
       .map((id) => PREDEFINED_TAGS.find((tag) => tag.id === id)?.name)
       .filter((name): name is string => !!name); // string[] 보장
-  
+      console.log("🎯 전송할 키워드:", keywordNames);
     try {
       await api.post(`/api/game-session/${room.roomId}/start`, {
         keywords: keywordNames,
@@ -502,6 +505,28 @@ const RandomSongGame = ({
       console.error("Failed to start game:", error);
       // TODO: 에러 처리 (토스트 등)
     }
+  };
+
+  const getCurrentHints = () => {
+    const serverStartTime = gameSession?.serverStartTime;
+    if (!serverStartTime || !gameSession?.currentSong) {
+      return ["🎵 노래를 잘 들어보세요!"];
+    }
+    
+    const elapsed = Date.now() - serverStartTime;
+    const timeLeft = Math.max(0, 30 - Math.floor(elapsed / 1000));
+    
+    const hints = ["🎵 노래를 잘 들어보세요!"];
+    
+    if (timeLeft <= 20) {
+      hints.push(`🎤 가수: ${gameSession.currentSong.artist}`);
+    }
+    
+    if (timeLeft <= 10) {
+      hints.push(`💡 제목 힌트: ${gameSession.currentSong.hint}`);
+    }
+    
+    return hints;
   };
 
   useEffect(() => {
@@ -654,60 +679,94 @@ const RandomSongGame = ({
             나가기
           </Button>
           <Card className="bg-white/90 backdrop-blur-sm mb-6">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
                 <CardTitle className="text-2xl font-bold">
-                  Round {gameSession?.currentRound} / {gameSession?.maxRound}
                   {gameSession?.currentRound === gameSession?.maxRound && (
-                    <span className="text-red-500 ml-2">🎉 마지막 라운드입니다!</span>
+                    <span className="text-red-500">🎉 마지막 라운드입니다!</span>
                   )}
                 </CardTitle>
-                  <CardDescription className="text-lg">
-                    힌트:{" "}
-                    <span className="font-bold text-blue-600">
-                      {gameSession?.currentSong?.hint}
-                    </span>
-                  </CardDescription>
-                </div>
-                <div className="text-right">
-                  <div className="text-3xl font-bold text-red-500 flex items-center gap-2">
-                    <Timer className="w-8 h-8" />
-                    {roundTimer}초
+              </div>
+              <div className="flex-1 text-center mx-8">
+                {getCurrentHints().map((hint, index) => (
+                  <motion.div
+                    key={`${index}-${Math.floor((Date.now() - (gameSession?.serverStartTime || 0)) / 10000)}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                    className="text-lg font-bold text-black"
+                  >
+                    {hint}
+                  </motion.div>
+                ))}
+              </div>
+              <div className="text-right">
+                <div className="relative flex items-center justify-center">
+                  {/* 원형 배경 */}
+                  <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 100 100">
+                    <circle
+                      cx="50" cy="50" r="40"
+                      stroke="rgb(229, 231, 235)"
+                      strokeWidth="6"
+                      fill="transparent"
+                    />
+                    <circle
+                      cx="50" cy="50" r="40"
+                      stroke={roundTimer <= 5 ? "rgb(239, 68, 68)" : roundTimer <= 10 ? "rgb(251, 191, 36)" : "rgb(59, 130, 246)"}
+                      strokeWidth="6"
+                      fill="transparent"
+                      strokeDasharray={`${2 * Math.PI * 40}`}
+                      strokeDashoffset={`${2 * Math.PI * 40 * (1 - roundTimer / 30)}`}
+                      className="transition-all duration-500"
+                    />
+                  </svg>
+                  <div className={`absolute text-2xl font-bold ${
+                    roundTimer <= 5 ? 'text-red-500' : roundTimer <= 10 ? 'text-yellow-600' : 'text-blue-600'
+                  }`}>
+                    {roundTimer}
                   </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Music className="w-5 h-5 animate-pulse" />
-                    노래 재생 중
-                  </div>
                 </div>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Music className="w-5 h-5 animate-pulse" />
+                  노래 재생 중
+                </div>
+              </div>
+            </div>
+
+            {/* ✅ 힌트를 독립적인 중앙 영역으로 이동
+            <div className="text-center space-y-2 my-6">
+              {getCurrentHints().map((hint, index) => (
+                <motion.div
+                  key={`${index}-${Math.floor((Date.now() - (gameSession?.serverStartTime || 0)) / 10000)}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  className="text-xl font-bold text-blue-600"
+                >
+                  {hint}
+                </motion.div>
+              ))}
+            </div> */}
+
+            <div className="mt-4">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm text-gray-600">전체 라운드 진행률</span>
+                <span className="text-sm font-bold text-gray-800">
+                  {gameSession?.currentRound || 0} / {gameSession?.maxRound || 0}
+                </span>
               </div>
               <Progress
                 value={
-                  gameSession?.roundDuration
-                    ? ((gameSession.roundDuration - roundTimer) /
-                        gameSession.roundDuration) *
-                      100
+                  gameSession?.maxRound
+                    ? (gameSession.currentRound / gameSession.maxRound) * 100
                     : 0
                 }
-                className="mt-4"
               />
-            </CardHeader>
-          </Card>
-          {!hasUserInteractedForAudio && (
-            <div className="text-center mb-4">
-              <Button
-                onClick={handlePlayAudio}
-                size="lg"
-                className="bg-green-500 hover:bg-green-600 text-white font-bold text-xl px-8 py-4"
-              >
-                <Play className="w-5 h-5 mr-2" />
-                음악 재생
-              </Button>
-              <p className="text-sm text-gray-600 mt-2">
-                음악이 자동으로 재생되지 않으면 버튼을 눌러주세요.
-              </p>
             </div>
-          )}
+          </CardHeader>
+          </Card>
+          
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="bg-white/90 backdrop-blur-sm">
               <CardHeader>
@@ -768,6 +827,21 @@ const RandomSongGame = ({
               </Card>
             </div>
           </div>
+          {!hasUserInteractedForAudio && (
+            <div className="text-center mb-4">
+              <Button
+                onClick={handlePlayAudio}
+                size="lg"
+                className="bg-green-500 hover:bg-green-600 text-white font-bold text-xl px-8 py-4"
+              >
+                <Play className="w-5 h-5 mr-2" />
+                음악 재생
+              </Button>
+              <p className="text-sm text-gray-600 mt-2">
+                음악이 자동으로 재생되지 않으면 버튼을 눌러주세요.
+              </p>
+            </div>
+          )}
           {/* Audio element is controlled by ref and WebSocket updates */}
           <audio ref={audioRef} />
         </div>
@@ -920,7 +994,6 @@ const RandomSongGame = ({
             </ul>
 
             <div className="mt-6 flex gap-3 justify-center">
-              {/* <Button onClick={() => router.push("/lobby")}>:house: 로비로</Button> */}
               <Button onClick={handleLeaveRoom}>로비로 이동</Button>
               <Button variant="secondary" onClick={() => {
                 // 💡 모든 상태를 초기화하고 waiting phase로 돌입
