@@ -6,7 +6,7 @@ import { ArrowLeft, Volume2 } from "lucide-react";
 
 interface GameHeaderProps {
   currentRound: number;
-  totalRounds: number;
+  maxRound: number;
   timeLeft: number;
   isReading: boolean;
   onBack: () => void;
@@ -15,7 +15,7 @@ interface GameHeaderProps {
 
 const GameHeader = ({
   currentRound,
-  totalRounds,
+  maxRound,
   timeLeft,
   isReading,
   onBack,
@@ -36,7 +36,7 @@ const GameHeader = ({
               </CardTitle>
               <div className="flex items-center gap-4 mt-2">
                 <Badge variant="outline">
-                  라운드 {currentRound}/{totalRounds}
+                  라운드 {currentRound}/{maxRound}
                 </Badge>
                 <div className="flex items-center gap-2">
                   <Volume2 className="w-4 h-4" />
