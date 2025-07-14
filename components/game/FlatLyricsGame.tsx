@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import GameHeader from "./GameHeader";
 import GameChat from "./GameChat";
 import GameScoreboard from "./GameScoreboard";
@@ -8,6 +9,7 @@ import GameInfo from "./GameInfo";
 import GameResultModal from "./GameResultModal";
 import { connectGameSocket, disconnectGameSocket } from "@/lib/gameSocket";
 import { sendGameMessage } from "@/lib/gameSocket";
+import { Sparkles, Music, Mic, Trophy, Star, Zap, Bot, Rocket, Target, Crown } from "lucide-react";
 
 interface FlatLyricsGameProps {
   user: any;
@@ -34,6 +36,11 @@ interface GameState {
   correctAnswer: string | null;
   correctArtist: string | null;
   roundWinner: string | null;
+  showCorrectAnswer: boolean;
+  showParticles: boolean;
+  audioLevel: number;
+  robotSpeaking: boolean;
+  scoreAnimations: { id: string; score: number; x: number; y: number }[];
 }
 
 interface ChatMessage {
@@ -44,6 +51,16 @@ interface ChatMessage {
   time: string;
   isCorrect?: boolean;
   isSystem?: boolean;
+}
+
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  color: string;
 }
 
 const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGameProps) => {
@@ -57,6 +74,11 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
     correctAnswer: null,
     correctArtist: null,
     roundWinner: null,
+    showCorrectAnswer: false,
+    showParticles: false,
+    audioLevel: 0,
+    robotSpeaking: false,
+    scoreAnimations: [],
   });
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -64,9 +86,107 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
   const [showResults, setShowResults] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [robotMessages, setRobotMessages] = useState<string[]>([]);
+  const [showRobot, setShowRobot] = useState(false);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  // 로봇 메시지 생성
+  const generateRobotMessage = () => {
+    const messages = [
+      "안녕하세요! 저는 AI 노래 로봇입니다! 🤖",
+      "노래를 부를 준비가 되었어요! 🎵",
+      "가사를 잘 들어보세요! 🎤",
+      "정답을 맞춰보세요! 🎯",
+      "훌륭해요! 정답입니다! 🎉",
+      "다음 라운드로 넘어갑니다! 🚀",
+      "점수가 올라가고 있어요! ⬆️",
+      "정말 잘하시네요! 👏",
+      "노래를 더 부를까요? 🎶",
+      "힌트를 잘 활용하세요! 💡"
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  };
+
+  // 점수 애니메이션 추가
+  const addScoreAnimation = (playerId: string, score: number, x: number, y: number) => {
+    const newAnimation = {
+      id: `${playerId}-${Date.now()}`,
+      score,
+      x,
+      y
+    };
+    setGameState(prev => ({
+      ...prev,
+      scoreAnimations: [...prev.scoreAnimations, newAnimation]
+    }));
+
+    setTimeout(() => {
+      setGameState(prev => ({
+        ...prev,
+        scoreAnimations: prev.scoreAnimations.filter(anim => anim.id !== newAnimation.id)
+      }));
+    }, 2000);
+  };
+
+  // 오디오 시각화 효과 제거
+
+  // 파티클 효과
+  useEffect(() => {
+    if (!gameState.showParticles) return;
+
+    const interval = setInterval(() => {
+      setParticles(prev => {
+        const newParticles = prev
+          .map(p => ({ ...p, life: p.life - 1, x: p.x + p.vx, y: p.y + p.vy }))
+          .filter(p => p.life > 0);
+
+        if (Math.random() < 0.5) {
+          newParticles.push({
+            id: Date.now() + Math.random(),
+            x: Math.random() * window.innerWidth,
+            y: window.innerHeight,
+            vx: (Math.random() - 0.5) * 6,
+            vy: -Math.random() * 4 - 2,
+            life: 80,
+            color: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', '#54a0ff'][Math.floor(Math.random() * 7)]
+          });
+        }
+
+        return newParticles;
+      });
+    }, 30);
+
+    return () => clearInterval(interval);
+  }, [gameState.showParticles]);
+
+  // 로봇 메시지 효과
+  useEffect(() => {
+    if (gameState.robotSpeaking) {
+      const message = generateRobotMessage();
+      setRobotMessages(prev => [...prev, message]);
+      
+      setTimeout(() => {
+        setGameState(prev => ({ ...prev, robotSpeaking: false }));
+      }, 3000);
+    }
+  }, [gameState.robotSpeaking]);
+
+  // 승리 효과
+  const triggerVictoryEffect = () => {
+    setGameState(prev => ({ ...prev, showParticles: true, robotSpeaking: true }));
+    setShowRobot(true);
+
+    setTimeout(() => {
+      setGameState(prev => ({ ...prev, showParticles: false }));
+      setShowRobot(false);
+    }, 4000);
+  };
 
   useEffect(() => {
     if (!room || !room.roomId) return;
@@ -112,17 +232,13 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
       correctArtist: null,
       roundWinner: null,
       isReading: true,
+      showCorrectAnswer: false,
+      robotSpeaking: true,
     }));
+
+    setShowRobot(true);
   
-    const systemMessage: ChatMessage = {
-      id: Date.now(),
-      playerId: "system",
-      playerName: "시스템",
-      message: `라운드 ${roundNumber} 시작! 가사를 들어보세요.`,
-      time: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
-      isSystem: true,
-    };
-    setChatMessages((prev) => [...prev, systemMessage]);
+
   
     // 🔁 기존 setAudio() 대신 ref 사용
     const newAudio = new Audio(`/api/song/tts?songId=${song.id}`);
@@ -148,6 +264,7 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
     newAudio.onended = () => {
       console.log("🎵 오디오 재생 종료됨");
       setGameState((prev) => ({ ...prev, isReading: false }));
+      setShowRobot(false);
       if (user.id === room.hostId) {
         notifyTtsFinished(room.roomId);
       }
@@ -164,20 +281,30 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
 
   const handleAnswerCorrect = (data: any) => {
     const { playerId, playerName, title, artist, score } = data;
+    
+    console.log('정답 데이터:', data);
+    console.log('playerId:', playerId);
+    console.log('players:', players);
+    console.log('찾은 플레이어:', players.find(p => p.id === playerId));
    
-   
-      // ✅ 정답자는 오디오 멈추기
-      if (audioRef.current) {
-        window.speechSynthesis.cancel();
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        audioRef.current.onended = null;
-        audioRef.current.src = "";
-      }
+    // ✅ 정답자는 오디오 멈추기
+    if (audioRef.current) {
+      window.speechSynthesis.cancel();
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.onended = null;
+      audioRef.current.src = "";
+    }
 
-      if (user.id === room.hostId) {
-        notifyTtsFinished(room.roomId);
-      }
+    if (user.id === room.hostId) {
+      notifyTtsFinished(room.roomId);
+    }
+
+    // 점수 애니메이션 추가
+    addScoreAnimation(playerId, score, Math.random() * window.innerWidth, Math.random() * window.innerHeight);
+
+    // 승리 효과 트리거
+    triggerVictoryEffect();
 
     setGameState((prev) => ({
       ...prev,
@@ -185,33 +312,41 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
       correctAnswer: title,
       correctArtist: artist,
       isReading: false,
+      showCorrectAnswer: true,
       scores: {
         ...prev.scores,
         [playerId]: (prev.scores[playerId] || 0) + score,
       },
     }));
 
-    const systemMessage: ChatMessage = {
-      id: Date.now(),
-      playerId: "system",
-      playerName: "시스템",
-      message: `🎉 ${playerName}님 정답! "${title}" - ${artist} (+${score}점)`,
-      time: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
-      isSystem: true,
-    };
-    setChatMessages((prev) => [...prev, systemMessage]);
+
+
+    // 정답 사운드 재생
+    const aiSound = new Audio('/audio/ai.wav');
+    aiSound.volume = 0.5; // 볼륨을 50%로 설정
+    aiSound.play().catch(err => console.error('ai.wav 재생 실패:', err));
   };
 
   const handleGameEnd = (data: any) => {
     setGameOver(true);
     setShowResults(true);
+    
+    // 게임 결과 사운드 재생
+    const aiResultSound = new Audio('/audio/airesult.wav');
+    aiResultSound.volume = 0.5; // 볼륨을 50%로 설정
+    aiResultSound.play().catch(err => console.error('airesult.wav 재생 실패:', err));
+    
     // onGameEnd(data);
   };
 
   const handleCloseResult = () => {
+    console.log("🏠 로비로 이동 버튼 클릭");
     setShowResults(false);
-    onGameEnd(playersWithScores); // ✅ 로비 이동 또는 부모에게 알림
+    // 로비로 이동
+    window.location.href = '/lobby';
   };
+
+
 
   useEffect(() => {
   
@@ -303,8 +438,51 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
   }));
 
   return (
-    <div className="min-h-screen p-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full min-h-screen p-4 relative overflow-hidden">
+      {/* 파티클 효과 */}
+      <AnimatePresence>
+        {gameState.showParticles && particles.map((particle) => (
+          <motion.div
+            key={particle.id}
+            className="absolute w-3 h-3 rounded-full pointer-events-none"
+            style={{
+              left: particle.x,
+              top: particle.y,
+              backgroundColor: particle.color,
+            }}
+            initial={{ opacity: 1, scale: 0 }}
+            animate={{ opacity: 0, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1 }}
+          />
+        ))}
+      </AnimatePresence>
+
+      {/* 점수 애니메이션 */}
+      <AnimatePresence>
+        {gameState.scoreAnimations.map((animation) => (
+          <motion.div
+            key={animation.id}
+            className="absolute pointer-events-none z-50"
+            style={{ left: animation.x, top: animation.y }}
+            initial={{ opacity: 0, y: 0, scale: 0.5 }}
+            animate={{ opacity: 1, y: -100, scale: 1.5 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 2, ease: "easeOut" }}
+          >
+            <div className="text-2xl font-bold text-yellow-400 drop-shadow-lg">
+              +{animation.score}
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      {/* 로봇 캐릭터 */}
+      {/* 로봇 캐릭터 */}
+
+
+
+      <div className="max-w-7xl mx-auto relative z-10">
         <GameHeader
           currentRound={gameState.currentRound}
           maxRound={gameState.maxRound}
@@ -313,7 +491,53 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
           onBack={onBack}
           hintText={gameState.currentSong?.hint || "없음"}
         />
+
+
+
+
+        {/* 정답 표시 */}
+        <AnimatePresence>
+          {gameState.showCorrectAnswer && gameState.correctAnswer && (
+            <motion.div
+              className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="bg-green-500 rounded-3xl shadow-2xl border-4 border-yellow-300 p-8">
+                <div className="text-center">
+                  <h2 className="text-3xl font-bold text-white mb-3 drop-shadow-lg">
+                    {gameState.correctAnswer}
+                  </h2>
+                  <p className="text-xl text-white font-semibold mb-4">
+                    {gameState.correctArtist}
+                  </p>
+                  <motion.div
+                    className="text-lg text-white font-semibold"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5, duration: 0.5 }}
+                  >
+                    {(() => {
+                      const winner = players.find(p => String(p.id) === String(gameState.roundWinner));
+                      console.log('정답창 - roundWinner:', gameState.roundWinner);
+                      console.log('정답창 - 찾은 플레이어:', winner);
+                      console.log('정답창 - 닉네임:', winner?.nickname);
+                      console.log('정답창 - 플레이어 ID들:', players.map(p => ({ id: p.id, type: typeof p.id })));
+                      return winner?.nickname ? `${winner.nickname}님이 맞췄습니다!` : '정답입니다!';
+                    })()}
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div>
+            <GameScoreboard players={playersWithScores} />
+          </div>
           <div className="lg:col-span-2">
             <GameChat
               messages={chatMessages}
@@ -321,15 +545,6 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
               isReading={gameState.isReading}
               onChatInputChange={setChatInput}
               onChatSubmit={handleChatSubmit}
-            />
-          </div>
-          <div>
-            <GameScoreboard players={playersWithScores} />
-            <GameInfo
-              isReading={gameState.isReading}
-              correctAnswer={gameState.correctAnswer}
-              correctArtist={gameState.correctArtist}
-              totalRounds={gameState.maxRound}
             />
           </div>
         </div>

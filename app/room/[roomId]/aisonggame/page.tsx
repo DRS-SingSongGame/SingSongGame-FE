@@ -209,7 +209,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
         <div className="flex gap-6">
           {/* 왼쪽 메인 컨텐츠 */}
           <div className="flex-1">
-            <Card className="bg-white/90 backdrop-blur-sm">
+            <Card className="bg-white/90 backdrop-blur-sm rounded-2xl">
               <CardHeader className="text-center relative">
                 <Button
                   variant="outline"
@@ -235,7 +235,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
                     return (
                       <motion.div
                         key={player ? player.id : `empty-${index}`}
-                        className="text-center p-4 rounded-lg bg-red-50 border border-red-200"
+                        className="text-center p-4 rounded-2xl bg-red-50 border border-red-200"
                         whileHover={{ scale: 1.05 }}
                         transition={{ duration: 0.2 }}
                       >
@@ -277,7 +277,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
                         onClick={handleStartGame}
                         disabled={gameStarted || selectedTagIds.length === 0}
                         size="lg"
-                        className="bg-red-500 hover:bg-red-600 text-white font-bold text-xl px-12 py-6"
+                        className="bg-red-500 hover:bg-red-600 text-white font-bold text-xl px-12 py-6 rounded-2xl"
                       >
                         <Play className="w-6 h-6 mr-3" />
                         {gameStarted ? "게임 시작 중..." : "AI 노래 맞추기 시작!"}
@@ -301,7 +301,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
             {user.id === room.hostId ? (
               // 방장용 키워드 선택 UI
               <div className="w-full mt-6">
-                <Card className="bg-white/90 backdrop-blur-sm p-4">
+                <Card className="bg-white/90 backdrop-blur-sm p-4 rounded-2xl">
                   <CardContent className="space-y-4">
                     <KeywordSelector
                       tags={PREDEFINED_TAGS}
@@ -316,7 +316,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
                         <Button
                           onClick={handleKeywordConfirm}
                           disabled={selectedTagIds.length === 0}
-                          className="px-6 py-2 bg-red-600 text-white font-semibold rounded-full shadow-md hover:bg-red-700"
+                          className="px-6 py-2 bg-red-600 text-white font-semibold rounded-2xl shadow-md hover:bg-red-700"
                         >
                           키워드 확정
                         </Button>
@@ -357,7 +357,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
               <input
                 type="text"
                 placeholder="메시지를 입력하세요..."
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     const target = e.target as HTMLInputElement;
@@ -376,7 +376,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
                     input.value = '';
                   }
                 }}
-                className="px-3 py-2 bg-red-500 text-white text-sm rounded-md hover:bg-red-600"
+                className="px-3 py-2 bg-red-500 text-white text-sm rounded-xl hover:bg-red-600"
               >
                 전송
               </button>
