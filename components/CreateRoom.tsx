@@ -195,7 +195,7 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
                 <SelectValue placeholder="라운드 수 선택" />
               </SelectTrigger>
               <SelectContent>
-                {[5, 10, 15, 20].map((num) => (
+                {[3, 5, 10, 15, 20].map((num) => (
                   <SelectItem key={num} value={num.toString()}>{num} 라운드</SelectItem>
                 ))}
               </SelectContent>

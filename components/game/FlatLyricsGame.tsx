@@ -26,7 +26,7 @@ interface Song {
 
 interface GameState {
   currentRound: number;
-  totalRounds: number;
+  maxRound: number;
   timeLeft: number;
   isReading: boolean;
   currentSong: Song | null;
@@ -49,7 +49,7 @@ interface ChatMessage {
 const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGameProps) => {
   const [gameState, setGameState] = useState<GameState>({
     currentRound: 0,
-    totalRounds: 2,
+    maxRound: 0,
     timeLeft: 60,
     isReading: false,
     currentSong: null,
@@ -105,6 +105,7 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
     setGameState((prev) => ({
       ...prev,
       currentRound: roundNumber,
+      maxRound: song.maxRound,
       currentSong: song,
       timeLeft: 60,
       correctAnswer: null,
@@ -306,7 +307,7 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
       <div className="max-w-7xl mx-auto">
         <GameHeader
           currentRound={gameState.currentRound}
-          totalRounds={gameState.totalRounds}
+          maxRound={gameState.maxRound}
           timeLeft={gameState.timeLeft}
           isReading={gameState.isReading}
           onBack={onBack}
@@ -328,7 +329,7 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
               isReading={gameState.isReading}
               correctAnswer={gameState.correctAnswer}
               correctArtist={gameState.correctArtist}
-              totalRounds={gameState.totalRounds}
+              totalRounds={gameState.maxRound}
             />
           </div>
         </div>
