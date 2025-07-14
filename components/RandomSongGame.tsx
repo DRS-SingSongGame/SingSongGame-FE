@@ -115,6 +115,9 @@ const RandomSongGame = ({
 
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 
+  const [showRoundNotification, setShowRoundNotification] = useState(false);
+  const [showHintAnimation, setShowHintAnimation] = useState<string | null>(null);
+  const [isKeywordConfirmed, setIsKeywordConfirmed] = useState(false);
   useEffect(() => {
     if (phase === 'playing') {
       setTimeout(() => {
@@ -232,6 +235,9 @@ const RandomSongGame = ({
       },
       onRoundStart: (response) => {
         console.log("Round Start:", response);
+
+        setShowRoundNotification(true);
+        setTimeout(() => setShowRoundNotification(false), 2000);
         
 
         currentRoundRef.current = response.round;
@@ -507,145 +513,237 @@ const RandomSongGame = ({
     }
   };
 
+  const handleKeywordConfirm = () => {
+    sendKeywordConfirm(room.roomId, selectedTagIds);
+    setIsKeywordConfirmed(true); // 키워드 확정 상태로 변경
+  };
+
   const getCurrentHints = () => {
     const serverStartTime = gameSession?.serverStartTime;
     if (!serverStartTime || !gameSession?.currentSong) {
-      return ["🎵 노래를 잘 들어보세요!"];
+      return [];
     }
     
     const elapsed = Date.now() - serverStartTime;
     const timeLeft = Math.max(0, 30 - Math.floor(elapsed / 1000));
     
-    const hints = ["🎵 노래를 잘 들어보세요!"];
+    const hints = [];
     
-    if (timeLeft <= 20) {
+    // 중앙 팝업이 끝난 후에만 상단에 표시 (2초 딜레이 추가)
+    if (timeLeft <= 18) { // 20초 - 2초(팝업 시간)
       hints.push(`🎤 가수: ${gameSession.currentSong.artist}`);
     }
     
-    if (timeLeft <= 10) {
+    if (timeLeft <= 8) { // 10초 - 2초(팝업 시간)
       hints.push(`💡 제목 힌트: ${gameSession.currentSong.hint}`);
     }
     
     return hints;
   };
+  
+  // getCurrentHints()가 변할 때마다 체크
+  useEffect(() => {
+    if (phase !== "playing" || !gameSession?.serverStartTime || !gameSession?.currentSong || showAnswerModal) return;
+    
+    const elapsed = Date.now() - gameSession.serverStartTime;
+    const timeLeft = Math.max(0, 30 - Math.floor(elapsed / 1000));
+    
+    // 정확히 20초일 때 가수 힌트 팝업
+    if (timeLeft === 20 && !showHintAnimation) {
+      setShowHintAnimation(` 가수: ${gameSession.currentSong.artist}`);
+      setTimeout(() => setShowHintAnimation(null), 2000);
+    }
+    
+    // 정확히 10초일 때 제목 힌트 팝업  
+    if (timeLeft === 10 && !showHintAnimation) {
+      setShowHintAnimation(` 제목 힌트: ${gameSession.currentSong.hint}`);
+      setTimeout(() => setShowHintAnimation(null), 2000);
+    }
+  }, [phase, roundTimer, gameSession?.serverStartTime, gameSession?.currentSong, showHintAnimation]);
 
   useEffect(() => {
     const audio = new Audio('/audio/entersound.wav');
     audio.play();
   }, []);
 
+  useEffect(() => {
+    if (showAnswerModal) {
+      const correctSound = new Audio('/audio/ai.wav');
+      correctSound.volume = 0.5; // 음원보다 살짝 작게
+      correctSound.play().catch(console.error);
+    }
+  }, [showAnswerModal]);
+
+  useEffect(() => {
+    if (showNoAnswerModal) {
+      const failSound = new Audio('/audio/fail.mp3');
+      failSound.volume = 0.5; // 적절한 볼륨으로 설정
+      failSound.play().catch((error) => {
+        console.error('효과음 재생 실패:', error);
+      });
+    }
+  }, [showNoAnswerModal]);
+
   if (loading) return <div>로딩 중...</div>;
 
   // phase별 화면
   if (phase === "waiting") {
     return (
-      <div className="min-h-screen p-4 bg-gradient-to-br from-cyan-400 via-blue-500 via-purple-500 to-pink-500 flex flex-col">
-        <div className="max-w-4xl mx-auto flex-1">
-          <Button
-            variant="outline"
-            //onClick={onBack}
-            onClick={handleLeaveRoom}
-            className="mb-4 bg-white/90 backdrop-blur-sm"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            뒤로가기
-          </Button>
-          <Card className="bg-white/90 backdrop-blur-sm">
-            <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-                {isAISongGame ? "🤖 AI 노래 맞추기" : "🎵 랜덤 노래 맞추기"}
-              </CardTitle>
-              <CardDescription className="text-lg">
-                {isAISongGame
-                  ? "AI가 부른 노래를 듣고 제목을 맞춰보세요!"
-                  : "노래를 듣고 제목을 가장 빨리 맞춰보세요!"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {playersState.map((player) => (
-                  <div
-                    key={player.id}
-                    className="text-center p-4 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200"
+      <div className="min-h-screen p-4 bg-gradient-to-br from-cyan-400 via-blue-500 via-purple-500 to-pink-500">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex gap-6">
+            {/* 왼쪽 메인 컨텐츠 */}
+            <div className="flex-1">
+              <Card className="bg-white/90 backdrop-blur-sm rounded-2xl">
+                <CardHeader className="text-center relative">
+                  <Button
+                    variant="outline"
+                    onClick={handleLeaveRoom}
+                    className="absolute left-0 top-0 bg-white/90 backdrop-blur-sm"
                   >
-                    <Avatar className="w-16 h-16 mx-auto mb-2">
-                      <AvatarImage src={player.avatar} />
-                      <AvatarFallback>{player.nickname[0]}</AvatarFallback>
-                    </Avatar>
-                    <h3 className="font-semibold">{player.nickname}</h3>
-
-                  </div>
-                ))}
-              </div>
-              {phase === "waiting" && (
-                <div className="text-center">
-                  {isHost ? (
-                    <Button
-                    onClick={handleStartGame}
-                    disabled={selectedTagIds.length === 0} // 최소 1개 선택되어야 버튼 활성화
-                    size="lg"
-                    className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 text-white font-bold text-xl px-12 py-6 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Play className="w-6 h-6 mr-3" />
-                    게임 시작!
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    뒤로가기
                   </Button>
-                   ) : ( 
-                    <p className="text-lg font-semibold text-black/90 mt-4">
-                      ⏳ 방장이 게임을 시작할 때까지 기다려주세요...
-                    </p>
-                   )} 
+                  <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    🎵 랜덤 노래 맞추기
+                  </CardTitle>
+                  <CardDescription className="text-lg">
+                    노래를 듣고 제목을 가장 빨리 맞춰보세요!
+                  </CardDescription>
+                </CardHeader>
+  
+                <CardContent className="space-y-6">
+                  {/* 플레이어 목록 - 3x2 격자 */}
+                  <div className="grid grid-cols-3 gap-4">
+                    {Array.from({ length: 6 }, (_, index) => {
+                      const player = playersState[index];
+                      return (
+                        <div
+                          key={player ? player.id : `empty-${index}`}
+                          className="text-center p-4 rounded-2xl bg-blue-50 border border-blue-200"
+                        >
+                          {player ? (
+                            <>
+                              <Avatar className="w-16 h-16 mx-auto mb-2">
+                                <AvatarImage src={player.avatar} />
+                                <AvatarFallback>{player.nickname[0]}</AvatarFallback>
+                              </Avatar>
+                              <h3 className="font-semibold">{player.nickname}</h3>
+                              <Badge className="mt-1 bg-blue-500">
+                                준비 완료
+                              </Badge>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-16 h-16 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                                <Users className="w-8 h-8 text-gray-400" />
+                              </div>
+                              <h3 className="font-semibold text-gray-400">빈 자리</h3>
+                              <Badge className="mt-1 bg-gray-400">
+                                대기 중
+                              </Badge>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+  
+                  {/* 게임 시작 버튼 */}
+                  <div className="text-center">
+                  {isHost ? (
+                    <>
+                      {isKeywordConfirmed && selectedTagIds.length > 0 ? (
+                        <Button
+                          onClick={handleStartGame}
+                          size="lg"
+                          className="bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-600 hover:via-blue-600 hover:to-purple-600 text-white font-bold text-xl px-12 py-6"
+                        >
+                          <Play className="w-6 h-6 mr-3" />
+                          랜덤 노래 맞추기 시작!
+                        </Button>
+                      ) : (
+                        <div className="py-8">
+                          <div className="bg-gray-100 text-gray-500 px-12 py-6 rounded-2xl text-xl font-bold inline-block cursor-not-allowed">
+                            <Play className="w-6 h-6 mr-3 inline" />
+                            랜덤 노래 맞추기 시작!
+                          </div>
+                          <div className="mt-3 text-yellow-600 font-semibold">
+                            ⚠️ 키워드를 선택하고 확정해주세요
+                          </div>
+                        </div>
+                      )}
+                    </>
+                    ) : (
+                      <p className="text-lg font-semibold text-gray-700 py-8">
+                        ⏳ 방장이 게임을 시작할 때까지 기다려주세요...
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+  
+              {/* 키워드 선택 UI */}
+              {isHost ? (
+                <div className="w-full mt-6">
+                  <Card className="bg-white/90 backdrop-blur-sm p-4 rounded-2xl">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-semibold text-gray-800">
+                        🎯 키워드 최대 3개를 선택하세요
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                    <KeywordSelector
+                      tags={PREDEFINED_TAGS}
+                      selected={selectedTagIds}
+                      onChange={(newSelectedIds) => {
+                        setSelectedTagIds(newSelectedIds);
+                        setIsKeywordConfirmed(false); // 키워드 바뀌면 확정 해제
+                      }}
+                    />
+                      <div className="flex justify-end mt-4">
+                      <Button
+                        onClick={handleKeywordConfirm}
+                        disabled={selectedTagIds.length === 0 || isKeywordConfirmed}
+                        className={`px-6 py-2 font-semibold rounded-full shadow-md ${
+                          isKeywordConfirmed 
+                            ? "bg-green-600 text-white cursor-default" 
+                            : "bg-purple-600 text-white hover:bg-purple-700"
+                        }`}
+                      >
+                        {isKeywordConfirmed ? "✅ 키워드 확정 완료" : "키워드 확정"}
+                      </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="w-full mt-6">
+                  <KeywordDisplay />
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
-        {isHost ? (
-          // 방장용 키워드 선택 UI
-          <div className="max-w-4xl mx-auto w-full mt-6">
-            <Card className="bg-white/90 backdrop-blur-sm p-4">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-semibold text-gray-800">
-                  🎯 키워드 최대 3개를 선택하세요
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <KeywordSelector
-                  tags={PREDEFINED_TAGS}
-                  selected={selectedTagIds}
-                  onChange={setSelectedTagIds}
+            </div>
+  
+            {/* 오른쪽 채팅 영역 */}
+            <div className="w-80 h-[817px] bg-white/90 backdrop-blur-sm rounded-lg p-4 flex flex-col">
+              <div className="mb-3">
+                <h3 className="text-purple-600 text-sm font-semibold flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  채팅
+                </h3>
+              </div>
+              <div className="flex-1">
+                <ChatBox
+                  user={user}
+                  messages={chatMessages}
+                  onSend={handleSendMessage}
+                  autoScrollToBottom={true}
+                  chatType="room"
+                  compact={true}
                 />
-                <div className="flex justify-end mt-4">
-                  <Button
-                    onClick={() => sendKeywordConfirm(room.roomId, selectedTagIds)}
-                    disabled={selectedTagIds.length === 0}
-                    className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-full shadow-md hover:bg-purple-700"
-                  >
-                    키워드 확정
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
-        ) : (
-          // 참여자용 키워드 미리보기 컴포넌트 (zustand 기반)
-          <KeywordDisplay />
-        )}
-
-        <div className="max-w-4xl mx-auto w-full mt-6">
-          <Card className="bg-white/90 backdrop-blur-sm flex flex-col">
-            <CardHeader>
-              <CardTitle className="text-pink-700">채팅</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col flex-1">
-              <ChatBox
-                user={user}
-                messages={chatMessages}
-                onSend={handleSendMessage}
-                autoScrollToBottom={true}
-                chatType="room"
-              />
-            </CardContent>
-          </Card>
         </div>
       </div>
     );
@@ -669,6 +767,53 @@ const RandomSongGame = ({
   if (phase === "playing") {
     return (
       <div className="min-h-screen p-4 bg-gradient-to-br from-cyan-400 via-blue-500 via-purple-500 to-pink-500">
+        {showRoundNotification && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            className="text-4xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-4 rounded-2xl shadow-2xl"
+          >
+            Round {gameSession?.currentRound} 시작!
+          </motion.div>
+        </div>
+      )}
+          
+          {showHintAnimation && (
+            <div className="fixed inset-0 z-50 pointer-events-none">
+              <motion.div
+                initial={{ 
+                  position: "fixed",
+                  top: "50%", 
+                  left: "50%", 
+                  x: "-50%", 
+                  y: "-50%",
+                  scale: 1.5,
+                  opacity: 1
+                }}
+                animate={{ 
+                  top: "140px", // 힌트 박스 위치로 (실제 위치에 맞게 조정)
+                  left: "50%",
+                  x: "-50%", 
+                  y: "0%",
+                  scale: 1,
+                  opacity: 0.8
+                }}
+                exit={{ opacity: 0 }}
+                transition={{ 
+                  duration: 1.5, 
+                  ease: "easeInOut",
+                  times: [0, 0.7, 1], // 70%까지는 이동, 나머지는 페이드아웃
+                  opacity: { duration: 2, times: [0, 0.7, 1] }
+                }}
+                className="text-2xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 rounded-xl shadow-2xl whitespace-nowrap"
+              >
+                {showHintAnimation}
+              </motion.div>
+            </div>
+          )}
+
         <div className="max-w-6xl mx-auto">
           <Button
             variant="outline"
@@ -682,25 +827,42 @@ const RandomSongGame = ({
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle className="text-2xl font-bold">
-                  {gameSession?.currentRound === gameSession?.maxRound && (
-                    <span className="text-red-500">🎉 마지막 라운드입니다!</span>
-                  )}
-                </CardTitle>
+              <CardTitle className="text-2xl font-bold">
+                {gameSession?.currentRound === gameSession?.maxRound ? (
+                  <span className="text-red-500">🎉 마지막 라운드입니다!</span>
+                ) : (
+                  <span className="text-blue-600">
+                    🎵 Round {gameSession?.currentRound || 1}
+                  </span>
+                )}
+              </CardTitle>
               </div>
-              <div className="flex-1 text-center mx-8">
-                {getCurrentHints().map((hint, index) => (
-                  <motion.div
-                    key={`${index}-${Math.floor((Date.now() - (gameSession?.serverStartTime || 0)) / 10000)}`}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="text-lg font-bold text-black"
-                  >
-                    {hint}
-                  </motion.div>
-                ))}
-              </div>
+              {getCurrentHints().length === 0 ? (
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-gray-600">힌트 준비 중</span>
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-100"></div>
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-200"></div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 text-center mx-8">
+                  <div className="flex items-center justify-center gap-4 flex-wrap">
+                    {getCurrentHints().map((hint, index) => (
+                      <motion.span
+                        key={`${index}-${Math.floor((Date.now() - (gameSession?.serverStartTime || 0)) / 10000)}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.1 }}
+                        className="text-sm font-semibold text-gray-700 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1 border border-gray-200"
+                      >
+                        {hint}
+                      </motion.span>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="text-right">
                 <div className="relative flex items-center justify-center">
                   {/* 원형 배경 */}
@@ -733,21 +895,6 @@ const RandomSongGame = ({
                 </div>
               </div>
             </div>
-
-            {/* ✅ 힌트를 독립적인 중앙 영역으로 이동
-            <div className="text-center space-y-2 my-6">
-              {getCurrentHints().map((hint, index) => (
-                <motion.div
-                  key={`${index}-${Math.floor((Date.now() - (gameSession?.serverStartTime || 0)) / 10000)}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="text-xl font-bold text-blue-600"
-                >
-                  {hint}
-                </motion.div>
-              ))}
-            </div> */}
 
             <div className="mt-4">
               <div className="flex justify-between items-center mb-1">
@@ -786,9 +933,9 @@ const RandomSongGame = ({
                     .map((player, index) => (
                       <div
                         key={player.id}
-                        className={`flex items-center gap-3 p-3 rounded-lg ${
+                        className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-500 ${
                           player.nickname === gameSession?.winner
-                            ? "bg-yellow-100 border-2 border-yellow-400"
+                            ? "bg-gradient-to-r from-yellow-100 via-green-100 to-yellow-100 border-2 border-yellow-400 shadow-lg animate-pulse transform scale-105"
                             : "bg-gray-50"
                         }`}
                       >
@@ -802,9 +949,12 @@ const RandomSongGame = ({
                         <div className="flex-1">
                           <div className="font-semibold">{player.nickname}</div>
                         </div>
-                        <Badge className="bg-blue-500">
-                          점수: {player.score}점
-                        </Badge>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {player.score}
+                          </div>
+                          <div className="text-xs text-gray-500">점</div>
+                        </div>
                       </div>
                     ))}
                 </div>
@@ -848,6 +998,7 @@ const RandomSongGame = ({
         {showAnswerModal && answerModalData && (
           <Dialog open={showAnswerModal} onOpenChange={setShowAnswerModal}>
           <DialogContent className="sm:max-w-[425px] text-center">
+          <div className="fixed inset-0 bg-green-400/20 animate-ping pointer-events-none z-40" />
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

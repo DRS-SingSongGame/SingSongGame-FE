@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { ArrowLeft } from 'lucide-react';
 import { useCreateRoom, CreateRoomResponse } from '@/hooks/useCreateRoom';
 import { useJoinRoom } from '@/hooks/useJoinRoom';
-import { ApiResponse } from '@/types/api';
+import GlobalLoading from './ui/GlobalLoading';
 
 interface CreateRoomProps {
   onBack: () => void;
@@ -236,11 +236,15 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
               disabled={!roomName.trim() || !gameMode || !maxRounds || (isPrivate && !password.trim()) || isLoading || isJoining}
               className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
             >
-              {isLoading || isJoining ? '처리 중...' : '방 만들기'}
+              방 만들기
             </Button>
           </div>
         </CardContent>
       </Card>
+      <GlobalLoading 
+      isLoading={isLoading || isJoining} 
+      message={isLoading ? "🏠 방을 생성하는 중..." : "🚪 방에 입장하는 중..."} 
+      />
     </div>
   );
 };
