@@ -230,3 +230,32 @@
   position: absolute;
   top: -20px;
 }
+
+/* 파이프/철제/네온 카드 스타일 */
+.pipe-metal-card {
+  border: 6px solid transparent;
+  border-image: linear-gradient(120deg, #00eaff 0%, #b8b8b8 40%, #222 100%);
+  border-image-slice: 1;
+  background: linear-gradient(135deg, #23272f 80%, #3a3f4b 100%);
+  box-shadow: 0 0 24px 4px #00eaff55, 0 2px 16px 0 #222a;
+  color: #e0f7fa;
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+}
+
+/* 파이프/철제/네온 버튼 스타일 */
+.pipe-metal-btn {
+  border: 4px solid #00eaff;
+  background: linear-gradient(120deg, #23272f 60%, #00eaff 100%);
+  color: #e0f7fa;
+  font-weight: bold;
+  box-shadow: 0 0 16px 2px #00eaff88, 0 2px 8px 0 #222a;
+  text-shadow: 0 0 8px #00eaff88;
+  transition: filter 0.2s, box-shadow 0.2s;
+  border-radius: 0.75rem;
+}
+.pipe-metal-btn:hover {
+  filter: brightness(1.2) drop-shadow(0 0 8px #00eaff);
+  box-shadow: 0 0 32px 8px #00eaffcc, 0 2px 16px 0 #222a;
+}
