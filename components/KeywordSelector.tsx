@@ -36,12 +36,12 @@ const KeywordSelector: React.FC<KeywordSelectorProps> = ({ tags, selected, onCha
       };
 
   return (
-    <div className="flex flex-wrap gap-2 mt-4">
+    <div className="flex flex-wrap gap-2 mt-2">
       {tags.map((tag) => (
         <button
           key={tag.id}
           onClick={() => toggleTag(tag.id)}
-          className={`px-3 py-1 rounded-full border transition 
+          className={`px-2 py-0.5 rounded-full border transition text-sm
             ${
               selected.includes(tag.id)
                 ? "bg-purple-600 text-white border-transparent"
