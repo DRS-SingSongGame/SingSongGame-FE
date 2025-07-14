@@ -36,14 +36,27 @@ const LoginPage = ({ onLogin }: LoginPageProps) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-pink-400 via-purple-500 via-blue-500 to-cyan-400">
+      {/* ✅ 로고를 카드 밖에 배치 */}
+      <div className="mb-8 text-center relative z-50">
+        <img 
+          src="/singsonglogo.png" 
+          alt="SingSong Game Logo" 
+          width={600}
+          height={600}
+          className="mx-auto mb-4 drop-shadow-lg"
+        />
+        
+      </div>
+
+      {/* 로그인 카드 */}
+      <Card className="w-full max-w-md bg-white/90 backdrop-blur-sm relative z-40">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            🎵 Sing Song Game
+          <CardTitle className="text-2xl font-bold text-gray-800">
+            로그인
           </CardTitle>
-          <CardDescription className="text-lg">
-            친구들과 함께 즐기는 음악 퀴즈 게임
+          <CardDescription className="text-gray-600">
+            게임을 시작하려면 로그인해주세요
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
