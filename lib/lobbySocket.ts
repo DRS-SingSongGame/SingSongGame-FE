@@ -33,15 +33,21 @@ export function connectLobbySocket(
   if (!client) {
     client = new Client({
       brokerURL: undefined,
-      webSocketFactory: () => new SockJS('/api/ws/chat'),
+      webSocketFactory: () => new SockJS(`/api/ws/chat?userId=${userId}&nickname=${nickname}`),
       reconnectDelay: 5000,
       connectHeaders: {
         // 👇 사용자 정보 직접 넘김 (토큰 대신)
-        userId,
+        userId: String(userId), 
         nickname
       },
       onConnect: () => {
         console.log('[lobbySocket] Connected to lobby socket');
+
+        console.log('[lobbySocket] connectHeaders 확인:', {
+          userId: String(userId),
+          nickname,
+          typeofUserId: typeof userId
+        });
 
         if (!subscription) {
           subscription = client!.subscribe('/topic/lobby', (message: IMessage) => {
@@ -71,10 +77,23 @@ export function connectLobbySocket(
               time: new Date(body.timestamp).toLocaleTimeString('ko-KR', {
                 hour: '2-digit',
                 minute: '2-digit'
-              })
+              }),
+              tier: body.tier 
             });
           });
         }
+
+        client!.subscribe(`/user/queue/match`, (message: IMessage) => {
+          const body = JSON.parse(message.body);
+          console.log('[lobbySocket] MATCH_FOUND 메시지 수신:', body);
+        
+          if (body.type === 'MATCH_FOUND') {
+            onMessage({
+              type: body.type,
+              data: body.data
+            });
+          }
+        });
 
         // 로비 입장
         fetch('/api/lobby/enter', {
