@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Crown, Trophy, Medal, Award, Star, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import AnimatedScore from './AnimatedScore';
 
 interface Player {
   id: string;
@@ -102,8 +103,8 @@ const GameScoreboard = ({ players }: GameScoreboardProps) => {
                     whileHover={{ scale: 1.1 }}
                     transition={{ type: "spring", stiffness: 300 }}
                   >
-                                      <div className={`font-bold text-xl text-gray-600`}>
-                      {player.score}점
+                    <div className={`font-bold text-xl text-gray-600`}>
+                      <AnimatedScore score={player.score} unit="점" />
                     </div>
                     {player.score > 0 && (
                       <motion.div

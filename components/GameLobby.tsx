@@ -15,6 +15,7 @@ import {
   Settings,
   VolumeX,
   Volume2,
+  HelpCircle,
 } from "lucide-react";
 import { useJoinRoom } from "@/hooks/useJoinRoom";
 import {
@@ -131,6 +132,7 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
   const [isComposing, setIsComposing] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState({ open: false, message: "" });
+  const [showQuickMatchInfo, setShowQuickMatchInfo] = useState(false);
 
 
   const handleBgmPlay = () => setIsBgmPlaying(true);
@@ -308,6 +310,14 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
                 >
                   빠른 대전
                 </Button>
+                <button
+                  className="ml-1 p-0 bg-transparent hover:bg-transparent flex items-center justify-center"
+                  onClick={() => setShowQuickMatchInfo(true)}
+                  aria-label="빠른대전 설명 보기"
+                  style={{ height: '32px', width: '32px' }}
+                >
+                  <HelpCircle className="w-6 h-6 text-red-500" />
+                </button>
               </div>
             </CardHeader>
             <CardContent className="px-0 pb-0 w-full max-w-full flex-1 min-h-0">
@@ -568,6 +578,28 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
           message={error.message}
           onClose={() => setError({ open: false, message: "" })}
         />
+      )}
+
+      {/* 빠른대전 설명 모달 */}
+      {showQuickMatchInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full text-center">
+            <h4 className="font-semibold text-blue-800 mb-3 text-lg">
+              랜덤 노래 맞추기
+            </h4>
+            <p className="text-base text-blue-600">
+              • 6명의 플레이어가 함께 참여<br />
+              • 랜덤한 노래를 듣고 제목 맞추기<br />
+              • 가장 빨리 정답을 맞힌 사람이 점수 획득
+            </p>
+            <Button
+              onClick={() => setShowQuickMatchInfo(false)}
+              className="mt-6 w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg transition-colors"
+            >
+              닫기
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );
