@@ -267,6 +267,17 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
     }
   }, [user?.id]);
 
+  // 티어명-이미지 매핑
+  const tierImageMap: Record<string, string> = {
+    '새내기': '/rank/t1.png',
+    '훈련생': '/rank/t2.png',
+    '모험가': '/rank/t3.png',
+    '도전자': '/rank/t4.png',
+    '에이스': '/rank/t5.png',
+    '전설': '/rank/t6.png',
+  };
+  const tierImg = tierImageMap[tier] || '';
+
   return (
     <div className="py-4 px-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 h-full min-h-0">
       <BGMPlayer bgmVolume={settings.bgmVolume} isPlaying={isBgmPlaying} setIsPlaying={setIsBgmPlaying} />
@@ -442,52 +453,64 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
           </Card>
         </div>
         <div className="col-span-3 flex flex-col gap-0 items-stretch mt-0 pt-0 h-full min-h-0">
-          <Card className="bg-white/90 backdrop-blur-sm w-full mb-0 mt-0 pt-0 pb-0">
-            <CardHeader className="border-b p-0 pb-0 mt-0 mb-0 pl-6">
-              <CardTitle className="text-2xl font-bold">내 정보</CardTitle>
-              <div className="flex items-center gap-4 mt-4">
-                <Avatar className="w-16 h-16 ring-4 ring-pink-500">
-                  {user.profileImage ? (
-                    <AvatarImage src={user.profileImage} alt="프로필 이미지" />
-                  ) : (
-                    <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
-                      {user.nickname?.[0] || "?"}
-                    </AvatarFallback>
+          <Card className="bg-white/90 backdrop-blur-sm w-full mb-0 mt-0 pt-0 pb-0 h-28">
+            <CardHeader className="border-b p-0 pb-0 mt-0 mb-0 pl-6 h-full flex justify-center items-center py-4">
+              <CardTitle className="text-2xl font-bold"></CardTitle>
+              <div className="flex items-center gap-4 mt-4 justify-start">
+                {/* 사진+닉네임+티어 상자 */}
+                <div className="relative flex items-center gap-2 p-3 rounded-xl bg-white/80 shadow-md hover:bg-blue-50 transition group min-w-[180px] max-w-[320px] ml-[-30px]">
+                  {/* 티어 이미지 툴팁 */}
+                  {tierImg && (
+                    <img
+                      src={tierImg}
+                      alt={tier}
+                      className="absolute top-1/2 left-[-90px] -translate-y-1/2 w-20 h-20 object-contain opacity-0 group-hover:opacity-100 transition pointer-events-none"
+                      style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.2))", zIndex: 9999 }}
+                    />
                   )}
-                </Avatar>
-                <div className="min-w-0">
-                  <h3 className="font-semibold text-lg truncate">
-                    {user.nickname}
-                  </h3>
-                  <p className="text-gray-600 text-sm truncate">
-                    {tier || "티어 없음"}🎵
-                  </p>
+                  <Avatar className="w-16 h-16 ring-4 ring-pink-500">
+                    {user.profileImage ? (
+                      <AvatarImage src={user.profileImage} alt="프로필 이미지" />
+                    ) : (
+                      <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
+                        {user.nickname?.[0] || "?"}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div className="min-w-0 flex flex-col">
+                    <h3 className="font-semibold text-lg truncate">{user.nickname}</h3>
+                    <span className="text-xs text-gray-500 font-semibold mt-1 flex items-center gap-1">
+                      {tier || "티어 없음"}
+                      {tierImg && (
+                        <img src={tierImg} alt={tier} className="w-5 h-5 object-contain inline-block align-middle" />
+                      )}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-2 mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsSettingsModalOpen(true)}
-                  className="glow-hover bg-gradient-to-br from-blue-500 via-blue-400 to-cyan-400 text-white font-bold shadow-xl border-2 border-blue-300"
-                >
-                  <Settings className="w-4 h-4 mr-2" /> 설정
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onLogout}
-                  className="glow-hover bg-gradient-to-br from-blue-500 via-blue-400 to-cyan-400 text-white font-bold shadow-xl border-2 border-blue-300"
-                >
-                  <LogOut className="w-4 h-4 mr-2" /> 로그아웃
-                </Button>
+                {/* 설정/로그아웃 버튼을 오른쪽에 배치 */}
+                <div className="flex flex-col gap-2 ml-2">
+                  <button
+                    onClick={() => setIsSettingsModalOpen(true)}
+                    className="p-1 rounded-full hover:bg-blue-100 transition"
+                    aria-label="설정 열기"
+                  >
+                    <Settings className="w-5 h-5 text-blue-500" />
+                  </button>
+                  <button
+                    onClick={onLogout}
+                    className="p-1 rounded-full hover:bg-blue-100 transition"
+                    aria-label="로그아웃"
+                  >
+                    <LogOut className="w-5 h-5 text-blue-500" />
+                  </button>
+                </div>
               </div>
             </CardHeader>
           </Card>
           <div className="mt-4" />
           <Card className="bg-white/90 backdrop-blur-sm w-full h-[740px] flex flex-col p-0">
             <div className="p-6 flex-1 flex flex-col">
-              <div className="text-xl font-bold mb-2">로비 유저</div>
+              <div className="text-xl font-bold mb-2">유저</div>
               <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                 {onlineUsers.map((u) => (
                   <div
