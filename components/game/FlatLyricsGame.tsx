@@ -10,6 +10,7 @@ import GameResultModal from "./GameResultModal";
 import { connectGameSocket, disconnectGameSocket } from "@/lib/gameSocket";
 import { sendGameMessage } from "@/lib/gameSocket";
 import { Sparkles, Music, Mic, Trophy, Star, Zap, Bot, Rocket, Target, Crown } from "lucide-react";
+import api from "@/lib/api";
 
 interface FlatLyricsGameProps {
   user: any;
@@ -339,10 +340,13 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
     // onGameEnd(data);
   };
 
-  const handleCloseResult = () => {
-    console.log("🏠 로비로 이동 버튼 클릭");
+  const handleCloseResult = async () => {
     setShowResults(false);
-    // 로비로 이동
+    try {
+      await api.delete(`/api/room/${room.roomId}/leave`);
+    } catch (e) {
+      // 실패해도 그냥 로비로 이동
+    }
     window.location.href = '/lobby';
   };
 
