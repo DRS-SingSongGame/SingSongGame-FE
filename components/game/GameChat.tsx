@@ -41,8 +41,11 @@ const GameChat = ({
   }, [messages]);
 
   return (
-    <Card className="pipe-metal-card rounded-2xl">
-      <CardHeader className="bg-gray-50 border-b border-gray-200">
+    <Card className="pipe-metal-card rounded-2xl ">
+      <CardHeader
+        className="bg-gray-50 border-none rounded-none"
+        style={{ border: 'none', boxShadow: 'none', outline: 'none' }}
+      >
         <CardTitle className="flex items-center gap-2 text-xl font-bold text-gray-700">
            채팅 & 정답 입력
         </CardTitle>
