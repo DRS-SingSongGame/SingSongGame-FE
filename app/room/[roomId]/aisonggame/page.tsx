@@ -213,8 +213,13 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
               <CardHeader className="text-center relative">
                 <Button
                   variant="outline"
-                  onClick={handleLeaveRoom}
-                  className="absolute left-0 top-0 bg-white/90 backdrop-blur-sm"
+                  onClick={async () => {
+                    try {
+                      await api.delete(`/api/room/${room.roomId}/leave`);
+                    } catch (e) {}
+                    router.push('/lobby');
+                  }}
+                  className="absolute left-0 top-0 ml-2 mt-2 bg-white/90 backdrop-blur-sm px-1 py-0.5 text-sm"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   뒤로가기
@@ -334,7 +339,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
           </div>
 
           {/* 오른쪽 채팅 영역 */}
-          <div className="w-80 h-[820px] bg-white/90 backdrop-blur-sm rounded-lg p-4 flex flex-col">
+          <div className="w-80 h-[820px] bg-white/90 backdrop-blur-sm p-4 flex flex-col">
             <div className="mb-3">
               <h3 className="text-red-600 text-sm font-semibold flex items-center gap-2">
                 <Users className="w-4 h-4" />
