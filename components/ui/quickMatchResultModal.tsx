@@ -14,12 +14,12 @@ interface QuickMatchResultModalProps {
   const QuickMatchResultModal = ({ result, onClose }: QuickMatchResultModalProps) => {
     // 티어명에 따라 이미지 경로 매핑
     const tierImageMap: Record<string, string> = {
-      '새내기': '/rank/t1.png',
-      '훈련생': '/rank/t2.png',
-      '모험가': '/rank/t3.png',
-      '도전자': '/rank/t4.png',
-      '에이스': '/rank/t5.png',
-      '전설': '/rank/t6.png',
+      'SAENAEGI': '/rank/t1.png',
+      'HUNRYUNSAENG': '/rank/t2.png',
+      'MOHEMGA': '/rank/t3.png',
+      'DOJEONJA': '/rank/t4.png',
+      'ACE': '/rank/t5.png',
+      'LEGEND': '/rank/t6.png',
     };
     const tierImg = tierImageMap[result.newTier] || '';
     return (
