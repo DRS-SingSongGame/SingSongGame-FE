@@ -509,34 +509,45 @@ const RandomSongGame = ({
   };
 
   const handleLeaveRoom = async () => {
-    try {
-      console.log("🔁 나가기 시도, 현재 room:", room);
+  try {
+    console.log("🔁 나가기 시도, 현재 room:", room);
 
-      if (room.roomType === "QUICK_MATCH") {
-        const res = await api.post("/api/quick-match/end", null, {
-          params: {
-            roomCode: room.roomCode,
-          },
-        });
-        const data = (res.data as any).data;
+    if (room.roomType === "QUICK_MATCH") {
+      // 1. 게임 종료 알림
+      await api.post("/api/quick-match/end", null, {
+        params: {
+          roomCode: room.roomCode,
+        },
+      });
 
-        
-        localStorage.setItem("quickMatchResult", JSON.stringify(data));
-        console.log("빠른대전 결과 저장:", data);
-        setTimeout(() => {
-          router.push("/lobby");
-        }, 100);
-      } else {
-        console.log("🚪 일반 방 나가기 호출 시작");
+      // 2. 캐시된 MMR 결과 조회
+      const resultRes = await api.get("/api/quick-match/result", {
+        params: {
+          roomCode: room.roomCode,
+        },
+      });
 
-        await api.delete(`/api/room/${room.roomId}/leave`);
+      const resultData = (resultRes as any).data;
+      localStorage.setItem("quickMatchResult", JSON.stringify(resultData));
+      console.log("📦 빠른대전 결과 저장:", resultData);
+
+      // 3. 로비 이동
+      setTimeout(() => {
         router.push("/lobby");
-      }
-    } catch (error) {
-      console.error("❌ 방 나가기 실패:", error);
+      }, 100);
+
+    } else {
+      console.log("🚪 일반 방 나가기 호출 시작");
+
+      await api.delete(`/api/room/${room.roomId}/leave`);
       router.push("/lobby");
     }
-  };
+
+  } catch (error) {
+    console.error("❌ 방 나가기 실패:", error);
+    router.push("/lobby");
+  }
+};
 
   const handlePlayAudio = () => {
     if (audioRef.current) {
