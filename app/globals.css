@@ -248,14 +248,12 @@ a,
 /* 파이프/철제/네온 카드 스타일 */
 .pipe-metal-card {
   border: 6px solid transparent;
-  border-image: linear-gradient(120deg, #00eaff 0%, #b8b8b8 40%, #222 100%);
   border-image-slice: 1;
   background: linear-gradient(135deg, #23272f 80%, #3a3f4b 100%);
   box-shadow: 0 0 24px 4px #00eaff55, 0 2px 16px 0 #222a;
   color: #e0f7fa;
   position: relative;
   overflow: hidden;
-  border-radius: 1rem;
 }
 
 /* 파이프/철제/네온 버튼 스타일 */
