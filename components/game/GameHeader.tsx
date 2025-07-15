@@ -91,9 +91,7 @@ const GameHeader = ({
                   <motion.img
                     src="/robot.png"
                     alt="AI 로봇"
-                    className={`relative z-10 rounded-2xl shadow-2xl border-4 border-blue-900 bg-black transition-all duration-300 ${
-                      isReading ? 'opacity-100 scale-100' : 'opacity-50 scale-95'
-                    }`}
+                    className="relative z-10 rounded-2xl shadow-2xl border-4 border-blue-900 bg-black"
                     style={{ width: 300, height: 169, objectFit: 'cover' }}
                     animate={isReading ? {
                       scale: [1, 1.04, 1],
@@ -103,7 +101,13 @@ const GameHeader = ({
                         "brightness(1.15)",
                         "brightness(1)",
                       ],
-                    } : {}}
+                      opacity: 1,
+                    } : {
+                      scale: 0.95,
+                      opacity: 0.5,
+                      filter: "brightness(1)",
+                      rotate: 0,
+                    }}
                     transition={{
                       duration: 1.2,
                       repeat: Infinity,
