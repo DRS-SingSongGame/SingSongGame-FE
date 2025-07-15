@@ -160,6 +160,20 @@
   }
 }
 
+button,
+.btn,
+[role="button"],
+a,
+[tabindex]:not([tabindex="-1"]),
+[onclick],
+[aria-pressed],
+[aria-selected],
+[aria-label],
+.clickable,
+.card-clickable {
+  cursor: url('/cursor/buttonmic.png') 0 0, pointer !important;
+}
+
 /* 스크롤바 숨기기 */
 .scrollbar-hide {
   /* IE and Edge */
