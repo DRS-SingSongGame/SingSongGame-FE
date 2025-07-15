@@ -14,9 +14,10 @@ interface GameResultModalProps {
   isOpen: boolean;
   players: Player[];
   onClose: () => void;
+  onRestart?: () => void;
 }
 
-const GameResultModal = ({ isOpen, players, onClose }: GameResultModalProps) => {
+const GameResultModal = ({ isOpen, players, onClose, onRestart }: GameResultModalProps) => {
   const getRankIcon = (index: number) => {
     switch (index) {
       case 0: return <Crown className="w-5 h-5 text-yellow-500" />;
@@ -30,7 +31,7 @@ const GameResultModal = ({ isOpen, players, onClose }: GameResultModalProps) => 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md rounded-2xl">
         <DialogHeader>
           <DialogTitle>
             <span className="text-center text-2xl font-bold">🎉 게임 결과</span>
@@ -43,7 +44,7 @@ const GameResultModal = ({ isOpen, players, onClose }: GameResultModalProps) => 
           {sortedPlayers.map((player, index) => (
             <div
               key={player.id}
-              className={`flex items-center gap-3 p-3 rounded-lg ${
+              className={`flex items-center gap-3 p-3 rounded-2xl ${
                 index === 0 ? 'bg-yellow-50 border-2 border-yellow-300' :
                 index === 1 ? 'bg-gray-50 border-2 border-gray-300' :
                 index === 2 ? 'bg-amber-50 border-2 border-amber-300' :
@@ -67,12 +68,14 @@ const GameResultModal = ({ isOpen, players, onClose }: GameResultModalProps) => 
             </div>
           ))}
         </div>
-        <Button 
-          onClick={onClose} 
-          className="w-full mt-4"
-        >
-          확인
-        </Button>
+        <div className="flex gap-3 mt-6">
+          <Button 
+            onClick={onClose} 
+            className="flex-1"
+          >
+            로비로 이동
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

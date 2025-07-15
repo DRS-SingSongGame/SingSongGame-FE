@@ -1,10 +1,15 @@
   'use client';
 
-  import { useState, useEffect, useRef } from 'react';
+  import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
   import { Input } from '@/components/ui/Input';
   import { Button } from '@/components/ui/Button';
   import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
   import { ScrollArea } from '@/components/ui/scroll-area';
+
+  export interface ChatBoxRef {
+  focusInput: () => void;
+}
+
 
   export interface ChatMessage {
     id: number;
@@ -24,12 +29,21 @@
     autoScrollToBottom?: boolean;
     chatType?: "lobby" | "room" | "game";
     hideInput?: boolean;
+    compact? : boolean;
   }
 
-  const ChatBox = ({ user, messages, onSend, autoScrollToBottom, hideInput, chatType = "lobby" }: ChatBoxProps) => {
+  const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({ user, messages, onSend, autoScrollToBottom, hideInput, chatType = "lobby", compact = false }, ref) => {
     const [input, setInput] = useState('');
     const [isComposing, setIsComposing] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null); // 추가
+  
+    // ref 메서드 노출
+    useImperativeHandle(ref, () => ({
+      focusInput: () => {
+        inputRef.current?.focus();
+      }
+    }));
 
   const handleSend = () => {
     const messageToSend = input.trim();
@@ -52,10 +66,50 @@
       }
     }, [messages, autoScrollToBottom]);
 
+    if (compact) {
+      // Card 없이 컴팩트 버전
+      return (
+        <>
+          <div className="flex-1 overflow-y-auto mb-3 h-[700px] scrollbar-hide">
+            <div ref={scrollRef} className="space-y-2">
+              {messages.map((msg) => (
+                <div key={msg.id} className="mb-2">
+                  <div className="text-sm">
+                    <span className="text-purple-600 font-medium">
+                      {(msg.type === 'ENTER' || msg.type === 'LEAVE') ? '시스템' : msg.senderName}:
+                    </span>{' '}
+                    <span className="text-gray-700">{msg.message}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {!hideInput && (
+            <div className="flex gap-2">
+              <Input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onCompositionStart={() => setIsComposing(true)}
+                onCompositionEnd={() => setIsComposing(false)}
+                placeholder="메시지를 입력하세요..."
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl"
+              />
+              <Button onClick={handleSend} className="px-3 py-2 bg-purple-500 text-white text-sm rounded-xl">
+                전송
+              </Button>
+            </div>
+          )}
+        </>
+      );
+    }
+  
+
     return (
       <Card className="bg-white/90 backdrop-blur-sm">
         <CardHeader>
-          <div className="text-3xl font-extrabold text-black mb-4 text-left">{chatType === "room" ? "방 채팅" : chatType === "game" ? "게임 채팅" : "로비 채팅"}</div>
+          <div className="text-3xl font-extrabold text-black mb-4 text-left">{chatType === "room" ? "" : chatType === "game" ? "게임 채팅" : "로비 채팅"}</div>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[200px] mb-2 pr-2">
@@ -75,6 +129,7 @@
           {!hideInput && (
             <div className="flex gap-2">
               <Input
+                ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -88,6 +143,8 @@
         </CardContent>
       </Card>
     );
-  };
+  });
+
+  ChatBox.displayName = 'ChatBox';
 
   export default ChatBox;

@@ -618,6 +618,10 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                             {users.length} / {room.maxPlayer}
                           </span>
                         </div>
+                        <div>
+                          <span className="font-medium">최대 라운드:</span>{" "}
+                          <span>{room.maxRound}</span>
+                        </div>
                       </CardContent>
                     </div>
 
@@ -659,7 +663,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                           onClick={() =>
                             socket.current?.emit("start_game", {
                               roomId,
-                              maxRounds: 1,
+                              maxRounds: room.maxRound,
                               demoMode,
                             })
                           }
