@@ -1,10 +1,15 @@
   'use client';
 
-  import { useState, useEffect, useRef } from 'react';
+  import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
   import { Input } from '@/components/ui/Input';
   import { Button } from '@/components/ui/Button';
   import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
   import { ScrollArea } from '@/components/ui/scroll-area';
+
+  export interface ChatBoxRef {
+  focusInput: () => void;
+}
+
 
   export interface ChatMessage {
     id: number;
@@ -27,10 +32,18 @@
     compact? : boolean;
   }
 
-  const ChatBox = ({ user, messages, onSend, autoScrollToBottom, hideInput, chatType = "lobby" , compact = false}: ChatBoxProps) => {
+  const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({ user, messages, onSend, autoScrollToBottom, hideInput, chatType = "lobby", compact = false }, ref) => {
     const [input, setInput] = useState('');
     const [isComposing, setIsComposing] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null); // 추가
+  
+    // ref 메서드 노출
+    useImperativeHandle(ref, () => ({
+      focusInput: () => {
+        inputRef.current?.focus();
+      }
+    }));
 
   const handleSend = () => {
     const messageToSend = input.trim();
@@ -74,6 +87,7 @@
           {!hideInput && (
             <div className="flex gap-2">
               <Input
+                ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -95,7 +109,7 @@
     return (
       <Card className="bg-white/90 backdrop-blur-sm">
         <CardHeader>
-          <div className="text-3xl font-extrabold text-black mb-4 text-left">{chatType === "room" ? "방 채팅" : chatType === "game" ? "게임 채팅" : "로비 채팅"}</div>
+          <div className="text-3xl font-extrabold text-black mb-4 text-left">{chatType === "room" ? "" : chatType === "game" ? "게임 채팅" : "로비 채팅"}</div>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[200px] mb-2 pr-2">
@@ -115,6 +129,7 @@
           {!hideInput && (
             <div className="flex gap-2">
               <Input
+                ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -128,6 +143,8 @@
         </CardContent>
       </Card>
     );
-  };
+  });
+
+  ChatBox.displayName = 'ChatBox';
 
   export default ChatBox;

@@ -32,7 +32,7 @@ import {
   Users,
 } from "lucide-react";
 import { connectGameSocket, disconnectGameSocket, sendGameMessage, sendKeywordConfirm } from "@/lib/gameSocket";
-import ChatBox, { ChatMessage } from "./chat/ChatBox";
+import ChatBox, { ChatMessage, ChatBoxRef } from "./chat/ChatBox";
 import axios from "axios";
 import { PREDEFINED_TAGS } from "@/lib/tags";
 import KeywordDisplay from "@/components/KeywordDisplay";
@@ -118,15 +118,54 @@ const RandomSongGame = ({
   const [showRoundNotification, setShowRoundNotification] = useState(false);
   const [showHintAnimation, setShowHintAnimation] = useState<string | null>(null);
   const [isKeywordConfirmed, setIsKeywordConfirmed] = useState(false);
+  const chatBoxRef = useRef<ChatBoxRef>(null);
+  
   useEffect(() => {
     if (phase === "playing") {
       setTimeout(() => {
-        inputRef.current?.focus(); // ✅ ref가 null 아닌 시점에만
-      }, 100); // 💡 delay를 주면 리렌더 타이밍 문제 해결
+        chatBoxRef.current?.focusInput();
+      }, 100);
     }
+  }, [phase]);
+  
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // 게임 중이고, 입력창이 포커스 안 되어 있을 때
+      if (phase === 'playing' && document.activeElement !== inputRef.current) {
+        // 특수키가 아닌 일반 문자 입력시
+        if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+          inputRef.current?.focus();
+        }
+      }
+    };
+  
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
   }, [phase]);
 
   // 정답자가 없는 경우 프로그레스바 애니메이션 //
+
+  useEffect(() => {
+    if (phase === "countdown" && countdown > 0) {
+      const countdownSound = new Audio('/audio/countdown_ssg.mp3');
+      countdownSound.volume = 0.6; // 적절한 볼륨
+      countdownSound.play().catch((error) => {
+        console.error('카운트다운 효과음 재생 실패:', error);
+      });
+    }
+    
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase === "final") {
+      const countdownSound = new Audio('/audio/final.wav');
+      countdownSound.volume = 0.7; // 적절한 볼륨
+      countdownSound.play().catch((error) => {
+        console.error('카운트다운 효과음 재생 실패:', error);
+      });
+    }
+  }, [phase]);
 
   useEffect(() => {
     if (!showNoAnswerModal) return;
@@ -275,6 +314,9 @@ const RandomSongGame = ({
             clearInterval(roundTimerIntervalRef.current!);
           }
         }, 1000);
+        setTimeout(() => {
+          chatBoxRef.current?.focusInput();
+        }, 200);
       },
       onAnswerCorrect: (response) => {
         console.log("Answer Correct:", response);
@@ -1020,12 +1062,13 @@ const RandomSongGame = ({
                   <CardTitle className="text-pink-700">게임 채팅</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col flex-1">
-                  <ChatBox
-                    user={user}
-                    messages={chatMessages}
-                    onSend={handleSendMessage}
-                    autoScrollToBottom={true}
-                    chatType="room"
+                  <ChatBox 
+                    ref={chatBoxRef}
+                    user={user} 
+                    messages={chatMessages} 
+                    onSend={handleSendMessage} 
+                    autoScrollToBottom={true} 
+                    chatType="room" 
                   />
                 </CardContent>
               </Card>
@@ -1052,7 +1095,6 @@ const RandomSongGame = ({
         {showAnswerModal && answerModalData && (
           <Dialog open={showAnswerModal} onOpenChange={setShowAnswerModal}>
           <DialogContent className="sm:max-w-[425px] text-center">
-          <div className="fixed inset-0 bg-green-400/20 animate-ping pointer-events-none z-40" />
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
