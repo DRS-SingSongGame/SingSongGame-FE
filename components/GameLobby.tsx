@@ -252,13 +252,19 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
   useEffect(() => {
     const result = localStorage.getItem("quickMatchResult");
     console.log("빠대 결과", result);
+  
     if (result && user?.id) {
       try {
         const parsed = JSON.parse(result);
-
-        const myResult = parsed.players.find((p: any) => p.userId === user.id);
-        if (myResult) {
-          setMyQuickMatchResult({ ...myResult, roomId: parsed.roomId });
+        console.log("✅ 빠대 파싱된 결과:", parsed);
+  
+        if (Array.isArray(parsed.players)) {
+          const myResult = parsed.players.find((p: any) => p.userId === user.id);
+          if (myResult) {
+            setMyQuickMatchResult({ ...myResult, roomId: parsed.roomId });
+          }
+        } else {
+          console.warn("❗ players가 배열이 아님:", parsed.players);
         }
       } catch (e) {
         console.error("빠른대전 결과 파싱 실패:", e);
