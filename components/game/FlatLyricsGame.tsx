@@ -526,8 +526,8 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
               zIndex: 100
             }}
             animate={{
-              top: 120, // 고정 위치와 동일하게
-              left: "calc(50% + 350px)",
+              top: 250, // 헤더(로봇) 아래 고정 위치 (px)
+              left: '50%',
               x: "-50%",
               y: "0%",
               scale: 1,
@@ -540,37 +540,47 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
               times: [0, 0.7, 1],
               opacity: { duration: 2, times: [0, 0.7, 1] }
             }}
-            className="text-2xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 rounded-2xl shadow-2xl whitespace-nowrap pointer-events-none border-4 border-yellow-200"
+            className="max-w-[340px] text-2xl font-extrabold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-3 rounded-2xl shadow-2xl whitespace-nowrap pointer-events-none border-4 border-yellow-200"
           >
             {showHintAnimation}
           </motion.div>
         )}
       </AnimatePresence>
-      {/* 고정 힌트 박스 (로봇 오른쪽) */}
+      {/* 고정 힌트 박스 (로봇 아래) */}
       {fixedHint && !showHintAnimation && (
         <div
           className="fixed z-30"
           style={{
-            top: 120,
-            left: 'calc(50% + 350px)',
+            top: 250,
+            left: '50%',
             transform: 'translateX(-50%)',
           }}
         >
-          <div className="text-2xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 rounded-2xl shadow-2xl whitespace-nowrap border-4 border-yellow-200">
+          <div className="max-w-[340px] text-2xl font-extrabold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-3 rounded-2xl shadow-2xl whitespace-nowrap border-4 border-yellow-200">
             {fixedHint}
           </div>
         </div>
       )}
 
       <div className="max-w-7xl mx-auto relative z-10">
-        <GameHeader
-          currentRound={gameState.currentRound}
-          maxRound={gameState.maxRound}
-          timeLeft={gameState.timeLeft}
-          isReading={gameState.isReading}
-          onBack={onBack}
-          // hintText prop 완전히 제거
-        />
+        <div style={{ position: 'relative' }}>
+          <GameHeader
+            currentRound={gameState.currentRound}
+            maxRound={gameState.maxRound}
+            isReading={gameState.isReading}
+            onBack={onBack}
+          />
+          {/* 오른쪽 하단 60초 타이머+게이지바 */}
+          <div style={{ position: 'absolute', right: 40, bottom: 24, width: 180, zIndex: 30 }} className="flex flex-col items-end">
+            <div className="text-3xl font-extrabold text-white mb-1 drop-shadow-lg">{gameState.timeLeft}초</div>
+            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-3 bg-gradient-to-r from-blue-400 to-red-400 transition-all duration-500"
+                style={{ width: `${(gameState.timeLeft / 60) * 100}%` }}
+              />
+            </div>
+          </div>
+        </div>
 
 
 
