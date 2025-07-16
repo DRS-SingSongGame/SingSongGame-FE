@@ -42,6 +42,35 @@ export default function GamePage({ params }: { params: { roomId: string } }) {
     fetchData();
   }, [params.roomId]);
 
+  useEffect(() => {
+    if (!room?.roomId) return;
+
+    const fetchPlayers = async () => {
+      try {
+        const roomRes = await api.get<ApiResponse<Room>>(`/api/room/${room.roomId}`);
+        const currentPlayers = roomRes.data.data.players;
+        
+        // 플레이어 목록이 변경된 경우에만 업데이트
+        if (JSON.stringify(currentPlayers) !== JSON.stringify(players)) {
+          console.log("🔄 플레이어 목록 업데이트:", currentPlayers);
+          setPlayers(currentPlayers);
+        }
+      } catch (err) {
+        console.error("플레이어 목록 동기화 실패:", err);
+      }
+    };
+
+    // 5초마다 플레이어 목록 동기화
+    const interval = setInterval(fetchPlayers, 5000);
+    return () => clearInterval(interval);
+  }, [room?.roomId, players]);
+
+  const handlePlayersUpdate = (updatedPlayers: any[]) => {
+    console.log("🔄 WebSocket으로부터 플레이어 업데이트:", updatedPlayers);
+    setPlayers(updatedPlayers);
+  };
+
+
   const onBack = () => {
     router.push('/lobby'); // Navigate back to lobby
   };
@@ -71,6 +100,7 @@ export default function GamePage({ params }: { params: { roomId: string } }) {
       players={players}
       onBack={onBack}
       onGameEnd={onGameEnd}
+      onPlayersUpdate={handlePlayersUpdate}
     />
   );
 }

@@ -36,6 +36,7 @@ import ChatBox, { ChatMessage, ChatBoxRef } from "./chat/ChatBox";
 import axios from "axios";
 import { PREDEFINED_TAGS } from "@/lib/tags";
 import KeywordDisplay from "@/components/KeywordDisplay";
+import GameResultModal from '@/components/game/GameResultModal';
 
 
 interface RandomSongGameProps {
@@ -46,6 +47,7 @@ interface RandomSongGameProps {
   onGameEnd: (results: any[]) => void;
   onGameStart?: () => void;
   isAISongGame?: boolean;
+  onPlayersUpdate?: (players: any[]) => void;
 }
 
 interface GameSessionType {
@@ -73,6 +75,7 @@ const RandomSongGame = ({
   onGameEnd,
   isAISongGame,
   onGameStart,
+  onPlayersUpdate,
 }: RandomSongGameProps) => {
   const [chatMessage, setChatMessage] = useState("");
   const [gameSession, setGameSession] = useState<GameSessionType | null>(null);
@@ -247,6 +250,7 @@ const RandomSongGame = ({
         // 플레이어 목록 업데이트
         if (msg.type === "PLAYER_UPDATE") {
           // 플레이어 정보 업데이트 로직이 필요하다면 여기에 추가
+          onPlayersUpdate?.(msg.players); // ✅ 부모에게 알림
           console.log("Player update received:", msg.players);
         }
         // 채팅 메시지 (게임 내 채팅)
@@ -357,22 +361,6 @@ const RandomSongGame = ({
         setTimeout(() => {
           setShowAnswerModal(false);
           setAnswerModalData(null);
-
-          // ✅ 마지막 라운드인 경우 강제 종료 fallback
-          // const isLastRound =
-          //   currentRoundRef.current >= maxRoundRef.current;
-
-          // if (isLastRound && phaseRef.current !== "final") {
-          //   console.log("🚨 마지막 라운드 종료 fallback 실행");
-          //   setPhase("final");
-          //   onGameEnd(
-          //     Object.entries(gameSession?.playerScores || {}).map(([id, score]) => ({
-          //       id,
-          //       score,
-          //     }))
-          //   );
-          // }
-      
         }, 5000);
       },
 
@@ -390,11 +378,26 @@ const RandomSongGame = ({
       },
 
       onGameEnd: (response) => {
-        console.log("Game End:", response);
+        
         if (roundTimerIntervalRef.current) {
           clearInterval(roundTimerIntervalRef.current);
         }
-        setGameEndResults(response.finalResults || []);
+        
+        if (response.finalResults) {
+          const finalScores: { [key: string]: number } = {};  // 타입 명시
+          response.finalResults.forEach((result: any) => {     // result 타입 명시
+            finalScores[result.userId] = result.score;
+          });
+          
+          setGameSession(prev => {
+            if (!prev) return prev;  // null 체크 추가
+            return {
+              ...prev,                // 기존 모든 속성 유지
+              playerScores: finalScores  // playerScores만 업데이트
+            };
+          });
+        }
+        
         setPhase("final");
         setShowGameEndModal(true);
       },
@@ -462,6 +465,32 @@ const RandomSongGame = ({
     setPlayersState(players);
   }, [players]);
 
+  const playersWithFinalScores = players.map((player) => ({
+    ...player,
+    score: gameSession?.playerScores?.[player.id] || 0,  // gameSession에서 직접
+  }));
+
+
+  const handleCloseResult = async () => {
+    setShowGameEndModal(false);
+    try {
+      await api.delete(`/api/room/${room.roomId}/leave`);
+    } catch (e) {
+      // 실패해도 그냥 로비로 이동
+    }
+    window.location.href = '/lobby';
+  };
+
+  const handleRestart = () => {
+    setPhase("waiting");
+    setGameSession(null);
+    setWinnerAnimatedScore(0);
+    setAnswerModalData(null);
+    setChatMessages([]);
+    setGameEndResults([]);
+    setShowGameEndModal(false);
+  };
+
   // 대기실에서만 2초마다 플레이어 목록 새로고침
   useEffect(() => {
     if (phase !== "waiting") return;
@@ -512,32 +541,28 @@ const RandomSongGame = ({
   try {
     console.log("🔁 나가기 시도, 현재 room:", room);
 
-    if (room.roomType === "QUICK_MATCH") {
-      // 1. 게임 종료 알림
-      await api.post("/api/quick-match/end", null, {
-        params: {
-          roomCode: room.roomCode,
-        },
-      });
+      if (room.roomType === "QUICK_MATCH") {
+        const res = await api.post("/api/quick-match/end", null, {
+          params: {
+            roomCode: room.roomCode,
+          },
+        });
+        const data = (res.data as any).data;
 
-      // 2. 캐시된 MMR 결과 조회
-      const resultRes = await api.get("/api/quick-match/result", {
-        params: {
-          roomCode: room.roomCode,
-        },
-      });
-
-      const resultData = (resultRes as any).data;
-      localStorage.setItem("quickMatchResult", JSON.stringify(resultData));
-      console.log("📦 빠른대전 결과 저장:", resultData);
-
-      // 3. 로비 이동
-      setTimeout(() => {
-        router.push("/lobby");
-      }, 100);
-
-    } else {
-      console.log("🚪 일반 방 나가기 호출 시작");
+        const resultRes = await api.get("/api/quick-match/result", {
+          params: {
+            roomCode: room.roomCode,
+          },
+        });
+  
+        const resultData = (resultRes as any).data;
+        localStorage.setItem("quickMatchResult", JSON.stringify(resultData));
+        console.log("📦 빠른대전 결과 저장:", resultData);
+        setTimeout(() => {
+          router.push("/lobby");
+        }, 100);
+      } else {
+        console.log("🚪 일반 방 나가기 호출 시작");
 
       await api.delete(`/api/room/${room.roomId}/leave`);
       router.push("/lobby");
@@ -1007,7 +1032,9 @@ const RandomSongGame = ({
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm text-gray-600">전체 라운드 진행률</span>
                 <span className="text-sm font-bold text-gray-800">
-                  {gameSession?.currentRound || 0} / {gameSession?.maxRound || 0}
+                  {gameSession?.maxRound
+                    ? (gameSession.currentRound / gameSession.maxRound) * 100
+                    : 0}
                 </span>
               </div>
               <Progress
@@ -1217,80 +1244,14 @@ const RandomSongGame = ({
       {/* 기존 게임 화면 (waiting / countdown / playing 등) 렌더링 */}
 
       {/* 🎉 게임 종료 모달 */}
-      <Dialog open={phase === "final"}>
-        <DialogContent className="sm:max-w-[500px] text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <div className="text-4xl font-bold text-purple-600">
-              🎉 게임 종료 🎉
-            </div>
-            <p className="text-gray-600 mt-2">최종 순위를 확인하세요!</p>
-
-            <ul className="mt-6 space-y-3">
-              {gameEndResults
-                .sort((a, b) => b.score - a.score)
-                .map((result, index) => {
-                  const player = playersState.find(
-                    (p) => p.id === result.userId
-                  );
-                  if (!player) return null;
-
-                  const isFirst = index === 0;
-
-                  return (
-                    <li
-                      key={player.id}
-                      className={`flex items-center justify-between bg-white border rounded-xl p-3 shadow-sm ${
-                        isFirst
-                          ? "border-yellow-400 bg-yellow-50"
-                          : "bg-gray-50"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={player.avatar} />
-                          <AvatarFallback>{player.nickname[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className="text-left">
-                          <div className="font-semibold text-gray-800">
-                            #{index + 1} {player.nickname}
-                            {isFirst && (
-                              <span className="ml-2 text-yellow-500">🥇</span>
-                            )}
-                          </div>
-                          {/* 정답 수 등을 표시하고 싶다면 여기에 */}
-                        </div>
-                      </div>
-                      <div className="text-blue-600 font-bold text-lg">
-                        {result.score}점
-                      </div>
-                    </li>
-                  );
-                })}
-            </ul>
-
-            <div className="mt-6 flex gap-3 justify-center">
-              <Button onClick={handleLeaveRoom}>로비로 이동</Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  // 💡 모든 상태를 초기화하고 waiting phase로 돌입
-                  setPhase("waiting");
-                  setGameSession(null); // 이전 세션 제거
-                  setWinnerAnimatedScore(0);
-                  setAnswerModalData(null);
-                  setChatMessages([]); // (선택) 채팅 비우기
-                }}
-              >
-                🔁 다시 하기
-              </Button>
-            </div>
-          </motion.div>
-        </DialogContent>
-      </Dialog>
+      <GameResultModal
+        isOpen={phase === "final"}
+        players={playersWithFinalScores}
+        onClose={handleCloseResult}
+        onRestart={handleRestart}
+        gameType="random"
+        onLeaveRoom={handleLeaveRoom}
+      />
     </div>
   );
 
