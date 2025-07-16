@@ -15,9 +15,11 @@ interface GameResultModalProps {
   players: Player[];
   onClose: () => void;
   onRestart?: () => void;
+  gameType?: 'ai' | 'random';
+  onLeaveRoom?: () => void;
 }
 
-const GameResultModal = ({ isOpen, players, onClose, onRestart }: GameResultModalProps) => {
+const GameResultModal = ({ isOpen, players, onClose, onRestart, gameType = 'ai', onLeaveRoom }: GameResultModalProps) => {
   const getRankIcon = (index: number) => {
     switch (index) {
       case 0: return <Crown className="w-5 h-5 text-yellow-500" />;
@@ -37,7 +39,7 @@ const GameResultModal = ({ isOpen, players, onClose, onRestart }: GameResultModa
             <span className="text-center text-2xl font-bold">🎉 게임 결과</span>
           </DialogTitle>
           <DialogDescription className="text-center">
-            평어 노래 맞추기 게임이 종료되었습니다!
+            {gameType === 'ai' ? 'AI 노래 맞추기 게임이 종료되었습니다!' : '랜덤 노래 맞추기 게임이 종료되었습니다!'}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -68,13 +70,34 @@ const GameResultModal = ({ isOpen, players, onClose, onRestart }: GameResultModa
             </div>
           ))}
         </div>
+        {/* ✅ 게임 타입에 따른 버튼 분기처리 */}
         <div className="flex gap-3 mt-6">
-          <Button 
-            onClick={onClose} 
-            className="flex-1"
-          >
-            로비로 이동
-          </Button>
+          {gameType === 'ai' ? (
+            // AI 게임: 기존 방식
+            <Button 
+              onClick={onClose} 
+              className="flex-1"
+            >
+              로비로 이동
+            </Button>
+          ) : (
+            // 랜덤 게임: 두 개 버튼
+            <>
+              <Button 
+                onClick={onLeaveRoom || onClose} 
+                className="flex-1"
+              >
+                로비로 이동
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={onRestart}
+                className="flex-1"
+              >
+                🔁 다시 하기
+              </Button>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

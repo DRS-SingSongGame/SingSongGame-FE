@@ -116,11 +116,12 @@
             <div ref={scrollRef} className="space-y-2 max-h-[200px] overflow-y-auto scrollbar-hide">
               {messages.map((msg) => (
                 <div
-                  key={msg.id}
-                  className="flex items-center w-full text-sm"
+                key={msg.id}
+                className="flex items-center w-full text-lg" // ✅ text-sm → text-lg
                 >
-                  <span className="font-semibold text-purple-600 mr-1">{(msg.type === 'ENTER' || msg.type === 'LEAVE') ? '시스템' : msg.senderName}:</span>
-                  <span className="ml-1 whitespace-pre-line break-all flex-1">{msg.message}</span>
+                  <span className="font-semibold text-purple-600 mr-1 text-lg"> 
+                  {(msg.type === 'ENTER' || msg.type === 'LEAVE') ? '시스템' : msg.senderName}:</span>
+                  <span className="ml-1 whitespace-pre-line break-all flex-1 text-lg">{msg.message}</span>
                   <span className="text-gray-400 text-xs ml-2 whitespace-nowrap">{msg.time}</span>
                 </div>
               ))}
@@ -136,8 +137,9 @@
                 onCompositionStart={() => setIsComposing(true)}
                 onCompositionEnd={() => setIsComposing(false)}
                 placeholder="메시지를 입력하세요..."
+                className="text-lg"
               />
-              <Button onClick={handleSend}>전송</Button>
+              <Button onClick={handleSend} className="text-lg px-6">전송</Button>
             </div>
             )}
         </CardContent>
