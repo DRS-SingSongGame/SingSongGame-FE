@@ -2,7 +2,9 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/Progress";
-import { ArrowLeft, Volume2 } from "lucide-react";
+import { ArrowLeft, Volume2, Music, Mic } from "lucide-react";
+import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 
 interface GameHeaderProps {
   currentRound: number;
@@ -21,41 +23,139 @@ const GameHeader = ({
   onBack,
   hintText
 }: GameHeaderProps) => {
+  const [showHint, setShowHint] = useState(false);
+
+  useEffect(() => {
+    if (isReading && hintText) {
+      // 10초 후에 힌트 표시
+      const hintTimer = setTimeout(() => {
+        setShowHint(true);
+      }, 10000); // 10초
+  
+      return () => clearTimeout(hintTimer);
+    }
+  }, [isReading, hintText]);
+
+  useEffect(() => {
+    if (!isReading) {
+      setShowHint(false); // 게임이 끝나면 힌트 숨기기
+    }
+  }, [isReading]);
+
   return (
     <div className="mb-6">
-      <Button variant="outline" onClick={onBack} className="mb-4">
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        로비로 돌아가기
-      </Button>
-      <Card className="bg-white/90 backdrop-blur-sm">
+      <Card className="pipe-metal-card rounded-2xl">
+        <div className="absolute top-4 left-4 z-10">
+          <Button variant="outline" onClick={onBack} className="pipe-metal-btn rounded-xl">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            로비로 돌아가기
+          </Button>
+        </div>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-                🎵 평어 노래 맞추기
+          <div className="flex flex-col items-center">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="w-full flex justify-center"
+            >
+              <CardTitle className="text-3xl font-bold text-white flex items-center justify-center gap-3 drop-shadow-lg">
               </CardTitle>
-              <div className="flex items-center gap-4 mt-2">
-                <Badge variant="outline">
-                  라운드 {currentRound}/{maxRound}
-                </Badge>
-                <div className="flex items-center gap-2">
-                  <Volume2 className="w-4 h-4" />
-                  <span className="text-sm">
-                    {isReading ? "TTS 읽는 중..." : "대기 중"}
-                  </span>
+              <motion.div
+                className="mt-4 flex justify-center items-center w-full"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="relative">
+                  {/* 빛나는 효과 */}
+                  {isReading && (
+                    <motion.div
+                      className="absolute inset-0 rounded-2xl"
+                      style={{
+                        background: 'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, rgba(147, 51, 234, 0.2) 50%, transparent 70%)',
+                        filter: 'blur(20px)',
+                      }}
+                      animate={{
+                        scale: [1, 1.2, 1],
+                        opacity: [0.5, 0.8, 0.5],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                    />
+                  )}
+                  
+                  <motion.img
+                    src="/robot.png"
+                    alt="AI 로봇"
+                    className="relative z-10 rounded-2xl shadow-2xl border-4 border-blue-900 bg-black"
+                    style={{ width: 300, height: 169, objectFit: 'cover' }}
+                    animate={isReading ? {
+                      scale: [1, 1.04, 1],
+                      rotate: [0, 2, -2, 0],
+                      filter: [
+                        "brightness(1)",
+                        "brightness(1.15)",
+                        "brightness(1)",
+                      ],
+                      opacity: 1,
+                    } : {
+                      scale: 0.95,
+                      opacity: 0.5,
+                      filter: "brightness(1)",
+                      rotate: 0,
+                    }}
+                    transition={{
+                      duration: 1.2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  />
                 </div>
-              </div>
-              <div className="mt-2">
-                  <Badge variant="secondary" className="text-base px-3 py-1">
-                    힌트: {hintText}
+              </motion.div>
+            </motion.div>
+            <div className="flex justify-between items-start w-full mt-1">
+              <div className="flex flex-col gap-1">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring" }}
+                >
+                  <Badge variant="outline" className="text-sm px-3 py-1 bg-gray-100 border-gray-300 rounded-xl">
+                    라운드 {currentRound}/{maxRound}
                   </Badge>
-                </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-blue-600">
-                {timeLeft}초
+                </motion.div>
+
+                {hintText && showHint && (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -20, scale: 0.9 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    transition={{ duration: 0.5, type: "spring" }}
+                  >
+                    <Badge variant="secondary" className="text-sm px-3 py-1 bg-yellow-100 border-yellow-300 rounded-xl">
+                      💡 힌트: {hintText}
+                    </Badge>
+                  </motion.div>
+                )}
               </div>
-              <Progress value={(timeLeft / 60) * 100} className="w-32 mt-2" />
+              <motion.div 
+                className="text-right"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3, type: "spring" }}
+              >
+                <div className="text-3xl font-bold text-white">
+                  {timeLeft}초
+                </div>
+                <Progress 
+                  value={(timeLeft / 60) * 100} 
+                  className="w-32 mt-2 h-2 bg-gray-200" 
+                />
+
+              </motion.div>
             </div>
           </div>
         </CardHeader>

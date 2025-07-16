@@ -1,28 +1,44 @@
-'use client';
+"use client";
 
-import useRooms from '@/hooks/useRoom';
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, RefreshCw, LogOut, Settings, Zap, Play, ArrowLeft, VolumeX, Volume2 } from 'lucide-react';
-import { useJoinRoom } from '@/hooks/useJoinRoom';
-import ChatBox from '@/components/chat/ChatBox';
-import { connectLobbySocket, disconnectLobbySocket, sendLobbyMessage } from '@/lib/lobbySocket';
+import useRooms from "@/hooks/useRoom";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Search,
+  RefreshCw,
+  LogOut,
+  Settings,
+  VolumeX,
+  Volume2,
+  HelpCircle,
+} from "lucide-react";
+import { useJoinRoom } from "@/hooks/useJoinRoom";
+import {
+  connectLobbySocket,
+  disconnectLobbySocket,
+  sendLobbyMessage,
+} from "@/lib/lobbySocket";
 import SettingsModal from "./SettingsModal";
 import BGMPlayer from "./BGMPlayer";
-import api from '@/lib/api';
-import { OnlineUser } from '@/types/online';
+import { OnlineUser } from "@/types/online";
+import QuickMatchPopup from "./QuickMatchPopup";
+import { MatchedRoom } from "@/types/quickmatch";
+import { useCreateRoom } from "@/hooks/useCreateRoom";
+import { Room } from "@/types/api";
+import QuickMatchResultModal from "@/components/ui/quickMatchResultModal";
+
+import api from "@/lib/api";
 import ErrorModal from "@/components/ErrorModal";
 
 
 export interface ChatMessage {
   id: number;
-  type: 'TALK' | 'ENTER' | 'LEAVE';
+  type: "TALK" | "ENTER" | "LEAVE";
   roomId: string;
   senderId: string;
   senderName: string;
@@ -38,57 +54,71 @@ interface GameLobbyProps {
   onLogout: () => void;
 }
 
-const getGameModeColor = (mode: string) => {
-  switch (mode) {
-    case 'KEY_SING_YOU': return 'bg-gradient-to-r from-pink-500 to-rose-500';
-    case 'RANDOM_SONG': return 'bg-gradient-to-r from-blue-500 to-cyan-500';
-    case 'PLAIN_SONG': return 'bg-gradient-to-r from-green-500 to-emerald-500';
-    default: return 'bg-gradient-to-r from-gray-500 to-slate-500';
-  }
+type QuickMatchResult = {
+  oldMmr: number;
+  newMmr: number;
+  oldTier: string;
+  newTier: string;
+  tierStatus: "UP" | "DOWN" | "SAME";
+  // ... 필요하다면 roomId 등 추가
+  roomId: string;
 };
 
 const getGameModeLabel = (mode: string) => {
   switch (mode) {
-    case 'KEY_SING_YOU': return '키싱유';
-    case 'RANDOM_SONG': return '랜덤 노래 맞추기';
-    case 'PLAIN_SONG': return '평어 노래 맞추기';
-    default: return '알 수 없음';
+    case "KEY_SING_YOU":
+      return "키싱유";
+    case "RANDOM_SONG":
+      return "랜덤 노래 맞추기";
+    case "PLAIN_SONG":
+      return "평어 노래 맞추기";
+    default:
+      return "알 수 없음";
   }
 };
 
 const getGamePath = (roomId: string, roomType: string) => {
   switch (roomType) {
-    case 'RANDOM_SONG': return `/room/${roomId}/randomsonggame`;
-    case 'KEY_SING_YOU': return `/room/${roomId}/keysingyougame`;
-    case 'PLAIN_SONG': return `/room/${roomId}/aisonggame`;
-    default: return `/room/${roomId}`;
+    case "RANDOM_SONG":
+      return `/room/${roomId}/randomsonggame`;
+    case "KEY_SING_YOU":
+      return `/keysingyou_room/${roomId}`;
+    case "PLAIN_SONG":
+      return `/room/${roomId}/aisonggame`;
+    default:
+      return `/room/${roomId}`;
   }
 };
 
 const playButtonSound = () => {
-  const audio = new Audio('/audio/buttonclick.wav');
+  const audio = new Audio("/audio/buttonclick.wav");
   audio.volume = 0.7;
   audio.play();
 };
 
-// RoomPlayerCount 컴포넌트 및 관련 코드 제거
-
-const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps) => {
+const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const router = useRouter();
-  const { mutate: joinRoom, isLoading: joining } = useJoinRoom();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([{
-    id: 1,
-    type: 'ENTER',
-    roomId: 'lobby',
-    senderId: 'system',
-    senderName: '관리자',
-    message: '싱송겜 게임 로비에 오신 것을 환영합니다!',
-    timestamp: new Date().toISOString(),
-    time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-  }]);
+  const { mutate: joinRoom } = useJoinRoom();
+  const { mutate: createRoomForQuickMatch } = useCreateRoom();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      id: 1,
+      type: "ENTER",
+      roomId: "lobby",
+      senderId: "system",
+      senderName: "관리자",
+      message: "싱송겜 게임 로비에 오신 것을 환영합니다!",
+      timestamp: new Date().toISOString(),
+      time: new Date().toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    },
+  ]);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isQuickMatchOpen, setIsQuickMatchOpen] = useState(false);
   const [settings, setSettings] = useState({
     standardFilter: true,
     bgmVolume: 50,
@@ -98,21 +128,46 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     shakeEffect: true,
   });
   const [isBgmPlaying, setIsBgmPlaying] = useState(true);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isComposing, setIsComposing] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState({ open: false, message: "" });
+  const [showQuickMatchInfo, setShowQuickMatchInfo] = useState(false);
 
 
   const handleBgmPlay = () => setIsBgmPlaying(true);
   const handleBgmPause = () => setIsBgmPlaying(false);
 
+  const [myQuickMatchResult, setMyQuickMatchResult] =
+    useState<QuickMatchResult | null>(null);
+
+  const [tier, setTier] = useState<string>("");
+
   useEffect(() => {
-    connectLobbySocket(user.id, user.nickname, (msg: ChatMessage) => {
-      setChatMessages((prev) => [...prev, msg]);
-    }, (users: any[]) => {
-      setOnlineUsers(users);
-    });
+    connectLobbySocket(
+      user.id,
+      user.nickname,
+      (msg: any) => {
+        if (msg.type === "MATCH_FOUND") {
+          const data = msg.data as MatchedRoom;
+          handleMatchFound(data); // ✅ 매칭된 방으로 이동
+        } else {
+          if (msg.type === "ENTER") {
+            if (msg.senderId === String(user.id)) {
+              if (msg.tier) {
+                setTier(msg.tier);
+              }
+            }
+          }
+
+          setChatMessages((prev) => [...prev, msg]); // 기존 채팅 메시지 유지
+        }
+      },
+      (users: any[]) => {
+        setOnlineUsers(users);
+      }
+    );
+
     return () => {
       disconnectLobbySocket(user.id);
     };
@@ -120,7 +175,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
 
   useEffect(() => {
     if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatMessages]);
 
@@ -128,7 +183,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     sendLobbyMessage(user.id, user.nickname, message);
   };
 
-  const { rooms, loading, refetch } = useRooms();
+  const { rooms, refetch } = useRooms();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -137,18 +192,20 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     return () => clearInterval(interval);
   }, [refetch]);
 
-  const filteredRooms = rooms?.filter((room) =>
-    room.roomName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    getGameModeLabel(room.roomType).includes(searchTerm)
-  ) || [];
-
-  const handleQuickMatch = () => console.log('Quick match started');
+  const filteredRooms =
+    rooms?.filter(
+      (room) =>
+        room.roomName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getGameModeLabel(room.roomType).includes(searchTerm)
+    ) || [];
 
   const handleRoomClick = (room: any) => {
     joinRoom(
       {
         roomId: room.roomId,
-        password: room.isPrivate ? prompt("비밀번호를 입력하세요") ?? undefined : undefined,
+        password: room.isPrivate
+          ? prompt("비밀번호를 입력하세요") ?? undefined
+          : undefined,
       },
       {
         onSuccess: () => {
@@ -171,20 +228,61 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
     );
   };
 
+  const handleMatchFound = (room: MatchedRoom) => {
+    console.log("Match found:", room);
+    setIsQuickMatchOpen(false);
+
+    const gamePath = getGamePath(room.roomId, room.roomType); // 🔁 roomId와 roomType만 있으면 충분
+    router.push(gamePath);
+  };
+
   const handleSettingsSave = (newSettings: any) => {
     setSettings(newSettings);
     setIsSettingsModalOpen(false);
   };
 
-  // 로비 진입 시 BGM 자동 재생
   useEffect(() => {
-    // 컴포넌트가 마운트되면 즉시 BGM 재생
     const timer = setTimeout(() => {
       setIsBgmPlaying(true);
     }, 100); // 약간의 지연을 두어 컴포넌트가 완전히 마운트된 후 재생
 
     return () => clearTimeout(timer);
-  }, []); // 빈 의존성 배열로 컴포넌트 마운트 시 한 번만 실행
+  }, []);
+
+  useEffect(() => {
+    const result = localStorage.getItem("quickMatchResult");
+    console.log("빠대 결과", result);
+  
+    if (result && user?.id) {
+      try {
+        const parsed = JSON.parse(result);
+        console.log("✅ 빠대 파싱된 결과:", parsed);
+  
+        if (Array.isArray(parsed.players)) {
+          const myResult = parsed.players.find((p: any) => p.userId === user.id);
+          if (myResult) {
+            setMyQuickMatchResult({ ...myResult, roomId: parsed.roomId });
+          }
+        } else {
+          console.warn("❗ players가 배열이 아님:", parsed.players);
+        }
+      } catch (e) {
+        console.error("빠른대전 결과 파싱 실패:", e);
+      }
+      localStorage.removeItem("quickMatchResult");
+    }
+  }, [user?.id]);
+
+  // 티어명-이미지 매핑
+  const tierImageMap: Record<string, string> = {
+    '새내기': '/rank/t1.png',
+    '훈련생': '/rank/t2.png',
+    '모험가': '/rank/t3.png',
+    '도전자': '/rank/t4.png',
+    '에이스': '/rank/t5.png',
+    '전설': '/rank/t6.png',
+  };
+  const tierImg = tierImageMap[tier] || '';
 
   return (
     <div className="py-4 px-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 h-full min-h-0">
@@ -195,7 +293,12 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
           <Card className="bg-white/80 backdrop-blur-sm flex-1 min-h-0 h-full w-full p-0 text-xl flex flex-col justify-between">
             <CardHeader className="pb-1 w-full max-w-full">
               <div className="flex gap-3 mt-0 px-0 pt-2 w-full max-w-full min-h-[100px]">
-                <Input placeholder="방 제목이나 게임 모드로 검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="text-xl py-6 px-8 w-full max-w-full" />
+                <Input
+                  placeholder="방 제목이나 게임 모드로 검색..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="text-xl py-6 px-8 w-full max-w-full"
+                />
                 <Button
                   variant="outline"
                   size="icon"
@@ -206,22 +309,48 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                 </Button>
                 <Button
                   size="sm"
-                  onClick={onCreateRoom}
+                  onClick={() => {
+                    playButtonSound();
+                    onCreateRoom();
+                  }}
                   className="glow-hover bg-gradient-to-br from-blue-500 via-blue-400 to-cyan-400 text-white font-bold shadow-xl border-2 border-blue-300 text-xl px-10 py-6 w-full max-w-[180px]"
                 >
                   방 만들기
                 </Button>
                 <Button
                   size="sm"
-                  onClick={handleQuickMatch}
+                  onClick={() => {
+                    playButtonSound();
+                    setIsQuickMatchOpen(true);
+                  }}
                   className="glow-hover bg-gradient-to-br from-red-500 via-red-400 to-red-300 text-white font-bold shadow-xl border-2 border-red-300 text-xl px-10 py-6 w-full max-w-[180px]"
                 >
                   빠른 대전
                 </Button>
+                <button
+                  className="ml-1 p-0 bg-transparent hover:bg-transparent flex items-center justify-center"
+                  onClick={() => setShowQuickMatchInfo(true)}
+                  aria-label="빠른대전 설명 보기"
+                  style={{ height: '32px', width: '32px' }}
+                >
+                  <HelpCircle className="w-6 h-6 text-red-500" />
+                </button>
               </div>
             </CardHeader>
             <CardContent className="px-0 pb-0 w-full max-w-full flex-1 min-h-0">
-              <ScrollArea className="h-full w-full max-w-full flex-1 min-h-0">
+              {/* 전체 배경 로고 워터마크 */}
+                <div 
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                  style={{
+                    backgroundImage: 'url("/singsonglogo.png")', // 로고 파일 경로
+                    backgroundSize: '800px', // 로고 크기
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    opacity: 0.40, // 
+                    zIndex: 1
+                  }}
+                />
+              <ScrollArea className="h-full w-full max-w-full flex-1 min-h-0 z-10">
                 <div className="grid grid-cols-2 gap-x-6 gap-y-4 px-3 max-h-[600px] overflow-y-auto">
                   {filteredRooms.map((room) => (
                     <Card
@@ -276,17 +405,21 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                 </div>
               </ScrollArea>
             </CardContent>
-            {/* 카드 내부 하단 채팅창 */}
             <div className="w-full px-6 pb-6 pt-2">
               <div className="bg-transparent rounded-lg p-0 w-full flex flex-col">
                 <div className="lobby-chat-messages mb-2 space-y-1 h-[60px] overflow-y-auto">
                   {chatMessages.map((msg) => (
                     <div key={msg.id} className="flex items-center text-xs">
                       <span className="font-semibold text-purple-600 mr-1">
-                        {(msg.type === 'ENTER' || msg.type === 'LEAVE') ? '시스템' : msg.senderName}:
+                        {msg.type === "ENTER" || msg.type === "LEAVE"
+                          ? "시스템"
+                          : msg.senderName}
+                        :
                       </span>
                       <span className="ml-1 flex-1">{msg.message}</span>
-                      <span className="text-gray-400 text-xs ml-2">{msg.time}</span>
+                      <span className="text-gray-400 text-xs ml-2">
+                        {msg.time}
+                      </span>
                     </div>
                   ))}
                   <div ref={chatEndRef} />
@@ -299,10 +432,10 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                     onCompositionStart={() => setIsComposing(true)}
                     onCompositionEnd={() => setIsComposing(false)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !isComposing) {
+                      if (e.key === "Enter" && !isComposing) {
                         e.preventDefault();
                         if (input.trim()) {
-                          setInput('');
+                          setInput("");
                           handleSendMessage(input.trim());
                         }
                       }
@@ -312,7 +445,7 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                   <Button
                     onClick={() => {
                       if (input.trim()) {
-                        setInput('');
+                        setInput("");
                         handleSendMessage(input.trim());
                       }
                     }}
@@ -326,48 +459,64 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
           </Card>
         </div>
         <div className="col-span-3 flex flex-col gap-0 items-stretch mt-0 pt-0 h-full min-h-0">
-          <Card className="bg-white/90 backdrop-blur-sm w-full mb-0 mt-0 pt-0 pb-0">
-            <CardHeader className="border-b p-0 pb-0 mt-0 mb-0 pl-6">
-              <CardTitle className="text-2xl font-bold">내 정보</CardTitle>
-              <div className="flex items-center gap-4 mt-4">
-                <Avatar className="w-16 h-16 ring-4 ring-pink-500">
-                  {user.profileImage ? (
-                    <AvatarImage src={user.profileImage} alt="프로필 이미지" />
-                  ) : (
-                    <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
-                      {user.nickname?.[0] || "?"}
-                    </AvatarFallback>
+          <Card className="bg-white/90 backdrop-blur-sm w-full mb-0 mt-0 pt-0 pb-0 h-28">
+            <CardHeader className="border-b p-0 pb-0 mt-0 mb-0 pl-6 h-full flex justify-center items-center py-4">
+              <CardTitle className="text-2xl font-bold"></CardTitle>
+              <div className="flex items-center gap-4 mt-4 justify-start">
+                {/* 사진+닉네임+티어 상자 */}
+                <div className="relative flex items-center gap-2 p-3 rounded-xl bg-white/80 shadow-md hover:bg-blue-50 transition group min-w-[180px] max-w-[320px] ml-[-30px]">
+                  {/* 티어 이미지 툴팁 */}
+                  {tierImg && (
+                    <img
+                      src={tierImg}
+                      alt={tier}
+                      className="absolute top-1/2 left-[-90px] -translate-y-1/2 w-20 h-20 object-contain opacity-0 group-hover:opacity-100 transition pointer-events-none"
+                      style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.2))", zIndex: 9999 }}
+                    />
                   )}
-                </Avatar>
-                <div className="min-w-0">
-                  <h3 className="font-semibold text-lg truncate">{user.nickname}</h3>
-                  <p className="text-gray-600 text-sm truncate">레벨 1 • 새내기 🎵</p>
+                  <Avatar className="w-16 h-16 ring-4 ring-pink-500">
+                    {user.profileImage ? (
+                      <AvatarImage src={user.profileImage} alt="프로필 이미지" />
+                    ) : (
+                      <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
+                        {user.nickname?.[0] || "?"}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div className="min-w-0 flex flex-col">
+                    <h3 className="font-semibold text-lg truncate">{user.nickname}</h3>
+                    <span className="text-xs text-gray-500 font-semibold mt-1 flex items-center gap-1">
+                      {tier || "티어 없음"}
+                      {tierImg && (
+                        <img src={tierImg} alt={tier} className="w-5 h-5 object-contain inline-block align-middle" />
+                      )}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-2 mt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsSettingsModalOpen(true)}
-                  className="glow-hover bg-gradient-to-br from-blue-500 via-blue-400 to-cyan-400 text-white font-bold shadow-xl border-2 border-blue-300"
-                >
-                  <Settings className="w-4 h-4 mr-2" /> 설정
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onLogout}
-                  className="glow-hover bg-gradient-to-br from-blue-500 via-blue-400 to-cyan-400 text-white font-bold shadow-xl border-2 border-blue-300"
-                >
-                  <LogOut className="w-4 h-4 mr-2" /> 로그아웃
-                </Button>
+                {/* 설정/로그아웃 버튼을 오른쪽에 배치 */}
+                <div className="flex flex-col gap-2 ml-2">
+                  <button
+                    onClick={() => setIsSettingsModalOpen(true)}
+                    className="p-1 rounded-full hover:bg-blue-100 transition"
+                    aria-label="설정 열기"
+                  >
+                    <Settings className="w-5 h-5 text-blue-500" />
+                  </button>
+                  <button
+                    onClick={onLogout}
+                    className="p-1 rounded-full hover:bg-blue-100 transition"
+                    aria-label="로그아웃"
+                  >
+                    <LogOut className="w-5 h-5 text-blue-500" />
+                  </button>
+                </div>
               </div>
             </CardHeader>
           </Card>
           <div className="mt-4" />
           <Card className="bg-white/90 backdrop-blur-sm w-full h-[740px] flex flex-col p-0">
             <div className="p-6 flex-1 flex flex-col">
-              <div className="text-xl font-bold mb-2">로비 유저</div>
+              <div className="text-xl font-bold mb-2">유저</div>
               <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                 {onlineUsers.map((u) => (
                   <div
@@ -378,7 +527,9 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
                       <AvatarImage src={u.imageUrl} />
                       <AvatarFallback>{u.username[0]}</AvatarFallback>
                     </Avatar>
-                    <span className="font-medium text-xs text-gray-800">{u.username}</span>
+                    <span className="font-medium text-xs text-gray-800">
+                      {u.username}
+                    </span>
                     <span className="text-xs text-green-500 ml-auto">
                       {u.location === "ROOM" ? "게임 중" : "로비"}
                     </span>
@@ -425,6 +576,31 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
         />
       )}
 
+      <QuickMatchPopup
+        user={user}
+        isOpen={isQuickMatchOpen}
+        onClose={() => setIsQuickMatchOpen(false)}
+        onMatchFound={handleMatchFound}
+      />
+
+      {myQuickMatchResult && (
+        <QuickMatchResultModal
+          result={myQuickMatchResult}
+          onClose={() => {
+            // 1. 모달 닫기
+            setMyQuickMatchResult(null);
+
+            // 2. leaveRoom 호출 (DELETE + roomId in URL)
+            api
+              .delete(`/api/room/${myQuickMatchResult.roomId}/leave`)
+              .then(() => {
+                // 3. 로비로 이동
+                router.push("/lobby");
+              })
+              .catch((err) => console.error("퇴장 실패:", err));
+          }}
+        />
+      )}
       {error.open && (
         <ErrorModal
           open={error.open}
@@ -432,10 +608,30 @@ const GameLobby = ({ user, onCreateRoom, onJoinRoom, onLogout }: GameLobbyProps)
           onClose={() => setError({ open: false, message: "" })}
         />
       )}
+
+      {/* 빠른대전 설명 모달 */}
+      {showQuickMatchInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full text-center">
+            <h4 className="font-semibold text-blue-800 mb-3 text-lg">
+              랜덤 노래 맞추기
+            </h4>
+            <p className="text-base text-blue-600">
+              • 6명의 플레이어가 함께 참여<br />
+              • 랜덤한 노래를 듣고 제목 맞추기<br />
+              • 가장 빨리 정답을 맞힌 사람이 점수 획득
+            </p>
+            <Button
+              onClick={() => setShowQuickMatchInfo(false)}
+              className="mt-6 w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-4 rounded-lg transition-colors"
+            >
+              닫기
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
-
-}
-
+};
 
 export default GameLobby;
