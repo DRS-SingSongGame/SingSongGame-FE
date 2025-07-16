@@ -103,7 +103,6 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
   const [rollingIndex, setRollingIndex] = useState(0);
   const [rollingSpeed, setRollingSpeed] = useState(30);
   const [showFinal, setShowFinal] = useState(false);
-  const [demoMode, setDemoMode] = useState(false);
 
   /* ───── refs ───── */
   const mySid = useRef<string>("");
@@ -638,17 +637,6 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                           <HelpCircle className="w-5 h-5" />
                           채점 기준
                         </button>
-
-                        {/* ✅ 데모 모드 체크박스 */}
-                        <label className="flex items-center gap-1 text-sm font-bold text-gray-600">
-                          <input
-                            type="checkbox"
-                            checked={demoMode}
-                            onChange={() => setDemoMode(!demoMode)}
-                            className="w-4 h-4 accent-pink-600"
-                          />
-                          데모 모드
-                        </label>
                       </div>
                       {/* 기존 마이크 허용 버튼 아래에 그대로 */}
                       <Button
@@ -664,19 +652,10 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                             socket.current?.emit("start_game", {
                               roomId,
                               maxRounds: room.maxRound,
-                              demoMode,
                             })
                           }
-                          className={`
-                            w-full h-[54px] text-xl font-extrabold shadow-2xl border-2 rounded-2xl
-                            transition-all duration-150
-                            ${demoMode
-                              ? "bg-gradient-to-br from-purple-700 via-purple-600 to-pink-500 hover:from-purple-800 hover:to-pink-600 border-purple-300"
-                              : "bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 hover:from-blue-800 hover:to-cyan-600 border-blue-300"
-                            }
-                            text-white`
-                          }
-                        >
+                          className="w-full h-[54px] text-xl font-extrabold shadow-2xl border-2 rounded-2xl transition-all duration-150
+                            bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 hover:from-blue-800 hover:to-cyan-600 text-white">
                           <Play className="w-5 h-5 mr-2" /> 게임 시작
                         </Button>
                       ) : (
