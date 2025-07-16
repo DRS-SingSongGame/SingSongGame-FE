@@ -14,7 +14,7 @@ export default function BGMPlayer({ bgmVolume = 50, isPlaying, setIsPlaying }: B
   useEffect(() => {
     const audio = new Audio('/audio/energy.mp3');
     audio.loop = true;
-    audio.volume = bgmVolume / 100;
+    audio.volume = 0.5; // 볼륨 50%로 고정
     audio.preload = 'auto'; // 오디오 미리 로드
     audioRef.current = audio;
 

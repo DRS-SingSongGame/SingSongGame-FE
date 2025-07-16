@@ -66,7 +66,7 @@ const GameChat = ({
                     type: "spring",
                     stiffness: 100
                   }}
-                  className={`flex gap-2 text-sm text-white`}
+                  className={`flex gap-2 text-base text-white`}
                 >
                   <div className="flex-1 min-w-0">
                     <span className="font-semibold text-white">

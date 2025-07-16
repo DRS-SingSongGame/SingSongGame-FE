@@ -4,52 +4,37 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/Progress";
 import { ArrowLeft, Volume2, Music, Mic } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
 
 interface GameHeaderProps {
   currentRound: number;
   maxRound: number;
-  timeLeft: number;
   isReading: boolean;
   onBack: () => void;
-  hintText: string | null;
+  hintText?: string | null;
+  children?: ReactNode;
+  timeLeft?: number;
 }
 
 const GameHeader = ({
   currentRound,
   maxRound,
-  timeLeft,
   isReading,
   onBack,
-  hintText
+  children,
+  timeLeft
 }: GameHeaderProps) => {
-  const [showHint, setShowHint] = useState(false);
-
-  useEffect(() => {
-    if (isReading && hintText) {
-      // 10초 후에 힌트 표시
-      const hintTimer = setTimeout(() => {
-        setShowHint(true);
-      }, 10000); // 10초
-  
-      return () => clearTimeout(hintTimer);
-    }
-  }, [isReading, hintText]);
-
-  useEffect(() => {
-    if (!isReading) {
-      setShowHint(false); // 게임이 끝나면 힌트 숨기기
-    }
-  }, [isReading]);
+  // hintText 관련 UI(힌트 Badge 등)와 showHint 상태, 관련 useEffect, 렌더링 부분을 모두 제거한다. 라운드 Badge도 제거한다.
 
   return (
     <div className="mb-6">
-      <Card className="pipe-metal-card rounded-2xl">
+      <Card className="pipe-metal-card rounded-2xl min-h-[270px]">
         <div className="absolute top-4 left-4 z-10">
           <Button variant="outline" onClick={onBack} className="pipe-metal-btn rounded-xl">
             <ArrowLeft className="w-4 h-4 mr-2" />
             로비로 돌아가기
           </Button>
+          {children}
         </div>
         <CardHeader>
           <div className="flex flex-col items-center">
@@ -114,49 +99,27 @@ const GameHeader = ({
                       ease: "easeInOut",
                     }}
                   />
+                  {/* robot 하단에 힌트 들어갈 공간 확보 */}
+                  <div className="w-full flex justify-center mt-16 min-h-[4px]">
+                    {children}
+                  </div>
+                  {/* 오른쪽 하단 60초 타이머+게이지바 */}
+                  {typeof timeLeft === 'number' && (
+                    <div style={{ position: 'absolute', right: 16, bottom: 16, width: 180 }} className="flex flex-col items-end z-20">
+                      <div className="text-3xl font-extrabold text-white mb-1 drop-shadow-lg">{timeLeft}초</div>
+                      <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-3 bg-gradient-to-r from-blue-400 to-red-400 transition-all duration-500"
+                          style={{ width: `${(timeLeft / 60) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             </motion.div>
-            <div className="flex justify-between items-start w-full mt-1">
-              <div className="flex flex-col gap-1">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring" }}
-                >
-                  <Badge variant="outline" className="text-sm px-3 py-1 bg-gray-100 border-gray-300 rounded-xl">
-                    라운드 {currentRound}/{maxRound}
-                  </Badge>
-                </motion.div>
-
-                {hintText && showHint && (
-                  <motion.div 
-                    initial={{ opacity: 0, x: -20, scale: 0.9 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    transition={{ duration: 0.5, type: "spring" }}
-                  >
-                    <Badge variant="secondary" className="text-sm px-3 py-1 bg-yellow-100 border-yellow-300 rounded-xl">
-                      💡 힌트: {hintText}
-                    </Badge>
-                  </motion.div>
-                )}
-              </div>
-              <motion.div 
-                className="text-right"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3, type: "spring" }}
-              >
-                <div className="text-3xl font-bold text-white">
-                  {timeLeft}초
-                </div>
-                <Progress 
-                  value={(timeLeft / 60) * 100} 
-                  className="w-32 mt-2 h-2 bg-gray-200" 
-                />
-
-              </motion.div>
-            </div>
+            {/* 타이머 UI 제거됨 */}
+            <div className="flex justify-end w-full mt-1"></div>
           </div>
         </CardHeader>
       </Card>
