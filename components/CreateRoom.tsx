@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -22,7 +22,7 @@ interface CreateRoomProps {
 const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
   const router = useRouter();
 
-  const [roomName, setRoomName] = useState('');
+  const [roomName, setRoomName] = useState('싱송겜 고고');
   const [gameMode, setGameMode] = useState('');
   const [description, setDescription] = useState('');
   const [maxPlayers, setMaxPlayers] = useState('6');
@@ -30,6 +30,14 @@ const CreateRoom = ({ onBack, onRoomCreated }: CreateRoomProps) => {
   const [password, setPassword] = useState('');
   const [maxRounds, setMaxRounds] = useState(''); // 기본값을 ''로 변경
 
+  // 게임모드 변경 시 최대 라운드 자동 선택
+  useEffect(() => {
+    if (gameMode === '키싱유') {
+      setMaxRounds('1');
+    } else if (gameMode === '랜덤 노래 맞추기' || gameMode === '평어 노래 맞추기') {
+      setMaxRounds('2');
+    }
+  }, [gameMode]);
 
   const { mutate: createRoom, isLoading } = useCreateRoom();
   const { mutate: joinRoom, isLoading: isJoining } = useJoinRoom();
