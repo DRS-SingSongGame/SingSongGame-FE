@@ -600,7 +600,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                       <CardHeader>
                         <CardTitle className="text-pink-700">방 정보</CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-2 flex-1">
+                      <CardContent className="space-y-2 flex-1 text-xl">
                         <div>
                           <span className="font-medium">게임 모드:</span>{" "}
                           <Badge className={getGameModeColor(room.roomType)}>
@@ -630,7 +630,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                       <div className="flex items-center justify-between mb-2">
                         {/* 도움말 버튼 */}
                         <button
-                          className="flex items-center gap-1 text-gray-500 font-bold hover:text-gray-700 transition-colors"
+                          className="flex items-center gap-1 text-gray-500 font-bold hover:text-gray-700 transition-colors text-lg"
                           onClick={() => setIsModalOpen(true)}
                           type="button"
                         >
@@ -688,8 +688,8 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
               🎤
             </div>
             <div className="space-y-4 mb-10 text-center">
-              <h2 className="text-3xl font-bold text-gray-900">키싱유 게임 시작!</h2>
-              <p className="text-xl text-gray-600">
+              <h2 className="text-4xl font-bold text-gray-900">키싱유 게임 시작!</h2>
+              <p className="text-2xl text-gray-600">
                 주어진 키워드가 들어간 노래를 <span className="font-bold text-pink-600">10초</span> 동안 불러주세요!
                 <br /><br />음정, 박자를 맞추면 더 높은 점수를 얻을 수 있어요!
               </p>
@@ -728,13 +728,13 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                 )}
               </div>
             </div>
-            <p className="text-xl text-gray-700">
+            <p className="text-2xl text-gray-700">
               <span className="font-bold text-blue-600">{users.find((u) => u.sid === currentSid)?.nickname}</span> 님의 차례입니다
               {currentSid === mySid.current && (
                 <span className="ml-2 text-green-600 font-bold">(내 차례)</span>
               )}
             </p>
-            <TimerCircle timeLeft={Math.ceil(timer)} duration={8} size={100} />
+            <TimerCircle timeLeft={Math.ceil(timer)} duration={8} size={80} />
           </div>
         );
 
@@ -743,8 +743,19 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
         if (mySid.current !== currentSid) {
           return (
             <div className="flex flex-col justify-center items-center min-h-[500px] h-full">
-              <div className="bg-green-500 text-white rounded-lg p-4 mb-8">
-                <h2 className="text-2xl font-bold">{keyword?.type}: {keyword?.name}</h2>
+              {/* 키워드 박스 - keyword 페이즈와 동일한 스타일 */}
+              <div className="text-center space-y-8 mb-8">
+                <div className="bg-green-500 text-white rounded-lg p-8 transform hover:scale-105 transition-all shadow-xl w-auto inline-block">
+                  <h2 className="text-4xl font-bold mb-2">{keyword?.type}</h2>
+                  <div className="relative overflow-hidden flex items-center justify-center" style={{
+                    height: '5rem',
+                    width: 'auto',
+                    minWidth: '12rem',
+                    maxWidth: '32rem'
+                  }}>
+                    <div className="text-5xl font-bold text-yellow-200 drop-shadow-lg transition-all duration-500 px-4 whitespace-nowrap">{keyword?.name}</div>
+                  </div>
+                </div>
               </div>
               <div className="space-y-6 flex flex-col items-center">
                 <div className="text-2xl font-semibold text-gray-800 mb-4">
@@ -758,13 +769,24 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
         // 내 턴일 때 기존 UI
         return (
           <div className="flex flex-col justify-center items-center min-h-[500px] h-full">
-            <div className="bg-green-500 text-white rounded-lg p-4 mb-8">
-              <h2 className="text-2xl font-bold">{keyword?.type} {keyword?.name}</h2>
+            {/* 키워드 박스 - keyword 페이즈와 동일한 스타일 */}
+            <div className="text-center space-y-8 mb-8">
+              <div className="bg-green-500 text-white rounded-lg p-8 transform hover:scale-105 transition-all shadow-xl w-auto inline-block">
+                <h2 className="text-4xl font-bold mb-2">{keyword?.type}</h2>
+                <div className="relative overflow-hidden flex items-center justify-center" style={{
+                  height: '5rem',
+                  width: 'auto',
+                  minWidth: '12rem',
+                  maxWidth: '32rem'
+                }}>
+                  <div className="text-5xl font-bold text-yellow-200 drop-shadow-lg transition-all duration-500 px-4 whitespace-nowrap">{keyword?.name}</div>
+                </div>
+              </div>
             </div>
             <div className="space-y-6 flex flex-col items-center">
               <div className="relative flex flex-col items-center">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center animate-pulse">
-                  <Mic className="w-12 h-12 text-white" />
+                <div className="w-20 h-20 rounded-full bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center animate-pulse">
+                  <Mic className="w-10 h-10 text-white" />
                 </div>
                 <div className="mt-3">
                   <Badge className="bg-red-500 text-white">녹음 중</Badge>
@@ -795,7 +817,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
               className="w-full mb-4"
             />
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-xl font-semibold text-gray-900">
                 {analysisStep === "분석중" ? (
                   <>
                     녹음된 <span className="text-blue-600 font-bold">음성 파형</span>을 분석하고 있습니다..
@@ -877,7 +899,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                 {passed && title && artist && (
                   <div className="flex items-center justify-center mt-2">
                     <span className="mr-2 text-2xl font-bold text-purple-500">🎵</span>
-                    <span className="text-gray-800 text-lg font-bold">{title} - {artist}</span>
+                    <span className="text-gray-800 text-xl font-bold">{title} - {artist}</span>
                   </div>
                 )}
               </div>
