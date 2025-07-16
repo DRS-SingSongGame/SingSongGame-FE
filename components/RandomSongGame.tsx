@@ -31,13 +31,17 @@ import {
   Timer,
   Users,
 } from "lucide-react";
-import { connectGameSocket, disconnectGameSocket, sendGameMessage, sendKeywordConfirm } from "@/lib/gameSocket";
+import {
+  connectGameSocket,
+  disconnectGameSocket,
+  sendGameMessage,
+  sendKeywordConfirm,
+} from "@/lib/gameSocket";
 import ChatBox, { ChatMessage, ChatBoxRef } from "./chat/ChatBox";
 import axios from "axios";
 import { PREDEFINED_TAGS } from "@/lib/tags";
 import KeywordDisplay from "@/components/KeywordDisplay";
-import GameResultModal from '@/components/game/GameResultModal';
-
+import GameResultModal from "@/components/game/GameResultModal";
 
 interface RandomSongGameProps {
   user: any;
@@ -119,10 +123,12 @@ const RandomSongGame = ({
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 
   const [showRoundNotification, setShowRoundNotification] = useState(false);
-  const [showHintAnimation, setShowHintAnimation] = useState<string | null>(null);
+  const [showHintAnimation, setShowHintAnimation] = useState<string | null>(
+    null
+  );
   const [isKeywordConfirmed, setIsKeywordConfirmed] = useState(false);
   const chatBoxRef = useRef<ChatBoxRef>(null);
-  
+
   useEffect(() => {
     if (phase === "playing") {
       setTimeout(() => {
@@ -130,42 +136,40 @@ const RandomSongGame = ({
       }, 100);
     }
   }, [phase]);
-  
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       // 게임 중이고, 입력창이 포커스 안 되어 있을 때
-      if (phase === 'playing' && document.activeElement !== inputRef.current) {
+      if (phase === "playing" && document.activeElement !== inputRef.current) {
         // 특수키가 아닌 일반 문자 입력시
         if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
           inputRef.current?.focus();
         }
       }
     };
-  
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
+
+    document.addEventListener("keydown", handleKeyPress);
+    return () => document.removeEventListener("keydown", handleKeyPress);
   }, [phase]);
 
   // 정답자가 없는 경우 프로그레스바 애니메이션 //
 
   useEffect(() => {
     if (phase === "countdown" && countdown > 0) {
-      const countdownSound = new Audio('/audio/countdown_ssg.mp3');
+      const countdownSound = new Audio("/audio/countdown_ssg.mp3");
       countdownSound.volume = 0.6; // 적절한 볼륨
       countdownSound.play().catch((error) => {
-        console.error('카운트다운 효과음 재생 실패:', error);
+        console.error("카운트다운 효과음 재생 실패:", error);
       });
     }
-    
   }, [phase]);
 
   useEffect(() => {
     if (phase === "final") {
-      const countdownSound = new Audio('/audio/final.wav');
+      const countdownSound = new Audio("/audio/final.wav");
       countdownSound.volume = 0.7; // 적절한 볼륨
       countdownSound.play().catch((error) => {
-        console.error('카운트다운 효과음 재생 실패:', error);
+        console.error("카운트다운 효과음 재생 실패:", error);
       });
     }
   }, [phase]);
@@ -199,8 +203,6 @@ const RandomSongGame = ({
   }, [showNoAnswerModal]);
 
   // 정답자가 없는 경우 프로그레스바 애니메이션 //
-
-
 
   const handleCloseNoAnswerModal = () => {
     setShowNoAnswerModal(false);
@@ -262,7 +264,7 @@ const RandomSongGame = ({
           setChatMessages((prev) => [...prev, msg]);
         }
       },
-      
+
       onGameStartCountdown: (response) => {
         console.log("Game Start Countdown:", response);
         setPhase("countdown");
@@ -284,7 +286,6 @@ const RandomSongGame = ({
 
         setShowRoundNotification(true);
         setTimeout(() => setShowRoundNotification(false), 2000);
-        
 
         currentRoundRef.current = response.round;
         maxRoundRef.current = response.maxRound;
@@ -378,26 +379,26 @@ const RandomSongGame = ({
       },
 
       onGameEnd: (response) => {
-        
         if (roundTimerIntervalRef.current) {
           clearInterval(roundTimerIntervalRef.current);
         }
-        
+
         if (response.finalResults) {
-          const finalScores: { [key: string]: number } = {};  // 타입 명시
-          response.finalResults.forEach((result: any) => {     // result 타입 명시
+          const finalScores: { [key: string]: number } = {}; // 타입 명시
+          response.finalResults.forEach((result: any) => {
+            // result 타입 명시
             finalScores[result.userId] = result.score;
           });
-          
-          setGameSession(prev => {
-            if (!prev) return prev;  // null 체크 추가
+
+          setGameSession((prev) => {
+            if (!prev) return prev; // null 체크 추가
             return {
-              ...prev,                // 기존 모든 속성 유지
-              playerScores: finalScores  // playerScores만 업데이트
+              ...prev, // 기존 모든 속성 유지
+              playerScores: finalScores, // playerScores만 업데이트
             };
           });
         }
-        
+
         setPhase("final");
         setShowGameEndModal(true);
       },
@@ -467,9 +468,8 @@ const RandomSongGame = ({
 
   const playersWithFinalScores = players.map((player) => ({
     ...player,
-    score: gameSession?.playerScores?.[player.id] || 0,  // gameSession에서 직접
+    score: gameSession?.playerScores?.[player.id] || 0, // gameSession에서 직접
   }));
-
 
   const handleCloseResult = async () => {
     setShowGameEndModal(false);
@@ -478,7 +478,7 @@ const RandomSongGame = ({
     } catch (e) {
       // 실패해도 그냥 로비로 이동
     }
-    window.location.href = '/lobby';
+    window.location.href = "/lobby";
   };
 
   const handleRestart = () => {
@@ -538,8 +538,8 @@ const RandomSongGame = ({
   };
 
   const handleLeaveRoom = async () => {
-  try {
-    console.log("🔁 나가기 시도, 현재 room:", room);
+    try {
+      console.log("🔁 나가기 시도, 현재 room:", room);
 
       if (room.roomType === "QUICK_MATCH") {
         const res = await api.post("/api/quick-match/end", null, {
@@ -554,7 +554,7 @@ const RandomSongGame = ({
             roomCode: room.roomCode,
           },
         });
-  
+
         const resultData = (resultRes as any).data;
         localStorage.setItem("quickMatchResult", JSON.stringify(resultData));
         console.log("📦 빠른대전 결과 저장:", resultData);
@@ -564,15 +564,14 @@ const RandomSongGame = ({
       } else {
         console.log("🚪 일반 방 나가기 호출 시작");
 
-      await api.delete(`/api/room/${room.roomId}/leave`);
+        await api.delete(`/api/room/${room.roomId}/leave`);
+        router.push("/lobby");
+      }
+    } catch (error) {
+      console.error("❌ 방 나가기 실패:", error);
       router.push("/lobby");
     }
-
-  } catch (error) {
-    console.error("❌ 방 나가기 실패:", error);
-    router.push("/lobby");
-  }
-};
+  };
 
   const handlePlayAudio = () => {
     if (audioRef.current) {
@@ -596,7 +595,7 @@ const RandomSongGame = ({
     const keywordNames = selectedTagIds
       .map((id) => PREDEFINED_TAGS.find((tag) => tag.id === id)?.name)
       .filter((name): name is string => !!name); // string[] 보장
-      console.log("🎯 전송할 키워드:", keywordNames);
+    console.log("🎯 전송할 키워드:", keywordNames);
     try {
       await api.post(`/api/game-session/${room.roomId}/start`, {
         keywords: keywordNames,
@@ -619,63 +618,89 @@ const RandomSongGame = ({
     if (!serverStartTime || !gameSession?.currentSong) {
       return [];
     }
-    
+
     const elapsed = Date.now() - serverStartTime;
     const timeLeft = Math.max(0, 30 - Math.floor(elapsed / 1000));
-    
+
     const hints = [];
-    
+
     // 중앙 팝업이 끝난 후에만 상단에 표시 (2초 딜레이 추가)
-    if (timeLeft <= 18) { // 20초 - 2초(팝업 시간)
+    if (timeLeft <= 18) {
+      // 20초 - 2초(팝업 시간)
       hints.push(`🎤 가수: ${gameSession.currentSong.artist}`);
     }
-    
-    if (timeLeft <= 8) { // 10초 - 2초(팝업 시간)
+
+    if (timeLeft <= 8) {
+      // 10초 - 2초(팝업 시간)
       hints.push(`💡 제목 힌트: ${gameSession.currentSong.hint}`);
     }
-    
+
     return hints;
   };
-  
+
   // getCurrentHints()가 변할 때마다 체크
   useEffect(() => {
-    if (phase !== "playing" || !gameSession?.serverStartTime || !gameSession?.currentSong || showAnswerModal) return;
-    
+    if (
+      phase !== "playing" ||
+      !gameSession?.serverStartTime ||
+      !gameSession?.currentSong ||
+      showAnswerModal
+    )
+      return;
+
     const elapsed = Date.now() - gameSession.serverStartTime;
     const timeLeft = Math.max(0, 30 - Math.floor(elapsed / 1000));
-    
+
     // 정확히 20초일 때 가수 힌트 팝업
     if (timeLeft === 20 && !showHintAnimation) {
       setShowHintAnimation(` 가수: ${gameSession.currentSong.artist}`);
       setTimeout(() => setShowHintAnimation(null), 2000);
     }
-    
-    // 정확히 10초일 때 제목 힌트 팝업  
+
+    // 정확히 10초일 때 제목 힌트 팝업
     if (timeLeft === 10 && !showHintAnimation) {
       setShowHintAnimation(` 제목 힌트: ${gameSession.currentSong.hint}`);
       setTimeout(() => setShowHintAnimation(null), 2000);
     }
-  }, [phase, roundTimer, gameSession?.serverStartTime, gameSession?.currentSong, showHintAnimation]);
-  
+  }, [
+    phase,
+    roundTimer,
+    gameSession?.serverStartTime,
+    gameSession?.currentSong,
+    showHintAnimation,
+  ]);
+
   // getCurrentHints()가 변할 때마다 체크
   useEffect(() => {
-    if (phase !== "playing" || !gameSession?.serverStartTime || !gameSession?.currentSong || showAnswerModal) return;
-    
+    if (
+      phase !== "playing" ||
+      !gameSession?.serverStartTime ||
+      !gameSession?.currentSong ||
+      showAnswerModal
+    )
+      return;
+
     const elapsed = Date.now() - gameSession.serverStartTime;
     const timeLeft = Math.max(0, 30 - Math.floor(elapsed / 1000));
-    
+
     // 정확히 20초일 때 가수 힌트 팝업
     if (timeLeft === 20 && !showHintAnimation) {
       setShowHintAnimation(` 가수: ${gameSession.currentSong.artist}`);
       setTimeout(() => setShowHintAnimation(null), 2000);
     }
-    
-    // 정확히 10초일 때 제목 힌트 팝업  
+
+    // 정확히 10초일 때 제목 힌트 팝업
     if (timeLeft === 10 && !showHintAnimation) {
       setShowHintAnimation(` 제목 힌트: ${gameSession.currentSong.hint}`);
       setTimeout(() => setShowHintAnimation(null), 2000);
     }
-  }, [phase, roundTimer, gameSession?.serverStartTime, gameSession?.currentSong, showHintAnimation]);
+  }, [
+    phase,
+    roundTimer,
+    gameSession?.serverStartTime,
+    gameSession?.currentSong,
+    showHintAnimation,
+  ]);
 
   useEffect(() => {
     const audio = new Audio("/audio/entersound.wav");
@@ -684,7 +709,7 @@ const RandomSongGame = ({
 
   useEffect(() => {
     if (showAnswerModal) {
-      const correctSound = new Audio('/audio/ai.wav');
+      const correctSound = new Audio("/audio/ai.wav");
       correctSound.volume = 0.5; // 음원보다 살짝 작게
       correctSound.play().catch(console.error);
     }
@@ -692,10 +717,10 @@ const RandomSongGame = ({
 
   useEffect(() => {
     if (showNoAnswerModal) {
-      const failSound = new Audio('/audio/fail.mp3');
+      const failSound = new Audio("/audio/fail.mp3");
       failSound.volume = 0.5; // 적절한 볼륨으로 설정
       failSound.play().catch((error) => {
-        console.error('효과음 재생 실패:', error);
+        console.error("효과음 재생 실패:", error);
       });
     }
   }, [showNoAnswerModal]);
@@ -706,7 +731,7 @@ const RandomSongGame = ({
   // 1. waiting 단계 - 모바일 반응형
   if (phase === "waiting") {
     const isQuickMatch = room?.roomType === "QUICK_MATCH";
-  
+
     return (
       <div className="min-h-screen p-2 md:p-4 bg-gradient-to-br from-cyan-400 via-blue-500 via-purple-500 to-pink-500">
         <div className="max-w-7xl mx-auto">
@@ -716,14 +741,18 @@ const RandomSongGame = ({
             <div className="flex-1">
               <Card className="bg-white/90 backdrop-blur-sm rounded-2xl">
                 <CardHeader className="text-center relative p-4 lg:p-6">
-                  <Button
-                    variant="outline"
-                    onClick={handleLeaveRoom}
-                    className="absolute left-2 lg:left-0 top-2 lg:top-0 bg-white/90 backdrop-blur-sm text-sm lg:text-base px-2 lg:px-4 py-1 lg:py-2"
-                  >
-                    <ArrowLeft className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
-                    뒤로가기
-                  </Button>
+                  {/* 빠른대전이 아닐 때만 뒤로가기 버튼 표시 */}
+                  {!isQuickMatch && (
+                    <Button
+                      variant="outline"
+                      onClick={handleLeaveRoom}
+                      className="absolute left-2 lg:left-0 top-2 lg:top-0 bg-white/90 backdrop-blur-sm text-sm lg:text-base px-2 lg:px-4 py-1 lg:py-2"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      뒤로가기
+                    </Button>
+                  )}
+
                   <CardTitle className="text-xl lg:text-3xl font-bold bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 bg-clip-text text-transparent mt-8 lg:mt-0">
                     🎵 랜덤 노래 맞추기
                   </CardTitle>
@@ -731,7 +760,7 @@ const RandomSongGame = ({
                     노래를 듣고 제목을 가장 빨리 맞춰보세요!
                   </CardDescription>
                 </CardHeader>
-  
+                
                 <CardContent className="space-y-4 lg:space-y-6 p-4 lg:p-6">
                   {/* 플레이어 목록 - 모바일: 2x3, 데스크톱: 3x2 */}
                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
@@ -746,6 +775,7 @@ const RandomSongGame = ({
                             <>
                               <Avatar className="w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-2">
                                 <AvatarImage src={player.avatar} />
+
                                 <AvatarFallback className="text-xs lg:text-base">
                                   {player.nickname[0]}
                                 </AvatarFallback>
@@ -760,16 +790,20 @@ const RandomSongGame = ({
                               <div className="w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
                                 <Users className="w-6 h-6 lg:w-8 lg:h-8 text-gray-400" />
                               </div>
+
                               <h3 className="font-semibold text-gray-400 text-sm lg:text-base">빈 자리</h3>
                               <Badge className="mt-1 bg-gray-400 text-xs">대기 중</Badge>
+
                             </>
                           )}
                         </div>
                       );
                     })}
                   </div>
-  
-                  {/* 게임 시작 영역 */}
+
+
+                  {/* 안내 메시지 or 게임 시작/키워드 UI */}
+
                   {isQuickMatch ? (
                     <div className="text-center py-6 lg:py-8">
                       <p className="text-base lg:text-lg font-semibold text-gray-700">
@@ -808,7 +842,7 @@ const RandomSongGame = ({
                           </p>
                         )}
                       </div>
-  
+
                       {/* 키워드 선택 UI */}
                       {isHost ? (
                         <div className="w-full mt-4 lg:mt-6">
@@ -933,7 +967,9 @@ const RandomSongGame = ({
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.5 }}
+
               className="text-xl lg:text-4xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 px-4 lg:px-8 py-2 lg:py-4 rounded-xl lg:rounded-2xl shadow-2xl"
+
             >
               Round {gameSession?.currentRound} 시작!
             </motion.div>
@@ -974,7 +1010,7 @@ const RandomSongGame = ({
             </motion.div>
           </div>
         )}
-  
+        
         <div className="max-w-6xl mx-auto">
           {/* 뒤로가기 버튼 */}
           <Button
@@ -985,6 +1021,7 @@ const RandomSongGame = ({
             <ArrowLeft className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
             나가기
           </Button>
+
   
           {/* 게임 헤더 - 모바일에서 컴팩트하게 */}
           <Card className="bg-white/90 backdrop-blur-sm mb-3 lg:mb-6">
@@ -1076,6 +1113,7 @@ const RandomSongGame = ({
                   <span className="text-sm text-gray-600">전체 라운드 진행률</span>
                   <span className="text-sm font-bold text-gray-800">
                     {gameSession?.currentRound || 0} / {gameSession?.maxRound || 0}
+
                   </span>
                 </div>
                 <Progress
@@ -1088,6 +1126,7 @@ const RandomSongGame = ({
               </div>
             </CardHeader>
           </Card>
+
           
           {/* 메인 게임 영역 */}
           <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
@@ -1155,10 +1194,12 @@ const RandomSongGame = ({
                               {player.score}
                             </div>
                             <div className="text-xs text-gray-500">점</div>
+
                           </div>
                         </div>
                       ))}
                   </div>
+
                 </CardContent>
               </Card>
             </div>
@@ -1183,7 +1224,6 @@ const RandomSongGame = ({
   
           <audio ref={audioRef} />
         </div>
-
 
 
         {/* 정답 모달 */}
