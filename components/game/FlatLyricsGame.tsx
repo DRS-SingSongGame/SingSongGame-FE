@@ -371,6 +371,15 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
     window.location.href = '/lobby';
   };
 
+  // 로비로 나가기(방 나가기) 핸들러
+  const handleLeaveRoom = async () => {
+    try {
+      await api.delete(`/api/room/${room.roomId}/leave`);
+    } catch (e) {
+      // 실패해도 그냥 로비로 이동
+    }
+    window.location.href = '/lobby';
+  };
 
 
   useEffect(() => {
@@ -568,7 +577,7 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
             currentRound={gameState.currentRound}
             maxRound={gameState.maxRound}
             isReading={gameState.isReading}
-            onBack={onBack}
+            onBack={handleLeaveRoom}
           />
           {/* 오른쪽 하단 60초 타이머+게이지바 */}
           <div style={{ position: 'absolute', right: 40, bottom: 24, width: 180, zIndex: 30 }} className="flex flex-col items-end">
