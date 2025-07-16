@@ -31,13 +31,17 @@ import {
   Timer,
   Users,
 } from "lucide-react";
-import { connectGameSocket, disconnectGameSocket, sendGameMessage, sendKeywordConfirm } from "@/lib/gameSocket";
+import {
+  connectGameSocket,
+  disconnectGameSocket,
+  sendGameMessage,
+  sendKeywordConfirm,
+} from "@/lib/gameSocket";
 import ChatBox, { ChatMessage, ChatBoxRef } from "./chat/ChatBox";
 import axios from "axios";
 import { PREDEFINED_TAGS } from "@/lib/tags";
 import KeywordDisplay from "@/components/KeywordDisplay";
-import GameResultModal from '@/components/game/GameResultModal';
-
+import GameResultModal from "@/components/game/GameResultModal";
 
 interface RandomSongGameProps {
   user: any;
@@ -119,10 +123,12 @@ const RandomSongGame = ({
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
 
   const [showRoundNotification, setShowRoundNotification] = useState(false);
-  const [showHintAnimation, setShowHintAnimation] = useState<string | null>(null);
+  const [showHintAnimation, setShowHintAnimation] = useState<string | null>(
+    null
+  );
   const [isKeywordConfirmed, setIsKeywordConfirmed] = useState(false);
   const chatBoxRef = useRef<ChatBoxRef>(null);
-  
+
   useEffect(() => {
     if (phase === "playing") {
       setTimeout(() => {
@@ -130,42 +136,40 @@ const RandomSongGame = ({
       }, 100);
     }
   }, [phase]);
-  
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       // 게임 중이고, 입력창이 포커스 안 되어 있을 때
-      if (phase === 'playing' && document.activeElement !== inputRef.current) {
+      if (phase === "playing" && document.activeElement !== inputRef.current) {
         // 특수키가 아닌 일반 문자 입력시
         if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
           inputRef.current?.focus();
         }
       }
     };
-  
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
+
+    document.addEventListener("keydown", handleKeyPress);
+    return () => document.removeEventListener("keydown", handleKeyPress);
   }, [phase]);
 
   // 정답자가 없는 경우 프로그레스바 애니메이션 //
 
   useEffect(() => {
     if (phase === "countdown" && countdown > 0) {
-      const countdownSound = new Audio('/audio/countdown_ssg.mp3');
+      const countdownSound = new Audio("/audio/countdown_ssg.mp3");
       countdownSound.volume = 0.6; // 적절한 볼륨
       countdownSound.play().catch((error) => {
-        console.error('카운트다운 효과음 재생 실패:', error);
+        console.error("카운트다운 효과음 재생 실패:", error);
       });
     }
-    
   }, [phase]);
 
   useEffect(() => {
     if (phase === "final") {
-      const countdownSound = new Audio('/audio/final.wav');
+      const countdownSound = new Audio("/audio/final.wav");
       countdownSound.volume = 0.7; // 적절한 볼륨
       countdownSound.play().catch((error) => {
-        console.error('카운트다운 효과음 재생 실패:', error);
+        console.error("카운트다운 효과음 재생 실패:", error);
       });
     }
   }, [phase]);
@@ -199,8 +203,6 @@ const RandomSongGame = ({
   }, [showNoAnswerModal]);
 
   // 정답자가 없는 경우 프로그레스바 애니메이션 //
-
-
 
   const handleCloseNoAnswerModal = () => {
     setShowNoAnswerModal(false);
@@ -262,7 +264,7 @@ const RandomSongGame = ({
           setChatMessages((prev) => [...prev, msg]);
         }
       },
-      
+
       onGameStartCountdown: (response) => {
         console.log("Game Start Countdown:", response);
         setPhase("countdown");
@@ -284,7 +286,6 @@ const RandomSongGame = ({
 
         setShowRoundNotification(true);
         setTimeout(() => setShowRoundNotification(false), 2000);
-        
 
         currentRoundRef.current = response.round;
         maxRoundRef.current = response.maxRound;
@@ -378,26 +379,26 @@ const RandomSongGame = ({
       },
 
       onGameEnd: (response) => {
-        
         if (roundTimerIntervalRef.current) {
           clearInterval(roundTimerIntervalRef.current);
         }
-        
+
         if (response.finalResults) {
-          const finalScores: { [key: string]: number } = {};  // 타입 명시
-          response.finalResults.forEach((result: any) => {     // result 타입 명시
+          const finalScores: { [key: string]: number } = {}; // 타입 명시
+          response.finalResults.forEach((result: any) => {
+            // result 타입 명시
             finalScores[result.userId] = result.score;
           });
-          
-          setGameSession(prev => {
-            if (!prev) return prev;  // null 체크 추가
+
+          setGameSession((prev) => {
+            if (!prev) return prev; // null 체크 추가
             return {
-              ...prev,                // 기존 모든 속성 유지
-              playerScores: finalScores  // playerScores만 업데이트
+              ...prev, // 기존 모든 속성 유지
+              playerScores: finalScores, // playerScores만 업데이트
             };
           });
         }
-        
+
         setPhase("final");
         setShowGameEndModal(true);
       },
@@ -467,9 +468,8 @@ const RandomSongGame = ({
 
   const playersWithFinalScores = players.map((player) => ({
     ...player,
-    score: gameSession?.playerScores?.[player.id] || 0,  // gameSession에서 직접
+    score: gameSession?.playerScores?.[player.id] || 0, // gameSession에서 직접
   }));
-
 
   const handleCloseResult = async () => {
     setShowGameEndModal(false);
@@ -478,7 +478,7 @@ const RandomSongGame = ({
     } catch (e) {
       // 실패해도 그냥 로비로 이동
     }
-    window.location.href = '/lobby';
+    window.location.href = "/lobby";
   };
 
   const handleRestart = () => {
@@ -538,8 +538,8 @@ const RandomSongGame = ({
   };
 
   const handleLeaveRoom = async () => {
-  try {
-    console.log("🔁 나가기 시도, 현재 room:", room);
+    try {
+      console.log("🔁 나가기 시도, 현재 room:", room);
 
       if (room.roomType === "QUICK_MATCH") {
         const res = await api.post("/api/quick-match/end", null, {
@@ -554,7 +554,7 @@ const RandomSongGame = ({
             roomCode: room.roomCode,
           },
         });
-  
+
         const resultData = (resultRes as any).data;
         localStorage.setItem("quickMatchResult", JSON.stringify(resultData));
         console.log("📦 빠른대전 결과 저장:", resultData);
@@ -564,15 +564,14 @@ const RandomSongGame = ({
       } else {
         console.log("🚪 일반 방 나가기 호출 시작");
 
-      await api.delete(`/api/room/${room.roomId}/leave`);
+        await api.delete(`/api/room/${room.roomId}/leave`);
+        router.push("/lobby");
+      }
+    } catch (error) {
+      console.error("❌ 방 나가기 실패:", error);
       router.push("/lobby");
     }
-
-  } catch (error) {
-    console.error("❌ 방 나가기 실패:", error);
-    router.push("/lobby");
-  }
-};
+  };
 
   const handlePlayAudio = () => {
     if (audioRef.current) {
@@ -596,7 +595,7 @@ const RandomSongGame = ({
     const keywordNames = selectedTagIds
       .map((id) => PREDEFINED_TAGS.find((tag) => tag.id === id)?.name)
       .filter((name): name is string => !!name); // string[] 보장
-      console.log("🎯 전송할 키워드:", keywordNames);
+    console.log("🎯 전송할 키워드:", keywordNames);
     try {
       await api.post(`/api/game-session/${room.roomId}/start`, {
         keywords: keywordNames,
@@ -619,63 +618,89 @@ const RandomSongGame = ({
     if (!serverStartTime || !gameSession?.currentSong) {
       return [];
     }
-    
+
     const elapsed = Date.now() - serverStartTime;
     const timeLeft = Math.max(0, 30 - Math.floor(elapsed / 1000));
-    
+
     const hints = [];
-    
+
     // 중앙 팝업이 끝난 후에만 상단에 표시 (2초 딜레이 추가)
-    if (timeLeft <= 18) { // 20초 - 2초(팝업 시간)
+    if (timeLeft <= 18) {
+      // 20초 - 2초(팝업 시간)
       hints.push(`🎤 가수: ${gameSession.currentSong.artist}`);
     }
-    
-    if (timeLeft <= 8) { // 10초 - 2초(팝업 시간)
+
+    if (timeLeft <= 8) {
+      // 10초 - 2초(팝업 시간)
       hints.push(`💡 제목 힌트: ${gameSession.currentSong.hint}`);
     }
-    
+
     return hints;
   };
-  
+
   // getCurrentHints()가 변할 때마다 체크
   useEffect(() => {
-    if (phase !== "playing" || !gameSession?.serverStartTime || !gameSession?.currentSong || showAnswerModal) return;
-    
+    if (
+      phase !== "playing" ||
+      !gameSession?.serverStartTime ||
+      !gameSession?.currentSong ||
+      showAnswerModal
+    )
+      return;
+
     const elapsed = Date.now() - gameSession.serverStartTime;
     const timeLeft = Math.max(0, 30 - Math.floor(elapsed / 1000));
-    
+
     // 정확히 20초일 때 가수 힌트 팝업
     if (timeLeft === 20 && !showHintAnimation) {
       setShowHintAnimation(` 가수: ${gameSession.currentSong.artist}`);
       setTimeout(() => setShowHintAnimation(null), 2000);
     }
-    
-    // 정확히 10초일 때 제목 힌트 팝업  
+
+    // 정확히 10초일 때 제목 힌트 팝업
     if (timeLeft === 10 && !showHintAnimation) {
       setShowHintAnimation(` 제목 힌트: ${gameSession.currentSong.hint}`);
       setTimeout(() => setShowHintAnimation(null), 2000);
     }
-  }, [phase, roundTimer, gameSession?.serverStartTime, gameSession?.currentSong, showHintAnimation]);
-  
+  }, [
+    phase,
+    roundTimer,
+    gameSession?.serverStartTime,
+    gameSession?.currentSong,
+    showHintAnimation,
+  ]);
+
   // getCurrentHints()가 변할 때마다 체크
   useEffect(() => {
-    if (phase !== "playing" || !gameSession?.serverStartTime || !gameSession?.currentSong || showAnswerModal) return;
-    
+    if (
+      phase !== "playing" ||
+      !gameSession?.serverStartTime ||
+      !gameSession?.currentSong ||
+      showAnswerModal
+    )
+      return;
+
     const elapsed = Date.now() - gameSession.serverStartTime;
     const timeLeft = Math.max(0, 30 - Math.floor(elapsed / 1000));
-    
+
     // 정확히 20초일 때 가수 힌트 팝업
     if (timeLeft === 20 && !showHintAnimation) {
       setShowHintAnimation(` 가수: ${gameSession.currentSong.artist}`);
       setTimeout(() => setShowHintAnimation(null), 2000);
     }
-    
-    // 정확히 10초일 때 제목 힌트 팝업  
+
+    // 정확히 10초일 때 제목 힌트 팝업
     if (timeLeft === 10 && !showHintAnimation) {
       setShowHintAnimation(` 제목 힌트: ${gameSession.currentSong.hint}`);
       setTimeout(() => setShowHintAnimation(null), 2000);
     }
-  }, [phase, roundTimer, gameSession?.serverStartTime, gameSession?.currentSong, showHintAnimation]);
+  }, [
+    phase,
+    roundTimer,
+    gameSession?.serverStartTime,
+    gameSession?.currentSong,
+    showHintAnimation,
+  ]);
 
   useEffect(() => {
     const audio = new Audio("/audio/entersound.wav");
@@ -684,7 +709,7 @@ const RandomSongGame = ({
 
   useEffect(() => {
     if (showAnswerModal) {
-      const correctSound = new Audio('/audio/ai.wav');
+      const correctSound = new Audio("/audio/ai.wav");
       correctSound.volume = 0.5; // 음원보다 살짝 작게
       correctSound.play().catch(console.error);
     }
@@ -692,10 +717,10 @@ const RandomSongGame = ({
 
   useEffect(() => {
     if (showNoAnswerModal) {
-      const failSound = new Audio('/audio/fail.mp3');
+      const failSound = new Audio("/audio/fail.mp3");
       failSound.volume = 0.5; // 적절한 볼륨으로 설정
       failSound.play().catch((error) => {
-        console.error('효과음 재생 실패:', error);
+        console.error("효과음 재생 실패:", error);
       });
     }
   }, [showNoAnswerModal]);
@@ -705,7 +730,7 @@ const RandomSongGame = ({
   // phase별 화면
   if (phase === "waiting") {
     const isQuickMatch = room?.roomType === "QUICK_MATCH";
-  
+
     return (
       <div className="min-h-screen p-4 bg-gradient-to-br from-cyan-400 via-blue-500 via-purple-500 to-pink-500">
         <div className="max-w-7xl mx-auto">
@@ -714,14 +739,18 @@ const RandomSongGame = ({
             <div className="flex-1">
               <Card className="bg-white/90 backdrop-blur-sm rounded-2xl">
                 <CardHeader className="text-center relative">
-                  <Button
-                    variant="outline"
-                    onClick={handleLeaveRoom}
-                    className="absolute left-0 top-0 bg-white/90 backdrop-blur-sm"
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    뒤로가기
-                  </Button>
+                  {/* 빠른대전이 아닐 때만 뒤로가기 버튼 표시 */}
+                  {!isQuickMatch && (
+                    <Button
+                      variant="outline"
+                      onClick={handleLeaveRoom}
+                      className="absolute left-0 top-0 bg-white/90 backdrop-blur-sm"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      뒤로가기
+                    </Button>
+                  )}
+
                   <CardTitle className="text-3xl font-bold bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
                     🎵 랜덤 노래 맞추기
                   </CardTitle>
@@ -729,7 +758,7 @@ const RandomSongGame = ({
                     노래를 듣고 제목을 가장 빨리 맞춰보세요!
                   </CardDescription>
                 </CardHeader>
-  
+
                 <CardContent className="space-y-6">
                   {/* 플레이어 목록 - 3x2 격자 */}
                   <div className="grid grid-cols-3 gap-4">
@@ -744,25 +773,35 @@ const RandomSongGame = ({
                             <>
                               <Avatar className="w-16 h-16 mx-auto mb-2">
                                 <AvatarImage src={player.avatar} />
-                                <AvatarFallback>{player.nickname[0]}</AvatarFallback>
+                                <AvatarFallback>
+                                  {player.nickname[0]}
+                                </AvatarFallback>
                               </Avatar>
-                              <h3 className="font-semibold">{player.nickname}</h3>
-                              <Badge className="mt-1 bg-blue-500">준비 완료</Badge>
+                              <h3 className="font-semibold">
+                                {player.nickname}
+                              </h3>
+                              <Badge className="mt-1 bg-blue-500">
+                                준비 완료
+                              </Badge>
                             </>
                           ) : (
                             <>
                               <div className="w-16 h-16 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
                                 <Users className="w-8 h-8 text-gray-400" />
                               </div>
-                              <h3 className="font-semibold text-gray-400">빈 자리</h3>
-                              <Badge className="mt-1 bg-gray-400">대기 중</Badge>
+                              <h3 className="font-semibold text-gray-400">
+                                빈 자리
+                              </h3>
+                              <Badge className="mt-1 bg-gray-400">
+                                대기 중
+                              </Badge>
                             </>
                           )}
                         </div>
                       );
                     })}
                   </div>
-  
+
                   {/* 안내 메시지 or 게임 시작/키워드 UI */}
                   {isQuickMatch ? (
                     <div className="text-center py-8">
@@ -803,7 +842,7 @@ const RandomSongGame = ({
                           </p>
                         )}
                       </div>
-  
+
                       {/* 키워드 선택 UI */}
                       {isHost ? (
                         <div className="w-full mt-6">
@@ -853,7 +892,7 @@ const RandomSongGame = ({
                 </CardContent>
               </Card>
             </div>
-  
+
             {/* 오른쪽 채팅 영역: QuickMatch가 아닐 때만 */}
             {!isQuickMatch && (
               <div className="w-80 h-[817px] bg-white/90 backdrop-blur-sm rounded-lg p-4 flex flex-col">
@@ -900,51 +939,51 @@ const RandomSongGame = ({
     return (
       <div className="min-h-screen p-4 bg-gradient-to-br from-cyan-400 via-blue-500 via-purple-500 to-pink-500">
         {showRoundNotification && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            className="text-4xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-4 rounded-2xl shadow-2xl"
-          >
-            Round {gameSession?.currentRound} 시작!
-          </motion.div>
-        </div>
-      )}
-          
-          {showHintAnimation && (
-            <div className="fixed inset-0 z-50 pointer-events-none">
-              <motion.div
-                initial={{ 
-                  position: "fixed",
-                  top: "50%", 
-                  left: "50%", 
-                  x: "-50%", 
-                  y: "-50%",
-                  scale: 1.5,
-                  opacity: 1
-                }}
-                animate={{ 
-                  top: "140px", // 힌트 박스 위치로 (실제 위치에 맞게 조정)
-                  left: "50%",
-                  x: "-50%", 
-                  y: "0%",
-                  scale: 1,
-                  opacity: 0.8
-                }}
-                exit={{ opacity: 0 }}
-                transition={{ 
-                  duration: 1.5, 
-                  ease: "easeInOut",
-                  times: [0, 0.7, 1], // 70%까지는 이동, 나머지는 페이드아웃
-                  opacity: { duration: 2, times: [0, 0.7, 1] }
-                }}
-                className="text-2xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 rounded-xl shadow-2xl whitespace-nowrap"
-              >
-                {showHintAnimation}
-              </motion.div>
-            </div>
-          )}
+          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              className="text-4xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-4 rounded-2xl shadow-2xl"
+            >
+              Round {gameSession?.currentRound} 시작!
+            </motion.div>
+          </div>
+        )}
+
+        {showHintAnimation && (
+          <div className="fixed inset-0 z-50 pointer-events-none">
+            <motion.div
+              initial={{
+                position: "fixed",
+                top: "50%",
+                left: "50%",
+                x: "-50%",
+                y: "-50%",
+                scale: 1.5,
+                opacity: 1,
+              }}
+              animate={{
+                top: "140px", // 힌트 박스 위치로 (실제 위치에 맞게 조정)
+                left: "50%",
+                x: "-50%",
+                y: "0%",
+                scale: 1,
+                opacity: 0.8,
+              }}
+              exit={{ opacity: 0 }}
+              transition={{
+                duration: 1.5,
+                ease: "easeInOut",
+                times: [0, 0.7, 1], // 70%까지는 이동, 나머지는 페이드아웃
+                opacity: { duration: 2, times: [0, 0.7, 1] },
+              }}
+              className="text-2xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 rounded-xl shadow-2xl whitespace-nowrap"
+            >
+              {showHintAnimation}
+            </motion.div>
+          </div>
+        )}
 
         <div className="max-w-6xl mx-auto">
           <Button
@@ -956,98 +995,126 @@ const RandomSongGame = ({
             나가기
           </Button>
           <Card className="bg-white/90 backdrop-blur-sm mb-6">
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-              <CardTitle className="text-2xl font-bold">
-                {gameSession?.currentRound === gameSession?.maxRound ? (
-                  <span className="text-red-500">🎉 마지막 라운드입니다!</span>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-2xl font-bold">
+                    {gameSession?.currentRound === gameSession?.maxRound ? (
+                      <span className="text-red-500">
+                        🎉 마지막 라운드입니다!
+                      </span>
+                    ) : (
+                      <span className="text-blue-600">
+                        🎵 Round {gameSession?.currentRound || 1}
+                      </span>
+                    )}
+                  </CardTitle>
+                </div>
+                {getCurrentHints().length === 0 ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-gray-600">힌트 준비 중</span>
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-100"></div>
+                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-200"></div>
+                    </div>
+                  </div>
                 ) : (
-                  <span className="text-blue-600">
-                    🎵 Round {gameSession?.currentRound || 1}
-                  </span>
+                  <div className="flex-1 text-center mx-8">
+                    <div className="flex items-center justify-center gap-4 flex-wrap">
+                      {getCurrentHints().map((hint, index) => (
+                        <motion.span
+                          key={`${index}-${Math.floor(
+                            (Date.now() - (gameSession?.serverStartTime || 0)) /
+                              10000
+                          )}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: index * 0.1 }}
+                          className="text-sm font-semibold text-gray-700 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1 border border-gray-200"
+                        >
+                          {hint}
+                        </motion.span>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </CardTitle>
-              </div>
-              {getCurrentHints().length === 0 ? (
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-gray-600">힌트 준비 중</span>
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-100"></div>
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-200"></div>
+                <div className="text-right">
+                  <div className="relative flex items-center justify-center">
+                    {/* 원형 배경 */}
+                    <svg
+                      className="w-20 h-20 transform -rotate-90"
+                      viewBox="0 0 100 100"
+                    >
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        stroke="rgb(229, 231, 235)"
+                        strokeWidth="6"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        stroke={
+                          roundTimer <= 5
+                            ? "rgb(239, 68, 68)"
+                            : roundTimer <= 10
+                            ? "rgb(251, 191, 36)"
+                            : "rgb(59, 130, 246)"
+                        }
+                        strokeWidth="6"
+                        fill="transparent"
+                        strokeDasharray={`${2 * Math.PI * 40}`}
+                        strokeDashoffset={`${
+                          2 * Math.PI * 40 * (1 - roundTimer / 30)
+                        }`}
+                        className="transition-all duration-500"
+                      />
+                    </svg>
+                    <div
+                      className={`absolute text-2xl font-bold ${
+                        roundTimer <= 5
+                          ? "text-red-500"
+                          : roundTimer <= 10
+                          ? "text-yellow-600"
+                          : "text-blue-600"
+                      }`}
+                    >
+                      {roundTimer}
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="flex-1 text-center mx-8">
-                  <div className="flex items-center justify-center gap-4 flex-wrap">
-                    {getCurrentHints().map((hint, index) => (
-                      <motion.span
-                        key={`${index}-${Math.floor((Date.now() - (gameSession?.serverStartTime || 0)) / 10000)}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                        className="text-sm font-semibold text-gray-700 bg-white/80 backdrop-blur-sm rounded-lg px-3 py-1 border border-gray-200"
-                      >
-                        {hint}
-                      </motion.span>
-                    ))}
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Music className="w-5 h-5 animate-pulse" />
+                    노래 재생 중
                   </div>
-                </div>
-              )}
-              <div className="text-right">
-                <div className="relative flex items-center justify-center">
-                  {/* 원형 배경 */}
-                  <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 100 100">
-                    <circle
-                      cx="50" cy="50" r="40"
-                      stroke="rgb(229, 231, 235)"
-                      strokeWidth="6"
-                      fill="transparent"
-                    />
-                    <circle
-                      cx="50" cy="50" r="40"
-                      stroke={roundTimer <= 5 ? "rgb(239, 68, 68)" : roundTimer <= 10 ? "rgb(251, 191, 36)" : "rgb(59, 130, 246)"}
-                      strokeWidth="6"
-                      fill="transparent"
-                      strokeDasharray={`${2 * Math.PI * 40}`}
-                      strokeDashoffset={`${2 * Math.PI * 40 * (1 - roundTimer / 30)}`}
-                      className="transition-all duration-500"
-                    />
-                  </svg>
-                  <div className={`absolute text-2xl font-bold ${
-                    roundTimer <= 5 ? 'text-red-500' : roundTimer <= 10 ? 'text-yellow-600' : 'text-blue-600'
-                  }`}>
-                    {roundTimer}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Music className="w-5 h-5 animate-pulse" />
-                  노래 재생 중
                 </div>
               </div>
-            </div>
 
-            <div className="mt-4">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm text-gray-600">전체 라운드 진행률</span>
-                <span className="text-sm font-bold text-gray-800">
-                  {gameSession?.maxRound
-                    ? (gameSession.currentRound / gameSession.maxRound) * 100
-                    : 0}
-                </span>
+              <div className="mt-4">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm text-gray-600">
+                    전체 라운드 진행률
+                  </span>
+                  <span className="text-sm font-bold text-gray-800">
+                    {gameSession?.maxRound
+                      ? (gameSession.currentRound / gameSession.maxRound) * 100
+                      : 0}
+                  </span>
+                </div>
+                <Progress
+                  value={
+                    gameSession?.maxRound
+                      ? (gameSession.currentRound / gameSession.maxRound) * 100
+                      : 0
+                  }
+                />
               </div>
-              <Progress
-                value={
-                  gameSession?.maxRound
-                    ? (gameSession.currentRound / gameSession.maxRound) * 100
-                    : 0
-                }
-              />
-            </div>
-          </CardHeader>
+            </CardHeader>
           </Card>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="bg-white/90 backdrop-blur-sm">
               <CardHeader>
@@ -1100,13 +1167,13 @@ const RandomSongGame = ({
                   <CardTitle className="text-pink-700">게임 채팅</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col flex-1">
-                  <ChatBox 
+                  <ChatBox
                     ref={chatBoxRef}
-                    user={user} 
-                    messages={chatMessages} 
-                    onSend={handleSendMessage} 
-                    autoScrollToBottom={true} 
-                    chatType="room" 
+                    user={user}
+                    messages={chatMessages}
+                    onSend={handleSendMessage}
+                    autoScrollToBottom={true}
+                    chatType="room"
                   />
                 </CardContent>
               </Card>
@@ -1132,35 +1199,35 @@ const RandomSongGame = ({
         </div>
         {showAnswerModal && answerModalData && (
           <Dialog open={showAnswerModal} onOpenChange={setShowAnswerModal}>
-          <DialogContent className="sm:max-w-[425px] text-center">
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.4 }}
-              className="flex flex-col items-center"
-            >
-              <div className="text-4xl font-bold text-green-600 mb-2">
-                🎉 정답입니다!
-              </div>
-              {winner && (
-                <div className="flex flex-col items-center gap-2">
-                  <Avatar className="w-20 h-20">
-                    <AvatarImage src={winner.avatar} />
-                    <AvatarFallback>{winner.nickname[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="text-xl font-semibold text-purple-800">
-                    {winner.nickname} 님이 정답을 맞췄어요!
-                  </div>
-                  <div className="flex flex-col items-center gap-2 relative">
-                    <motion.div
-                      key="score-change"
-                      initial={{ opacity: 1, y: 0, scale: 1 }}
-                      animate={{ opacity: 0, y: -40, scale: 1.3 }}
-                      transition={{ duration: 2.0, ease: "easeOut" }}
-                      className="absolute -top-8 ml-[150px] text-xl font-bold text-yellow-400 drop-shadow-md z-10"
-                    >
-                      +{answerModalData?.scoreGain ?? 0}점!
-                    </motion.div>
+            <DialogContent className="sm:max-w-[425px] text-center">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.4 }}
+                className="flex flex-col items-center"
+              >
+                <div className="text-4xl font-bold text-green-600 mb-2">
+                  🎉 정답입니다!
+                </div>
+                {winner && (
+                  <div className="flex flex-col items-center gap-2">
+                    <Avatar className="w-20 h-20">
+                      <AvatarImage src={winner.avatar} />
+                      <AvatarFallback>{winner.nickname[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="text-xl font-semibold text-purple-800">
+                      {winner.nickname} 님이 정답을 맞췄어요!
+                    </div>
+                    <div className="flex flex-col items-center gap-2 relative">
+                      <motion.div
+                        key="score-change"
+                        initial={{ opacity: 1, y: 0, scale: 1 }}
+                        animate={{ opacity: 0, y: -40, scale: 1.3 }}
+                        transition={{ duration: 2.0, ease: "easeOut" }}
+                        className="absolute -top-8 ml-[150px] text-xl font-bold text-yellow-400 drop-shadow-md z-10"
+                      >
+                        +{answerModalData?.scoreGain ?? 0}점!
+                      </motion.div>
 
                       <div className="text-2xl font-bold text-blue-700">
                         현재 점수:{" "}
