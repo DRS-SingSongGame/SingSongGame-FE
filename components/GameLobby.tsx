@@ -455,7 +455,7 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
               />
                 <ScrollArea className="h-full w-full max-w-full flex-1 min-h-0 z-10">
                   <div className="px-2 lg:px-6 py-2 max-h-[400px] lg:max-h-[600px] overflow-y-auto">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4 place-items-center max-w-7xl mx-auto">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 place-items-center max-w-5xl mx-auto">
                       {filteredRooms.map((room) => (
                         <Card
                           key={room.roomId}
