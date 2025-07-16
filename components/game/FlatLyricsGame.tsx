@@ -90,6 +90,9 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
   const [particles, setParticles] = useState<Particle[]>([]);
   const [robotMessages, setRobotMessages] = useState<string[]>([]);
   const [showRobot, setShowRobot] = useState(false);
+  const [showHintAnimation, setShowHintAnimation] = useState<string | null>(null);
+  // 힌트 고정 상태
+  const [fixedHint, setFixedHint] = useState<string | null>(null);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -188,6 +191,24 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
       setShowRobot(false);
     }, 4000);
   };
+
+  // 힌트 애니메이션 타이밍 제어 (라운드 시작 시)
+  useEffect(() => {
+    if (gameState.currentSong !== null && gameState.isReading) {
+      if (gameState.currentSong.hint) {
+        setTimeout(() => {
+          setShowHintAnimation(`💡 힌트: ${gameState.currentSong!.hint}`);
+          setTimeout(() => {
+            setShowHintAnimation(null);
+            setFixedHint(`💡 힌트: ${gameState.currentSong!.hint}`);
+          }, 2000); // 2초 후 사라짐 + 고정
+        }, 10000); // 라운드 시작 10초 후 힌트 표시
+      }
+    } else {
+      setShowHintAnimation(null);
+      setFixedHint(null);
+    }
+  }, [gameState.currentSong?.id, gameState.isReading]);
 
   useEffect(() => {
     if (!room || !room.roomId) return;
@@ -443,6 +464,11 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
 
   return (
     <div className="w-full min-h-screen p-4 relative overflow-hidden">
+      {/* 라운드 정보 오른쪽 위 (컴포넌트 내부) */}
+      <div className="absolute top-8 right-6 z-40 bg-white/80 rounded-xl px-5 py-2 shadow-lg text-lg font-bold text-blue-700 border border-blue-200">
+        Round {gameState.currentRound} / {gameState.maxRound}
+      </div>
+
       {/* 파티클 효과 */}
       <AnimatePresence>
         {gameState.showParticles && particles.map((particle) => (
@@ -484,7 +510,57 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
       {/* 로봇 캐릭터 */}
       {/* 로봇 캐릭터 */}
 
-
+      {/* 힌트 중앙 팝업 → 로봇 오른쪽으로 이동 후 고정 */}
+      <AnimatePresence>
+        {showHintAnimation && (
+          <motion.div
+            key="hint-popup"
+            initial={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              x: "-50%",
+              y: "-50%",
+              scale: 1.5,
+              opacity: 1,
+              zIndex: 100
+            }}
+            animate={{
+              top: 120, // 고정 위치와 동일하게
+              left: "calc(50% + 350px)",
+              x: "-50%",
+              y: "0%",
+              scale: 1,
+              opacity: 0.95
+            }}
+            exit={{ opacity: 0 }}
+            transition={{
+              duration: 1.5,
+              ease: "easeInOut",
+              times: [0, 0.7, 1],
+              opacity: { duration: 2, times: [0, 0.7, 1] }
+            }}
+            className="text-2xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 rounded-2xl shadow-2xl whitespace-nowrap pointer-events-none border-4 border-yellow-200"
+          >
+            {showHintAnimation}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* 고정 힌트 박스 (로봇 오른쪽) */}
+      {fixedHint && !showHintAnimation && (
+        <div
+          className="fixed z-30"
+          style={{
+            top: 120,
+            left: 'calc(50% + 350px)',
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <div className="text-2xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 rounded-2xl shadow-2xl whitespace-nowrap border-4 border-yellow-200">
+            {fixedHint}
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto relative z-10">
         <GameHeader
@@ -493,7 +569,7 @@ const FlatLyricsGame = ({ user, room, players, onBack, onGameEnd }: FlatLyricsGa
           timeLeft={gameState.timeLeft}
           isReading={gameState.isReading}
           onBack={onBack}
-          hintText={gameState.currentSong?.hint || "없음"}
+          // hintText prop 완전히 제거
         />
 
 

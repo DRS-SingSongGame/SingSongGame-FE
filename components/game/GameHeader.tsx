@@ -12,7 +12,7 @@ interface GameHeaderProps {
   timeLeft: number;
   isReading: boolean;
   onBack: () => void;
-  hintText: string | null;
+  hintText?: string | null;
 }
 
 const GameHeader = ({
@@ -21,26 +21,9 @@ const GameHeader = ({
   timeLeft,
   isReading,
   onBack,
-  hintText
+  // hintText 제거
 }: GameHeaderProps) => {
-  const [showHint, setShowHint] = useState(false);
-
-  useEffect(() => {
-    if (isReading && hintText) {
-      // 10초 후에 힌트 표시
-      const hintTimer = setTimeout(() => {
-        setShowHint(true);
-      }, 10000); // 10초
-  
-      return () => clearTimeout(hintTimer);
-    }
-  }, [isReading, hintText]);
-
-  useEffect(() => {
-    if (!isReading) {
-      setShowHint(false); // 게임이 끝나면 힌트 숨기기
-    }
-  }, [isReading]);
+  // hintText 관련 UI(힌트 Badge 등)와 showHint 상태, 관련 useEffect, 렌더링 부분을 모두 제거한다. 라운드 Badge도 제거한다.
 
   return (
     <div className="mb-6">
@@ -117,30 +100,7 @@ const GameHeader = ({
                 </div>
               </motion.div>
             </motion.div>
-            <div className="flex justify-between items-start w-full mt-1">
-              <div className="flex flex-col gap-1">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring" }}
-                >
-                  <Badge variant="outline" className="text-sm px-3 py-1 bg-gray-100 border-gray-300 rounded-xl">
-                    라운드 {currentRound}/{maxRound}
-                  </Badge>
-                </motion.div>
-
-                {hintText && showHint && (
-                  <motion.div 
-                    initial={{ opacity: 0, x: -20, scale: 0.9 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    transition={{ duration: 0.5, type: "spring" }}
-                  >
-                    <Badge variant="secondary" className="text-sm px-3 py-1 bg-yellow-100 border-yellow-300 rounded-xl">
-                      💡 힌트: {hintText}
-                    </Badge>
-                  </motion.div>
-                )}
-              </div>
+            <div className="flex justify-end w-full mt-1">
               <motion.div 
                 className="text-right"
                 initial={{ opacity: 0, scale: 0.8 }}
@@ -154,7 +114,6 @@ const GameHeader = ({
                   value={(timeLeft / 60) * 100} 
                   className="w-32 mt-2 h-2 bg-gray-200" 
                 />
-
               </motion.div>
             </div>
           </div>
