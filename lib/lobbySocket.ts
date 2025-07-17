@@ -4,6 +4,7 @@ import SockJS from 'sockjs-client';
 
 let client: Client | null = null;
 let subscription: StompSubscription | null = null;
+let roomDeleteSubscription: StompSubscription | null = null;
 
 let latestOnlineUsers: any[] = [];
 
@@ -23,7 +24,8 @@ export function connectLobbySocket(
   userId: string,
   nickname: string,
   onMessage: (msg: any) => void,
-  onUserListUpdate: (users: any[]) => void
+  onUserListUpdate: (users: any[]) => void,
+  onRoomDeleted?: (roomId: number) => void
 ) {
   if (client && client.connected && subscription) {
     console.warn('[lobbySocket] Already connected and subscribed.');
@@ -80,6 +82,19 @@ export function connectLobbySocket(
               }),
               tier: body.tier 
             });
+          });
+        }
+
+        // 방 삭제 알림 구독 추가
+        if (!roomDeleteSubscription && onRoomDeleted) {
+          roomDeleteSubscription = client!.subscribe('/topic/rooms/deleted', (message: IMessage) => {
+            try {
+              const deletedRoomId = JSON.parse(message.body);
+              console.log('[lobbySocket] Room deleted:', deletedRoomId);
+              onRoomDeleted(deletedRoomId);
+            } catch (err) {
+              console.error('[lobbySocket] Room deletion message parse error', err);
+            }
           });
         }
 

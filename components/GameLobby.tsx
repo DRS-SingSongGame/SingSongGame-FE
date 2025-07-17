@@ -70,6 +70,8 @@ const getGameModeLabel = (mode: string) => {
       return "랜덤 노래 맞추기";
     case "PLAIN_SONG":
       return "평어 노래 맞추기";
+    case "QUICK_MATCH":
+      return "빠른 대전"
     default:
       return "알 수 없음";
   }
@@ -137,7 +139,8 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
 
   const [myQuickMatchResult, setMyQuickMatchResult] = useState<QuickMatchResult | null>(null);
   const [tier, setTier] = useState<string>("");
-
+  const { rooms, refetch } = useRooms();
+  
   useEffect(() => {
     connectLobbySocket(
       user.id,
@@ -159,13 +162,21 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
       },
       (users: any[]) => {
         setOnlineUsers(users);
+      },
+      (deletedRoomId: number) => {
+        console.log('🗑️ 방이 삭제되었습니다:', deletedRoomId);
+        // 지연을 두고 한 번만 refetch
+        setTimeout(() => {
+          refetch();
+        }, 100);
+        
       }
     );
 
     return () => {
       disconnectLobbySocket(user.id);
     };
-  }, [user.id, user.nickname]);
+  }, [user.id, user.nickname, refetch]);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -177,7 +188,7 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
     sendLobbyMessage(user.id, user.nickname, message);
   };
 
-  const { rooms, refetch } = useRooms();
+  
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -507,8 +518,13 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
                             <div className={`text-xs lg:text-sm ${room.gameStatus === "IN_PROGRESS" ? "text-black" : "text-gray-700"}`}>
                               {getGameModeLabel(room.roomType)}
                             </div>
-                            <div className={`text-xs ${room.gameStatus === "IN_PROGRESS" ? "text-black" : "text-gray-500"}`}>
-                              방장: {room.hostName}
+                            <div className="flex justify-between items-center">
+                              <div className={`text-xs ${room.gameStatus === "IN_PROGRESS" ? "text-black" : "text-gray-500"}`}>
+                                방장: {room.hostName}
+                              </div>
+                              <div className={`text-xs ${room.gameStatus === "IN_PROGRESS" ? "text-black" : "text-gray-500"}`}>
+                                {room.maxRound || 3}라운드
+                              </div>
                             </div>
                           </div>
                         </Card>
