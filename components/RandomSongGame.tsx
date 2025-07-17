@@ -36,6 +36,9 @@ import {
   disconnectGameSocket,
   sendGameMessage,
   sendKeywordConfirm,
+  isGameSocketConnected,
+  reconnectGameSocket,
+  stopReconnecting
 } from "@/lib/gameSocket";
 import ChatBox, { ChatMessage, ChatBoxRef } from "./chat/ChatBox";
 import axios from "axios";
@@ -131,6 +134,11 @@ const RandomSongGame = ({
 
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [leaveModalMessage, setLeaveModalMessage] = useState('');
+  const [socketConnected, setSocketConnected] = useState(true);
+  const [showConnectionModal, setShowConnectionModal] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [showLeaveConfirmModal, setShowLeaveConfirmModal] = useState(false);
+  const isBlockingRef = useRef(true);
 
   useEffect(() => {
     if (phase === "playing") {
@@ -205,7 +213,7 @@ const RandomSongGame = ({
     };
   }, [showNoAnswerModal]);
 
-  // 정답자가 없는 경우 프로그레스바 애니메이션 //
+  
 
   const handleCloseNoAnswerModal = () => {
     setShowNoAnswerModal(false);
@@ -235,192 +243,243 @@ const RandomSongGame = ({
     }
   }, [showAnswerModal, winnerScore, winner]);
 
-  useEffect(() => {
-    setLoading(true);
-    connectGameSocket(room.roomId, {
-      onConnect: (frame) => {
-        console.log("WebSocket Connected:", frame);
-        setLoading(false);
-        // Initial game state fetch if needed, or rely purely on WebSocket messages
-        // For now, we assume the first state will come via WebSocket
-      },
-      onError: (error) => {
-        console.error("WebSocket Error:", error);
-        setLoading(false);
-        // Handle error, e.g., show error message to user
-      },
-      onMessage: (msg) => {
-        // 게임 관련 메시지 처리 (예: 플레이어 목록 업데이트, 게임 상태 변경 등)
-        console.log("Game WebSocket Message:", msg);
-        // 플레이어 목록 업데이트
-        if (msg.type === "PLAYER_UPDATE") {
-          // 플레이어 정보 업데이트 로직이 필요하다면 여기에 추가
-          onPlayersUpdate?.(msg.players); // ✅ 부모에게 알림
-          console.log("Player update received:", msg.players);
+  const createGameHandlers = () => ({
+    onConnect: (frame: any) => {
+      console.log("WebSocket Connected:", frame);
+      setSocketConnected(true);
+      setLoading(false);
+    },
+    onDisconnect: () => {
+      console.log("🚨 WebSocket 연결 끊김 감지!");
+      setSocketConnected(false);
+
+      
+      console.log("📡 즉시 연결 끊김 모달 표시!");
+      setShowConnectionModal(true);
+      
+    },
+    onError: (error: any) => {
+      console.error("WebSocket Error:", error);
+      setSocketConnected(false);
+      setLoading(false);
+    },
+    onMessage: (msg: any) => {
+      console.log("Game WebSocket Message:", msg);
+      if (msg.type === "PLAYER_UPDATE") {
+        onPlayersUpdate?.(msg.players);
+        console.log("Player update received:", msg.players);
+      }
+      else if (
+        msg.messageType === "TALK" ||
+        msg.messageType === "ENTER" ||
+        msg.messageType === "LEAVE"
+      ) {
+        setChatMessages((prev) => [...prev, msg]);
+      }
+    },
+    onGameStartCountdown: (response: any) => {
+      console.log("Game Start Countdown:", response);
+      setPhase("countdown");
+      setCountdown(response.countdownSeconds);
+      let currentCountdown = response.countdownSeconds;
+      const interval = setInterval(() => {
+        currentCountdown--;
+        if (currentCountdown >= 0) {
+          setCountdown(currentCountdown);
+        } else {
+          clearInterval(interval);
         }
-        // 채팅 메시지 (게임 내 채팅)
-        else if (
-          msg.messageType === "TALK" ||
-          msg.messageType === "ENTER" ||
-          msg.messageType === "LEAVE"
-        ) {
-          setChatMessages((prev) => [...prev, msg]);
-        }
-      },
+      }, 1000);
+    },
+    onRoundStart: (response: any) => {
+      console.log("Round Start:", response);
 
-      onGameStartCountdown: (response) => {
-        console.log("Game Start Countdown:", response);
-        setPhase("countdown");
-        setCountdown(response.countdownSeconds);
-        // Start a local countdown timer for display
-        let currentCountdown = response.countdownSeconds;
-        const interval = setInterval(() => {
-          currentCountdown--;
-          if (currentCountdown >= 0) {
-            setCountdown(currentCountdown);
-          } else {
-            clearInterval(interval);
-          }
-        }, 1000);
-        // return () => clearInterval(interval); // Cleanup on unmount - this return is for the inner interval, not the useEffect
-      },
-      onRoundStart: (response) => {
-        console.log("Round Start:", response);
+      setShowRoundNotification(true);
+      setTimeout(() => setShowRoundNotification(false), 2000);
 
-        setShowRoundNotification(true);
-        setTimeout(() => setShowRoundNotification(false), 2000);
+      currentRoundRef.current = response.round;
+      maxRoundRef.current = response.maxRound;
 
-        currentRoundRef.current = response.round;
-        maxRoundRef.current = response.maxRound;
+      setPhase("playing");
+      setGameSession((prev: any) => ({
+        ...prev,
+        currentRound: response.round,
+        currentSong: {
+          audioUrl: response.audioUrl,
+          artist: response.artist,
+          hint: response.hint,
+          title: response.title,
+        },
+        serverStartTime: response.serverStartTime,
+        roundDuration: 30,
+        playerScores: response.playerScores || prev?.playerScores,
+        maxRound: response.maxRound || prev?.maxRound,
+      }));
 
-        setPhase("playing");
-        setGameSession((prev: any) => ({
-          ...prev,
-          currentRound: response.round,
-          currentSong: {
-            audioUrl: response.audioUrl,
-            artist: response.artist,
-            hint: response.hint, // Use hint from backend
-            title: response.title,
-          },
-          serverStartTime: response.serverStartTime, // Set client-side start time for timer
-          roundDuration: 30, // Assuming 30 seconds as per backend InGameService
-          playerScores: response.playerScores || prev?.playerScores,
-          maxRound: response.maxRound || prev?.maxRound,
-        }));
-        // Start round timer
-        if (roundTimerIntervalRef.current) {
-          clearInterval(roundTimerIntervalRef.current);
-        }
-        let currentRoundTime = 30; // Assuming 30 seconds
-        setRoundTimer(currentRoundTime);
-        roundTimerIntervalRef.current = setInterval(() => {
-          currentRoundTime--;
-          if (currentRoundTime >= 0) {
-            setRoundTimer(currentRoundTime);
-          } else {
-            clearInterval(roundTimerIntervalRef.current!);
-          }
-        }, 1000);
-        setTimeout(() => {
-          chatBoxRef.current?.focusInput();
-        }, 200);
-      },
-      onAnswerCorrect: (response) => {
-        console.log("Answer Correct:", response);
-        // setPhase('answer_revealed'); // New phase for revealing answer
-        // Update scores and winner info
-        console.log("🎵 response.correctTitle:", response.correctTitle);
-
-        setGameSession((prev: any) => ({
-          ...prev,
-          winner: response.winnerNickname,
-          playerScores: response.updatedScores || prev?.playerScores,
-          correctTitle: response.correctTitle,
-        }));
-
-        // Show answer modal
-        setAnswerModalData({
-          winnerNickname: response.winnerNickname,
-          correctAnswer: response.correctAnswer,
-          correctTitle: response.correctTitle,
-          scoreGain: response.scoreGain ?? 0,
-        });
-        setShowAnswerModal(true);
-
-        if (response.updatedScores) {
-          setGameSession((prev) => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              playerScores: {
-                ...prev.playerScores,
-                ...response.updatedScores, // 업데이트된 점수 반영
-              },
-            };
-          });
-        }
-
-        // Hide modal after 5 seconds (matching backend's ANSWER_REVEAL_DURATION_SECONDS)
-        setTimeout(() => {
-          setShowAnswerModal(false);
-          setAnswerModalData(null);
-        }, 5000);
-      },
-
-      onRoundFailed: (data) => {
-        // 예: { title: "아이유 - 너랑 나" }
-        setNoAnswerModalContent({
-          title: "정답자가 없습니다 😢",
-          subtitle: `제목: ${data.title}`,
-        });
-        setShowNoAnswerModal(true);
-
-        setTimeout(() => {
-          setShowNoAnswerModal(false);
-        }, 3000);
-      },
-
-      onGameEnd: (response) => {
-        if (roundTimerIntervalRef.current) {
-          clearInterval(roundTimerIntervalRef.current);
-        }
-
-        if (response.finalResults) {
-          const finalScores: { [key: string]: number } = {}; // 타입 명시
-          response.finalResults.forEach((result: any) => {
-            // result 타입 명시
-            finalScores[result.userId] = result.score;
-          });
-
-          setGameSession((prev) => {
-            if (!prev) return prev; // null 체크 추가
-            return {
-              ...prev, // 기존 모든 속성 유지
-              playerScores: finalScores, // playerScores만 업데이트
-            };
-          });
-        }
-        // if (onGameEnd && response.finalResults) {
-        //   onGameEnd(response.finalResults);
-        // }
-
-        setPhase("final");
-        setShowGameEndModal(true);
-      },
-    });
-
-    return () => {
-      disconnectGameSocket();
       if (roundTimerIntervalRef.current) {
         clearInterval(roundTimerIntervalRef.current);
       }
-      if (nextRoundIntervalRef.current) {
-        // Cleanup for next round interval
-        clearInterval(nextRoundIntervalRef.current);
+      let currentRoundTime = 30;
+      setRoundTimer(currentRoundTime);
+      roundTimerIntervalRef.current = setInterval(() => {
+        currentRoundTime--;
+        if (currentRoundTime >= 0) {
+          setRoundTimer(currentRoundTime);
+        } else {
+          clearInterval(roundTimerIntervalRef.current!);
+        }
+      }, 1000);
+      setTimeout(() => {
+        chatBoxRef.current?.focusInput();
+      }, 200);
+    },
+    onAnswerCorrect: (response: any) => {
+      console.log("Answer Correct:", response);
+      console.log("🎵 response.correctTitle:", response.correctTitle);
+
+      setGameSession((prev: any) => ({
+        ...prev,
+        winner: response.winnerNickname,
+        playerScores: response.updatedScores || prev?.playerScores,
+        correctTitle: response.correctTitle,
+      }));
+
+      setAnswerModalData({
+        winnerNickname: response.winnerNickname,
+        correctAnswer: response.correctAnswer,
+        correctTitle: response.correctTitle,
+        scoreGain: response.scoreGain ?? 0,
+      });
+      setShowAnswerModal(true);
+
+      if (response.updatedScores) {
+        setGameSession((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            playerScores: {
+              ...prev.playerScores,
+              ...response.updatedScores,
+            },
+          };
+        });
+      }
+
+      setTimeout(() => {
+        setShowAnswerModal(false);
+        setAnswerModalData(null);
+      }, 5000);
+    },
+    onRoundFailed: (data: any) => {
+      setNoAnswerModalContent({
+        title: "정답자가 없습니다 😢",
+        subtitle: `제목: ${data.title}`,
+      });
+      setShowNoAnswerModal(true);
+
+      setTimeout(() => {
+        setShowNoAnswerModal(false);
+      }, 3000);
+    },
+    onGameEnd: (response: any) => {
+      if (roundTimerIntervalRef.current) {
+        clearInterval(roundTimerIntervalRef.current);
+      }
+
+      if (response.finalResults) {
+        const finalScores: { [key: string]: number } = {};
+        response.finalResults.forEach((result: any) => {
+          finalScores[result.userId] = result.score;
+        });
+
+        setGameSession((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            playerScores: finalScores,
+          };
+        });
+      }
+
+      setPhase("final");
+      setShowGameEndModal(true);
+    }
+  });
+
+    useEffect(() => {
+      setLoading(true);
+      const handlers = createGameHandlers();
+      connectGameSocket(room.roomId, handlers);
+
+      return () => {
+        stopReconnecting();
+        disconnectGameSocket();
+        if (roundTimerIntervalRef.current) {
+          clearInterval(roundTimerIntervalRef.current);
+        }
+        if (nextRoundIntervalRef.current) {
+          clearInterval(nextRoundIntervalRef.current);
+        }
+      };
+    }, [room.roomId]);
+
+  useEffect(() => {
+
+    const checkConnection = setInterval(() => {
+      const isConnected = isGameSocketConnected();
+      
+      if (!isConnected && socketConnected) { // ✅ 조건 추가
+        console.log("🔄 연결 끊김 감지됨!");
+        console.log("🎮 현재 phase:", phase);
+        setSocketConnected(false);
+        
+        if (phase === 'playing' || phase === 'countdown') {
+          console.log("🎮 게임 중 연결 끊김 - 자동 재연결 시작");
+          setShowConnectionModal(true); 
+        }
+      } else if (isConnected && !socketConnected) {
+        console.log("✅ 연결 복구됨!");
+        setSocketConnected(true);
+        setShowConnectionModal(false); // ✅ 모달 숨김
+      }
+    }, 2000);
+  
+    return () => clearInterval(checkConnection);
+  }, [socketConnected, phase, , showConnectionModal]);
+
+  const handleManualReconnect = () => {
+    console.log("🔄 수동 재연결 시도");
+    setIsReconnecting(true);
+    
+    const handlers = {
+      ...createGameHandlers(),
+      onConnect: (frame: any) => {
+        console.log("✅ 재연결 성공!");
+        setSocketConnected(true);
+        setIsReconnecting(false);
+        setShowConnectionModal(false); // ✅ 모달 닫기
+        setLoading(false);
+        
+        // 게임 상태 복구 로직도 여기에 추가할 수 있어요
+      },
+      onError: (error: any) => {
+        console.error("❌ 재연결 실패:", error);
+        setIsReconnecting(false);
+        // 모달은 유지
       }
     };
-  }, [room.roomId]); // Add onGameEnd to dependency array
+    
+    connectGameSocket(room.roomId, handlers);
+  };
+
+  // 컴포넌트 언마운트 시 재연결 중단
+  useEffect(() => {
+    return () => {
+      stopReconnecting();
+      disconnectGameSocket();
+    };
+  }, []);
+  
 
   // Effect to handle audio playback when phase changes to 'playing' or audioUrl changes
   useEffect(() => {
@@ -487,6 +546,80 @@ const RandomSongGame = ({
     window.location.href = "/lobby";
   };
 
+  
+  useEffect(() => {
+    if (phase === 'playing' || phase === 'countdown') {
+      isBlockingRef.current = true;
+      
+      const handlePopState = (e: PopStateEvent) => {
+        console.log("🔙 뒤로가기 감지, 차단 상태:", isBlockingRef.current);
+        
+        if (!isBlockingRef.current) {
+          console.log("🚫 차단 해제됨, 통과");
+          return;
+        }
+        
+        console.log("🛡️ 뒤로가기 차단, 모달 표시");
+        
+        setTimeout(() => {
+          window.history.pushState(null, '', window.location.href);
+        }, 0);
+        
+        setShowLeaveConfirmModal(true);
+      };
+  
+      // 2. 새로고침/브라우저 닫기 처리 (새로 추가)
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        if (!isBlockingRef.current) return;
+        
+        e.preventDefault();
+        e.returnValue = '게임이 진행 중입니다. 정말로 나가시겠습니까?';
+        return '게임이 진행 중입니다. 정말로 나가시겠습니까?';
+      };
+  
+      // 초기 히스토리 상태 생성
+      window.history.pushState(null, '', window.location.href);
+      
+      window.addEventListener('popstate', handlePopState);
+      window.addEventListener('beforeunload', handleBeforeUnload);
+  
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        isBlockingRef.current = false;
+      };
+    } else {
+      isBlockingRef.current = false;
+    }
+  }, [phase]);
+  
+  // 모달에서 실제 나가기 버튼
+  const handleConfirmLeave = () => {
+    console.log("🚪 실제 나가기 실행");
+    isBlockingRef.current = false; // 차단 해제
+    setShowLeaveConfirmModal(false);
+    
+    // 차단 해제 후 네비게이션
+    setTimeout(() => {
+      disconnectGameSocket();
+      router.push('/lobby');
+    }, 100);
+  };
+  
+  // 모달에서 계속하기 버튼
+  const handleStayInGame = () => {
+    console.log("🎮 게임 계속하기");
+    setShowLeaveConfirmModal(false);
+    // 차단 상태는 유지
+    
+    // 히스토리 다시 생성 (안전장치)
+    setTimeout(() => {
+      if (isBlockingRef.current) {
+        window.history.pushState(null, '', window.location.href);
+      }
+    }, 100);
+  };
+
   const handleRestart = () => {
     setPhase("waiting");
     setGameSession(null);
@@ -496,19 +629,6 @@ const RandomSongGame = ({
     setGameEndResults([]);
     setShowGameEndModal(false);
   };
-
-  // 대기실에서만 2초마다 플레이어 목록 새로고침
-  // useEffect(() => {
-  //   if (phase !== "waiting") return;
-  //   const fetchPlayers = async () => {
-  //     try {
-  //       const res = await api.get(`/api/room/${room.roomId}`);
-  //       setPlayersState((res.data as any).data.players);
-  //     } catch (e) {}
-  //   };
-  //   const interval = setInterval(fetchPlayers, 2000);
-  //   return () => clearInterval(interval);
-  // }, [phase, room.roomId]);
 
   // 4. 정답 제출
   const handleSendMessage = async (message: string) => {
@@ -794,6 +914,86 @@ const RandomSongGame = ({
     )
   );
 
+  // 연결 끊김 모달을 별도 함수로 분리
+const renderConnectionModal = () => (
+  showConnectionModal && (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+        <div className="text-center">
+          <div className="text-4xl mb-4">📡</div>
+          <h3 className="text-xl font-bold text-gray-900 mb-3">
+            서버와의 연결이 끊어졌습니다
+          </h3>
+          <p className="text-gray-600 mb-6 leading-relaxed">
+            네트워크 문제로 인해 서버와의 연결이 끊어졌습니다.<br/>
+            다시 연결하려면 아래 버튼을 클릭하세요.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                setShowConnectionModal(false);
+                router.push('/lobby');
+              }}
+              className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+            >
+              로비로 나가기
+            </button>
+            <button
+              onClick={handleManualReconnect}
+              disabled={isReconnecting}
+              className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors ${
+                isReconnecting 
+                  ? 'bg-gray-400 text-white cursor-not-allowed' 
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              }`}
+            >
+              {isReconnecting ? '재연결 중...' : '🔄 재연결'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+);
+
+    const renderLeaveConfirmModal = () => (
+      showLeaveConfirmModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <div className="text-center">
+              <div className="text-4xl mb-4">⚠️</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">
+                게임을 나가시겠습니까?
+              </h3>
+              <p className="text-gray-600 mb-6 leading-relaxed">
+                게임이 진행 중입니다.<br/>
+                나가시면 게임에서 제외되며 점수가 저장되지 않습니다.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleStayInGame} // ✅ 수정
+                  className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  계속 게임하기
+                </button>
+                <button
+                  onClick={handleConfirmLeave} // ✅ 수정
+                  className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+                >
+                  나가기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    );
+
+  const forceDisconnect = () => {
+    disconnectGameSocket();
+    console.log("🧪 테스트: 강제로 연결 끊기");
+  };
+
   if (loading) return <div>로딩 중...</div>;
 
   // phase별 화면
@@ -1026,6 +1226,8 @@ const RandomSongGame = ({
           </div>
         </Card>
         {renderLeaveModal()}
+        {renderConnectionModal()}
+        {renderLeaveConfirmModal()}
       </div>
     );
   }
@@ -1252,6 +1454,12 @@ const RandomSongGame = ({
                   }
                 />
               </div>
+              <button 
+                onClick={forceDisconnect}
+                className="fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded z-50 opacity-0"
+              >
+                🧪 연결 끊기 테스트
+              </button>
             </CardHeader>
           </Card>
 
@@ -1486,6 +1694,8 @@ const RandomSongGame = ({
         </Dialog>
       )}
       {renderLeaveModal()}
+      {renderConnectionModal()}
+      {renderLeaveConfirmModal()}
     </div>
   );
 }
