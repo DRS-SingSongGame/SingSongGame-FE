@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Users } from 'lucide-react';
 
 export interface ChatBoxRef {
   focusInput: () => void;
@@ -26,7 +27,7 @@ interface ChatBoxProps {
   messages: ChatMessage[];
   onSend?: (message: string) => void;
   autoScrollToBottom?: boolean;
-  chatType?: "lobby" | "room" | "game";
+  chatType?: "lobby" | "room" | "game" | "simple";
   hideInput?: boolean;
   compact?: boolean;
   className?: string;
@@ -115,6 +116,51 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({
             >
               전송
             </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+
+  if (chatType === "simple") {
+    return (
+      <div className="w-70 h-[750px] bg-white/90 backdrop-blur-sm rounded-lg p-4 flex flex-col">
+        <div className="mb-3">
+        </div>
+        <div className="flex-1 overflow-y-auto mb-3 scrollbar-hide" ref={scrollRef}>
+          {messages.map((msg) => (
+            <div key={msg.id} className="mb-2">
+              <div className="text-base text-gray-800 break-words">
+                <span className="text-sm font-bold text-purple-600 mr-2">
+                  {(msg.type === 'ENTER' || msg.type === 'LEAVE') ? '시스템' : msg.senderName}:
+                </span>
+                <span className="text-base text-gray-700">
+                  {msg.message}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        {!hideInput && (
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={() => setIsComposing(false)}
+              placeholder="메시지를 입력하세요..."
+              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-black-500"
+            />
+            <button
+              onClick={handleSend}
+              className="px-3 py-2 bg-purple-500 text-white text-sm rounded-xl hover:bg-purple-600"
+            >
+              전송
+            </button>
           </div>
         )}
       </div>

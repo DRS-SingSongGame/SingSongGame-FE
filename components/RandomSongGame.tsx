@@ -129,6 +129,9 @@ const RandomSongGame = ({
   const [isKeywordConfirmed, setIsKeywordConfirmed] = useState(false);
   const chatBoxRef = useRef<ChatBoxRef>(null);
 
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [leaveModalMessage, setLeaveModalMessage] = useState('');
+
   useEffect(() => {
     if (phase === "playing") {
       setTimeout(() => {
@@ -398,6 +401,9 @@ const RandomSongGame = ({
             };
           });
         }
+        // if (onGameEnd && response.finalResults) {
+        //   onGameEnd(response.finalResults);
+        // }
 
         setPhase("final");
         setShowGameEndModal(true);
@@ -414,7 +420,7 @@ const RandomSongGame = ({
         clearInterval(nextRoundIntervalRef.current);
       }
     };
-  }, [room.roomId, onGameEnd]); // Add onGameEnd to dependency array
+  }, [room.roomId]); // Add onGameEnd to dependency array
 
   // Effect to handle audio playback when phase changes to 'playing' or audioUrl changes
   useEffect(() => {
@@ -492,17 +498,17 @@ const RandomSongGame = ({
   };
 
   // 대기실에서만 2초마다 플레이어 목록 새로고침
-  useEffect(() => {
-    if (phase !== "waiting") return;
-    const fetchPlayers = async () => {
-      try {
-        const res = await api.get(`/api/room/${room.roomId}`);
-        setPlayersState((res.data as any).data.players);
-      } catch (e) {}
-    };
-    const interval = setInterval(fetchPlayers, 2000);
-    return () => clearInterval(interval);
-  }, [phase, room.roomId]);
+  // useEffect(() => {
+  //   if (phase !== "waiting") return;
+  //   const fetchPlayers = async () => {
+  //     try {
+  //       const res = await api.get(`/api/room/${room.roomId}`);
+  //       setPlayersState((res.data as any).data.players);
+  //     } catch (e) {}
+  //   };
+  //   const interval = setInterval(fetchPlayers, 2000);
+  //   return () => clearInterval(interval);
+  // }, [phase, room.roomId]);
 
   // 4. 정답 제출
   const handleSendMessage = async (message: string) => {
@@ -538,8 +544,29 @@ const RandomSongGame = ({
   };
 
   const handleLeaveRoom = async () => {
+    const gameInProgress = phase === 'playing' || phase === 'countdown';
+    let confirmMessage = '방을 나가시겠습니까?';
+    
+    if (gameInProgress) {
+      confirmMessage = room.roomType === "QUICK_MATCH" 
+        ? '빠른대전을 종료하시겠습니까? 결과가 저장됩니다.'
+        : '게임이 진행 중입니다. 나가시면 게임에서 제외됩니다. 계속하시겠습니까?';
+    }
+    
+    setLeaveModalMessage(confirmMessage);
+    setShowLeaveModal(true);
+  };
+
+  const confirmLeaveRoom = async () => {
     try {
       console.log("🔁 나가기 시도, 현재 room:", room);
+
+      if (roundTimerIntervalRef.current) {
+        clearInterval(roundTimerIntervalRef.current);
+      }
+      if (nextRoundIntervalRef.current) {
+        clearInterval(nextRoundIntervalRef.current);
+      }
 
       if (room.roomType === "QUICK_MATCH") {
         const res = await api.post("/api/quick-match/end", null, {
@@ -558,6 +585,9 @@ const RandomSongGame = ({
         const resultData = (resultRes as any).data;
         localStorage.setItem("quickMatchResult", JSON.stringify(resultData));
         console.log("📦 빠른대전 결과 저장:", resultData);
+
+        disconnectGameSocket();
+        
         setTimeout(() => {
           router.push("/lobby");
         }, 100);
@@ -565,11 +595,18 @@ const RandomSongGame = ({
         console.log("🚪 일반 방 나가기 호출 시작");
 
         await api.delete(`/api/room/${room.roomId}/leave`);
+
+        disconnectGameSocket();
+
         router.push("/lobby");
       }
     } catch (error) {
       console.error("❌ 방 나가기 실패:", error);
+      disconnectGameSocket();
       router.push("/lobby");
+    } finally {
+      // 모달 닫기 (성공하든 실패하든)
+      setShowLeaveModal(false);
     }
   };
 
@@ -890,11 +927,11 @@ const RandomSongGame = ({
   
             {/* 데스크톱 채팅 영역 */}
             {!isQuickMatch && (
-              <div className="hidden lg:flex w-80 h-[817px] bg-white/90 backdrop-blur-sm rounded-lg p-4 flex-col">
+              <div className="hidden lg:flex w-80 h-[817px] bg-white/90 backdrop-blur-sm rounded-lg p-4 rounded-lg flex-col">
                 <div className="mb-3">
                   <h3 className="text-purple-600 text-sm font-semibold flex items-center gap-2">
                     <Users className="w-4 h-4" />
-                    채팅
+                    대기실 채팅
                   </h3>
                 </div>
                 <div className="flex-1">
@@ -903,8 +940,8 @@ const RandomSongGame = ({
                     messages={chatMessages}
                     onSend={handleSendMessage}
                     autoScrollToBottom={true}
-                    chatType="room"
-                    compact={true}
+                    chatType="simple"
+                    compact={false}
                   />
                 </div>
               </div>
@@ -990,7 +1027,7 @@ const RandomSongGame = ({
                 opacity: 1
               }}
               animate={{ 
-                top: "80px",
+                top: "140px",
                 left: "50%",
                 x: "-50%", 
                 y: "0%",
@@ -1015,7 +1052,7 @@ const RandomSongGame = ({
           {/* 뒤로가기 버튼 */}
           <Button
             variant="outline"
-            onClick={onBack}
+            onClick={handleLeaveRoom}
             className="mb-2 lg:mb-4 bg-white/90 backdrop-blur-sm text-sm lg:text-base px-3 lg:px-4 py-1.5 lg:py-2"
           >
             <ArrowLeft className="w-3 h-3 lg:w-4 lg:h-4 mr-1 lg:mr-2" />
@@ -1029,14 +1066,14 @@ const RandomSongGame = ({
               <div className="flex flex-col gap-2 lg:gap-4 lg:flex-row lg:justify-between lg:items-center">
                 
                 {/* 상단 라인: 라운드 정보 + 타이머 */}
-                <div className="flex justify-between items-center lg:flex-col lg:items-start lg:justify-start">
+                <div className="flex justify-between items-center lg:flex-col lg:items-start lg:justify-start lg:w-120 lg:min-w-[150px]">
                   <div>
-                    <CardTitle className="text-base lg:text-2xl font-bold">
+                    <CardTitle className="text-base lg:text-xl font-bold">
                       {gameSession?.currentRound === gameSession?.maxRound ? (
                         <span className="text-red-500">🎉 마지막 라운드!</span>
                       ) : (
                         <span className="text-blue-600">
-                          🎵 Round {gameSession?.currentRound || 1}
+                          Round {gameSession?.currentRound || 1}
                         </span>
                       )}
                     </CardTitle>
@@ -1046,7 +1083,7 @@ const RandomSongGame = ({
                   </div>
                   
                   {/* 타이머 - 모바일에서 작게 */}
-                  <div className="flex flex-col items-center lg:items-end">
+                  <div className="flex flex-col items-center lg:items-start lg:mt-4">
                     <div className="relative flex items-center justify-center">
                       <svg className="w-12 h-12 lg:w-20 lg:h-20 transform -rotate-90" viewBox="0 0 100 100">
                         <circle
@@ -1078,35 +1115,90 @@ const RandomSongGame = ({
                   </div>
                 </div>
   
-                {/* 힌트 영역 - 모바일에서 풀 너비 */}
-                <div className="w-full lg:flex-1 lg:mx-8">
-                  {getCurrentHints().length === 0 ? (
-                    <div className="flex items-center justify-center gap-2 py-2">
-                      <span className="text-gray-600 text-sm">힌트 준비 중</span>
-                      <div className="flex gap-1">
-                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></div>
-                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce delay-100"></div>
-                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce delay-200"></div>
+
+                {/* 힌트 + LP판 영역 - 데스크톱에서 나란히 배치 */}
+                <div className="w-full lg:flex lg:items-center lg:justify-between lg:gap-8">
+                  {/* 힌트 영역 */}
+                  <div className="flex-1">
+                    {getCurrentHints().length === 0 ? (
+                      <div className="flex items-center justify-center gap-2 py-2">
+                        <div className="flex">
+                          {['힌', '트', ' ', '준', '비', ' ', '중'].map((char, index) => (
+                            <span
+                              key={index}
+                              className="text-gray-600 text-lg inline-block animate-bounce"
+                              style={{
+                                animationDelay: `${index * 0.1}s`,
+                                animationDuration: '1s'
+                              }}
+                            >
+                              {char === ' ' ? '\u00A0' : char}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex gap-1 ml-2">
+                          {[0, 0.1, 0.2].map((delay, index) => (
+                            <div
+                              key={index}
+                              className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"
+                              style={{ 
+                                animationDelay: `${delay}s`,
+                                animationDuration: '1s'
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2 flex-wrap py-2">
+                        {getCurrentHints().map((hint, index) => (
+                          <motion.span
+                            key={`${index}-${Math.floor((Date.now() - (gameSession?.serverStartTime || 0)) / 10000)}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: index * 0.1 }}
+                            className="text-sm lg:text-lg font-semibold text-gray-700 bg-white/80 backdrop-blur-sm rounded-lg px-3 lg:px-4 py-2 lg:py-3 border border-gray-200"
+                          >
+                            {hint}
+                          </motion.span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* LP판 애니메이션 - 데스크톱에서만 표시 */}
+                  <div className="hidden lg:flex items-center justify-center lg:w-28">
+                    <div className="relative">
+                      {/* LP판 */}
+                      <div 
+                        className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-800 via-gray-900 to-black shadow-2xl relative overflow-hidden animate-spin"
+                        style={{ 
+                          animationDuration: '3s',
+                          animationTimingFunction: 'linear',
+                          animationIterationCount: 'infinite'
+                        }}
+                      >
+                        {/* LP판 중앙 홀 */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full bg-red-500 shadow-inner"></div>
+                        </div>
+                        {/* LP판 홈 (선들) */}
+                        <div className="absolute inset-2 rounded-full border border-gray-600 opacity-30"></div>
+                        <div className="absolute inset-4 rounded-full border border-gray-600 opacity-20"></div>
+                        <div className="absolute inset-6 rounded-full border border-gray-600 opacity-10"></div>
+                        {/* 회전을 더 잘 보이게 하는 마크 */}
+                        <div className="absolute top-2 left-1/2 w-1 h-4 bg-white opacity-50 transform -translate-x-1/2"></div>
+                      </div>
+                      
+                      {/* 턴테이블 톤암 */}
+                      <div className="absolute -right-2 top-1/2 transform -translate-y-1/2">
+                        <div className="w-8 h-1 bg-gray-400 rounded-full shadow-sm transform rotate-12 origin-left"></div>
+                        <div className="w-2 h-2 bg-gray-600 rounded-full absolute -right-1 top-1/2 transform -translate-y-1/2"></div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-center gap-2 flex-wrap py-2">
-                      {getCurrentHints().map((hint, index) => (
-                        <motion.span
-                          key={`${index}-${Math.floor((Date.now() - (gameSession?.serverStartTime || 0)) / 10000)}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.3, delay: index * 0.1 }}
-                          className="text-xs lg:text-sm font-semibold text-gray-700 bg-white/80 backdrop-blur-sm rounded-lg px-2 lg:px-3 py-1 border border-gray-200"
-                        >
-                          {hint}
-                        </motion.span>
-                      ))}
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
-  
               {/* 진행률 바 - 데스크톱에서만 표시 */}
               <div className="mt-3 hidden lg:block">
                 <div className="flex justify-between items-center mb-1">
@@ -1283,6 +1375,36 @@ const RandomSongGame = ({
           </DialogContent>
         </Dialog>
       )}
+        {/* 나가기 확인 모달 */}
+          {showLeaveModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+                <div className="text-center">
+                  <div className="text-2xl mb-4">🚪</div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-3">
+                    방 나가기
+                  </h3>
+                  <p className="text-gray-600 mb-6 leading-relaxed">
+                    {leaveModalMessage}
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowLeaveModal(false)}
+                      className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                    >
+                      취소
+                    </button>
+                    <button
+                      onClick={confirmLeaveRoom}
+                      className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      나가기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
       {/* 오답 모달 */}
       {showNoAnswerModal && (
@@ -1331,10 +1453,11 @@ const RandomSongGame = ({
   );
 }
 
+
 return (
   <div className="min-h-screen p-2 md:p-4 bg-gradient-to-br from-cyan-400 via-blue-500 via-purple-500 to-pink-500">
     <GameResultModal
-      isOpen={phase === "final"}
+      isOpen={showGameEndModal}
       players={playersWithFinalScores}
       onClose={handleCloseResult}
       onRestart={handleRestart}
