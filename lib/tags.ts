@@ -1,5 +1,5 @@
 export const PREDEFINED_TAGS = [
-    // { id: 0, name: "전체" },
+    { id: 0, name: "전체" },
     { id: 1, name: "10년대" },
     { id: 2, name: "댄스" },
     { id: 3, name: "여자 가수" },
