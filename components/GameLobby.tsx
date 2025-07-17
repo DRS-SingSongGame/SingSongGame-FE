@@ -70,6 +70,8 @@ const getGameModeLabel = (mode: string) => {
       return "랜덤 노래 맞추기";
     case "PLAIN_SONG":
       return "평어 노래 맞추기";
+    case "QUICK_MATCH":
+      return "빠른 대전"
     default:
       return "알 수 없음";
   }
