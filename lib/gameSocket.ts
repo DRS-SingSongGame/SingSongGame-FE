@@ -5,6 +5,7 @@ let stompClient: Client | null = null;
 interface GameSocketCallbacks {
   onConnect: (frame: any) => void;
   onError: (error: any) => void;
+  onDisconnect?: () => void;
   onGameStartCountdown: (response: any) => void;
   onRoundStart: (response: any) => void;
   onAnswerCorrect: (response: any) => void;
@@ -17,15 +18,27 @@ export const connectGameSocket = (
   callbacks: GameSocketCallbacks,
   isAiGame: boolean = false
 ) => {
+  // 기존 연결이 있으면 먼저 정리
+  if (stompClient && stompClient.connected) {
+    console.log("🔄 기존 연결 정리 중...");
+    stompClient.deactivate();
+  }
+
   const socket = new SockJS("/api/ws/chat");
+
   stompClient = new Client({
     webSocketFactory: () => socket as any,
     connectHeaders: {}, // { Authorization: ... }
+  
     onConnect: (frame) => {
       console.log("Connected: " + frame);
       callbacks.onConnect(frame);
+
       const prefix = isAiGame ? "ai-room" : "room";
       // Subscribe to game-related topics
+
+      console.log(`구독 시작 : ${prefix}/${roomId}`);
+
       stompClient?.subscribe(`/topic/${prefix}/${roomId}/game-start`, (response) => {
         callbacks.onGameStartCountdown(JSON.parse(response.body));
       });
@@ -79,10 +92,22 @@ export const connectGameSocket = (
       console.error("STOMP error", error);
       callbacks.onError(error);
     },
-    // 필요시 onDisconnect, onWebSocketClose 등도 추가 가능
+    onDisconnect: (frame) => {
+      console.log("🚨 WebSocket 연결 끊김:", frame);
+      callbacks.onDisconnect?.();
+    },
+    onWebSocketClose: (event) => {
+      console.log("🔌 WebSocket 닫힘:", event);
+      callbacks.onDisconnect?.();
+    },
+    onWebSocketError: (event) => {
+      console.log("❌ WebSocket 에러:", event);
+      callbacks.onDisconnect?.();
+    }
   });
   stompClient.activate();
 };
+
 export const disconnectGameSocket = () => {
   if (stompClient !== null) {
     stompClient.deactivate();
@@ -90,6 +115,68 @@ export const disconnectGameSocket = () => {
     console.log("Disconnected");
   }
 };
+
+// 소켓 재연결 함수 //
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 5;
+let reconnectTimer: NodeJS.Timeout | null = null;
+
+export const reconnectGameSocket = (
+  roomId: string,
+  callbacks: GameSocketCallbacks,
+  isAiGame: boolean = false
+) => {
+  if (reconnectAttempts >= maxReconnectAttempts) {
+    console.error("❌ 최대 재연결 시도 횟수 초과");
+    callbacks.onError?.(new Error("재연결 실패"));
+    return;
+  }
+
+  reconnectAttempts++;
+  const delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 10000); // 지수 백오프
+
+  console.log(`🔄 재연결 시도 ${reconnectAttempts}/${maxReconnectAttempts} (${delay}ms 후)`);
+
+  reconnectTimer = setTimeout(() => {
+    connectGameSocket(roomId, {
+      ...callbacks,
+      onConnect: (frame) => {
+        console.log("✅ 재연결 성공!");
+        reconnectAttempts = 0; // 재연결 성공 시 카운터 리셋
+        callbacks.onConnect(frame);
+      },
+      onDisconnect: () => {
+        console.log("❌ 재연결된 연결이 다시 끊김");
+        callbacks.onDisconnect?.();
+        // 🚨 여기서 무한 재귀 제거! 대신 일정 시간 후 재시도
+        if (reconnectAttempts < maxReconnectAttempts) {
+          setTimeout(() => {
+            reconnectGameSocket(roomId, callbacks, isAiGame);
+          }, 2000);
+        }
+      },
+      onError: (error) => {
+        console.log("❌ 재연결 중 오류:", error);
+        callbacks.onError?.(error);
+        // 재연결 실패 시에도 재시도
+        if (reconnectAttempts < maxReconnectAttempts) {
+          setTimeout(() => {
+            reconnectGameSocket(roomId, callbacks, isAiGame);
+          }, 2000);
+        }
+      }
+    }, isAiGame);
+  }, delay);
+};
+
+export const stopReconnecting = () => {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  reconnectAttempts = 0;
+};
+
 export const isGameSocketConnected = () => {
   return stompClient !== null && stompClient.connected;
 };
