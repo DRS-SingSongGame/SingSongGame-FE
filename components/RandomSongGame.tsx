@@ -762,6 +762,38 @@ const RandomSongGame = ({
     }
   }, [showNoAnswerModal]);
 
+  const renderLeaveModal = () => (
+    showLeaveModal && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+          <div className="text-center">
+            <div className="text-2xl mb-4">🚪</div>
+            <h3 className="text-lg font-bold text-gray-900 mb-3">
+              방 나가기
+            </h3>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              {leaveModalMessage}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLeaveModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={confirmLeaveRoom}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                나가기
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  );
+
   if (loading) return <div>로딩 중...</div>;
 
   // phase별 화면
@@ -974,8 +1006,11 @@ const RandomSongGame = ({
             </div>
           )}
         </div>
+        {renderLeaveModal()}
       </div>
     );
+    
+    
   }
   
   // 2. countdown 단계
@@ -990,6 +1025,7 @@ const RandomSongGame = ({
             게임이 곧 시작됩니다!
           </div>
         </Card>
+        {renderLeaveModal()}
       </div>
     );
   }
@@ -1449,9 +1485,11 @@ const RandomSongGame = ({
           </DialogContent>
         </Dialog>
       )}
+      {renderLeaveModal()}
     </div>
   );
 }
+
 
 
 return (
@@ -1462,9 +1500,10 @@ return (
       onClose={handleCloseResult}
       onRestart={handleRestart}
       gameType="random"
-      onLeaveRoom={handleLeaveRoom}
+      onLeaveRoom={confirmLeaveRoom}
     />
   </div>
+  
   );
 
   return null;
