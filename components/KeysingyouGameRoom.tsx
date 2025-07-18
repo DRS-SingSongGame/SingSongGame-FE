@@ -43,6 +43,7 @@ interface Keyword {
 
 interface ChatMessage {
   message: string;
+  msgType: string;
 }
 
 type Phase =
@@ -522,6 +523,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     socket.current?.emit("room_chat", {
       roomId,
       message: `${nickname}: ${msg.trim()}`,
+      msgType: "chat",
     });
     setChatInput("");
   }
@@ -532,6 +534,24 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     handleLeaveRoom();
     router.push(`/lobby`);
   }
+
+  // 게임 시작 핸들러 추가 (랜덤송과 동일하게 API 호출)
+  const handleStartGame = async () => {
+    try {
+      // room 상태를 play로 바꾸는 API 호출 (키워드 없음)
+      await api.post(`/api/game-session/${room.roomId}/start`, {
+        keywords: [],
+      });
+    } catch (e) {
+      // 실패해도 일단 진행
+      console.error('room 상태 play 전환 API 실패', e);
+    }
+    // 기존 소켓 emit
+    socket.current?.emit("start_game", {
+      roomId,
+      maxRounds: room.maxRound,
+    });
+  };
 
   const renderGamePhase = () => {
     switch (phase) {
@@ -649,12 +669,24 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                         {chatMsgs.length === 0 ? (
                           <div className="text-gray-300 text-base text-center my-auto select-none">&nbsp;</div>
                         ) : (
-                          chatMsgs.map((c, i) => (
-                            <div key={i} className="flex items-center w-full text-base py-0.5">
-                              <span className="font-bold text-black mr-1">{c.message.split(":")[0]}:</span>
-                              <span className="ml-1 whitespace-pre-line break-all flex-1 text-black">{c.message.split(":").slice(1).join(":")}</span>
-                            </div>
-                          ))
+                          chatMsgs.map((c, i) => {
+                            if (c.msgType === 'chat') {
+                              const [who, ...body] = c.message.split(':');
+                              return (
+                                <div key={i} className="flex items-center text-base py-0.5">
+                                  <span className="font-bold mr-1">{who}:</span>
+                                  <span className="whitespace-pre-line break-all">{body.join(':')}</span>
+                                </div>
+                              );
+                            } else {
+                              /* join / leave → 시스템 메시지 */
+                              return (
+                                <div key={i} className="text-center text-sm italic text-gray-500 py-0.5">
+                                  {c.message}
+                                </div>
+                              );
+                            }
+                          })
                         )}
                       </div>
                     </div>
@@ -739,12 +771,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                       {isHost ? (
                         <Button
                           disabled={!users.every((u) => u.ready && u.mic) || users.length < 1}
-                          onClick={() =>
-                            socket.current?.emit("start_game", {
-                              roomId,
-                              maxRounds: room.maxRound,
-                            })
-                          }
+                          onClick={handleStartGame}
                           className="w-full h-[54px] text-xl font-extrabold shadow-2xl border-2 rounded-2xl transition-all duration-150
                             bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 hover:from-blue-800 hover:to-cyan-600 text-white">
                           <Play className="w-5 h-5 mr-2" /> 게임 시작
@@ -1219,16 +1246,33 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
             <div className="flex-1 overflow-y-auto">
               <KeysingyouChatBox
                 user={user}
-                messages={chatMsgs.map((c, i) => ({
-                  id: i,
-                  type: 'TALK',
-                  roomId: room.roomId,
-                  senderId: '',
-                  senderName: c.message.split(":")[0],
-                  message: c.message.split(":").slice(1).join(":"),
-                  timestamp: '',
-                  time: '',
-                }))}
+                messages={chatMsgs.map((c, i) => {
+                  if (c.msgType === "chat") {
+                    const [who, ...body] = c.message.split(":");
+                    return {
+                      id: i,
+                      type: "TALK",
+                      roomId: room.roomId,
+                      senderId: "",
+                      senderName: who ?? "",
+                      message: body.join(":").trim(), // 내용
+                      timestamp: "",
+                      time: "",
+                    };
+                  }
+
+                  // join / leave / 기타 시스템 알림
+                  return {
+                    id: i,
+                    type: "SYSTEM",
+                    roomId: room.roomId,
+                    senderId: "",
+                    senderName: "",            // 필요 없으므로 빈값
+                    message: c.message,        // 전체 문장을 그대로 넘긴다
+                    timestamp: "",
+                    time: "",
+                  };
+                })}
                 onSend={sendChat}
                 autoScrollToBottom={true}
                 chatType="game"
