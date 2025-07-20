@@ -1,35 +1,38 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import api from '@/lib/api';
-import { Button } from '@/components/ui/Button';
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import api from "@/lib/api";
+import { Button } from "@/components/ui/Button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/Card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
+} from "@/components/ui/Card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ArrowLeft, Play, Users, Brain, Music } from "lucide-react";
 import {
-  ArrowLeft,
-  Play,
-  Users,
-  Brain,
-  Music,
-} from 'lucide-react';
-import { connectGameSocket, disconnectGameSocket, sendGameMessage, sendKeywordConfirm } from '@/lib/gameSocket';
-import ChatBox, { ChatMessage } from '@/components/chat/ChatBox';
-import { ApiResponse, User, Room } from '@/types/api';
-import KeywordSelector from '@/components/KeywordSelector';
-import { PREDEFINED_TAGS } from '@/lib/tags';
-import KeywordDisplay from '@/components/KeywordDisplay';
+  connectGameSocket,
+  disconnectGameSocket,
+  sendGameMessage,
+  sendKeywordConfirm,
+} from "@/lib/gameSocket";
+import ChatBox, { ChatMessage } from "@/components/chat/ChatBox";
+import { ApiResponse, User, Room } from "@/types/api";
+import KeywordSelector from "@/components/KeywordSelector";
+import { PREDEFINED_TAGS } from "@/lib/tags";
+import KeywordDisplay from "@/components/KeywordDisplay";
 
-export default function AISongGamePage({ params }: { params: { roomId: string } }) {
+export default function AISongGamePage({
+  params,
+}: {
+  params: { roomId: string };
+}) {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [room, setRoom] = useState<any>(null);
@@ -40,21 +43,25 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
   const [gameStarted, setGameStarted] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [confirmedKeywords, setConfirmedKeywords] = useState<string[]>([]);
 
   // 채팅 메시지가 업데이트될 때마다 스크롤을 맨 아래로 이동
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
     }
   }, [chatMessages]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const userRes = await api.get<ApiResponse<User>>('/api/user/me');
+        const userRes = await api.get<ApiResponse<User>>("/api/user/me");
         setUser(userRes.data.data);
 
-        const roomRes = await api.get<ApiResponse<Room>>(`/api/room/${params.roomId}`);
+        const roomRes = await api.get<ApiResponse<Room>>(
+          `/api/room/${params.roomId}`
+        );
         setRoom(roomRes.data.data);
         setPlayers(roomRes.data.data.players);
       } catch (err) {
@@ -68,7 +75,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
   }, [params.roomId]);
 
   useEffect(() => {
-    const audio = new Audio('/audio/entersound.wav');
+    const audio = new Audio("/audio/entersound.wav");
     audio.play();
   }, []);
 
@@ -76,7 +83,9 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
   useEffect(() => {
     const fetchPlayers = async () => {
       try {
-        const roomRes = await api.get<ApiResponse<Room>>(`/api/room/${params.roomId}`);
+        const roomRes = await api.get<ApiResponse<Room>>(
+          `/api/room/${params.roomId}`
+        );
         setPlayers(roomRes.data.data.players);
       } catch (err) {
         // 무시
@@ -97,23 +106,30 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
         console.error("AI Song Game WebSocket Error:", error);
       },
       onMessage: (msg: any) => {
-        console.log('AI Song Game WebSocket Message:', msg);
-        if (msg.messageType === 'TALK' || msg.messageType === 'ENTER' || msg.messageType === 'LEAVE') {
-          setChatMessages((prev) => [...prev, {
-            id: Date.now(),
-            type: msg.messageType,
-            roomId: room.roomId.toString(),
-            senderId: msg.senderId,
-            senderName: msg.senderName,
-            message: msg.message,
-            timestamp: new Date().toISOString(),
-            playerId: msg.senderId,
-            playerName: msg.senderName,
-            time: new Date().toLocaleTimeString("ko-KR", {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          }]);
+        console.log("AI Song Game WebSocket Message:", msg);
+        if (
+          msg.messageType === "TALK" ||
+          msg.messageType === "ENTER" ||
+          msg.messageType === "LEAVE"
+        ) {
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now(),
+              type: msg.messageType,
+              roomId: room.roomId.toString(),
+              senderId: msg.senderId,
+              senderName: msg.senderName,
+              message: msg.message,
+              timestamp: new Date().toISOString(),
+              playerId: msg.senderId,
+              playerName: msg.senderName,
+              time: new Date().toLocaleTimeString("ko-KR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            },
+          ]);
         }
       },
       onGameStartCountdown: (response: any) => {
@@ -146,7 +162,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
     console.log("AI 노래 맞추기 게임 시작...");
     console.log("현재 room:", room);
     console.log("현재 user:", user);
-    
+
     if (!room?.roomId) {
       console.error("room.roomId가 없습니다!");
       return;
@@ -157,7 +173,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
       .filter((name): name is string => !!name);
 
     console.log("변환된 키워드 이름들:", keywordNames);
-    
+
     try {
       console.log(`/api/ai-game/${room.roomId}/start API 호출 시작`);
 
@@ -178,7 +194,13 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
 
     try {
       // 웹소켓을 통해 메시지 전송
-      sendGameMessage(room.roomId, user.id, user.nickname, message.trim(), true);
+      sendGameMessage(
+        room.roomId,
+        user.id,
+        user.nickname,
+        message.trim(),
+        true
+      );
     } catch (error) {
       console.error("채팅 메시지 전송 실패:", error);
     }
@@ -187,16 +209,21 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
   const handleLeaveRoom = async () => {
     try {
       await api.delete(`/api/room/${room.roomId}/leave`);
-      router.push('/lobby');
+      router.push("/lobby");
     } catch (error) {
       console.error("방 나가기 실패:", error);
-      router.push('/lobby');
+      router.push("/lobby");
     }
   };
-
   const handleKeywordConfirm = () => {
     if (selectedTagIds.length === 0 || !room?.roomId) return;
+
+    const keywords = selectedTagIds
+      .map((id) => PREDEFINED_TAGS.find((tag) => tag.id === id)?.name)
+      .filter((k): k is string => !!k);
+
     sendKeywordConfirm(room.roomId, selectedTagIds);
+    setConfirmedKeywords(keywords); // ✅ 방장도 키워드 저장
   };
 
   if (loading) return <div>게임 데이터를 불러오는 중...</div>;
@@ -217,7 +244,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
                     try {
                       await api.delete(`/api/room/${room.roomId}/leave`);
                     } catch (e) {}
-                    router.push('/lobby');
+                    router.push("/lobby");
                   }}
                   className="absolute left-0 top-0 ml-2 mt-2 bg-white/90 backdrop-blur-sm px-1 py-0.5 text-sm"
                 >
@@ -248,7 +275,9 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
                           <>
                             <Avatar className="w-16 h-16 mx-auto mb-2">
                               <AvatarImage src={player.avatar} />
-                              <AvatarFallback>{player.nickname[0]}</AvatarFallback>
+                              <AvatarFallback>
+                                {player.nickname[0]}
+                              </AvatarFallback>
                             </Avatar>
                             <h3 className="font-semibold">{player.nickname}</h3>
                             <Badge className="mt-1 bg-red-500">
@@ -260,10 +289,10 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
                             <div className="w-16 h-16 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
                               <Users className="w-8 h-8 text-gray-400" />
                             </div>
-                            <h3 className="font-semibold text-gray-400">빈 자리</h3>
-                            <Badge className="mt-1 bg-gray-400">
-                              대기 중
-                            </Badge>
+                            <h3 className="font-semibold text-gray-400">
+                              빈 자리
+                            </h3>
+                            <Badge className="mt-1 bg-gray-400">대기 중</Badge>
                           </>
                         )}
                       </motion.div>
@@ -280,25 +309,47 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
                     >
                       <Button
                         onClick={handleStartGame}
-                        disabled={gameStarted || selectedTagIds.length === 0}
+                        disabled={gameStarted || confirmedKeywords.length === 0}
                         size="lg"
                         className="bg-red-500 hover:bg-red-600 text-white font-bold text-xl px-12 py-6 rounded-2xl"
                       >
                         <Play className="w-6 h-6 mr-3" />
-                        {gameStarted ? "게임 시작 중..." : "AI 노래 맞추기 시작!"}
+                        {gameStarted
+                          ? "게임 시작 중..."
+                          : "AI 노래 맞추기 시작!"}
                       </Button>
                     </motion.div>
                   ) : (
-                    <div className="text-lg text-gray-700 font-semibold py-8">게임 시작을 기다리는 중...</div>
+                    <div className="text-lg text-gray-700 font-semibold py-8">
+                      게임 시작을 기다리는 중...
+                    </div>
                   )}
                   {selectedTagIds.length === 0 && !gameStarted && (
                     <p className="text-sm text-red-200 mt-2">
-                      ⚠️ 키워드를 최소 1개 선택해주세요
+                      ⚠️ 방장이 키워드를 최소 1개 선택해야 합니다.
                     </p>
                   )}
-                  <p className="text-sm text-gray-600 mt-2">
+                  {/* <p className="text-sm text-gray-600 mt-2">
                     버튼을 누르면 모든 참가자가 동시에 게임이 시작됩니다
-                  </p>
+                  </p> */}
+
+                  {confirmedKeywords.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-1">
+                        ✅ 선택된 키워드
+                      </h4>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {confirmedKeywords.map((kw, idx) => (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 bg-red-500 text-white rounded-full text-sm"
+                          >
+                            {kw}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -315,7 +366,7 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
                     />
                     <div className="mt-4">
                       <div className="text-center text-lg font-semibold text-gray-800 mb-2">
-                         최대 3개
+                        최대 3개
                       </div>
                       <div className="flex justify-end">
                         <Button
@@ -346,13 +397,16 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
                 채팅
               </h3>
             </div>
-            <div className="flex-1 overflow-y-auto mb-3 scrollbar-hide" ref={chatContainerRef}>
+            <div
+              className="flex-1 overflow-y-auto mb-3 scrollbar-hide"
+              ref={chatContainerRef}
+            >
               {chatMessages.map((msg) => (
                 <div key={msg.id} className="mb-2">
                   <div className="text-sm text-gray-700">
                     <span className="text-xs text-gray-500 font-medium">
                       {msg.senderName}:
-                    </span>{' '}
+                    </span>{" "}
                     {msg.message}
                   </div>
                 </div>
@@ -364,21 +418,22 @@ export default function AISongGamePage({ params }: { params: { roomId: string } 
                 placeholder="메시지를 입력하세요..."
                 className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
                 onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     const target = e.target as HTMLInputElement;
                     if (target.value.trim()) {
                       handleSendMessage(target.value);
-                      target.value = '';
+                      target.value = "";
                     }
                   }
                 }}
               />
               <button
                 onClick={(e) => {
-                  const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                  const input = e.currentTarget
+                    .previousElementSibling as HTMLInputElement;
                   if (input.value.trim()) {
                     handleSendMessage(input.value);
-                    input.value = '';
+                    input.value = "";
                   }
                 }}
                 className="px-3 py-2 bg-red-500 text-white text-sm rounded-xl hover:bg-red-600"
