@@ -27,7 +27,7 @@ export default function GamePage({ params }: { params: { roomId: string } }) {
         setRoom(roomRes.data.data);
         setPlayers(roomRes.data.data.players);
 
-        console.log('User State:', userRes.data.data);
+        
         console.log('Room State:', roomRes.data.data);
         console.log('Players State:', roomRes.data.data.players);
 
