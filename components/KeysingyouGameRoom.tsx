@@ -43,6 +43,7 @@ interface Keyword {
 
 interface ChatMessage {
   message: string;
+  msgType: string;
 }
 
 type Phase =
@@ -103,6 +104,10 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
   const [rollingIndex, setRollingIndex] = useState(0);
   const [rollingSpeed, setRollingSpeed] = useState(30);
   const [showFinal, setShowFinal] = useState(false);
+
+  // 1. 상태 및 ref 추가
+  const [showLeaveConfirmModal, setShowLeaveConfirmModal] = useState(false);
+  const isBlockingRef = useRef(true);
 
   /* ───── refs ───── */
   const mySid = useRef<string>("");
@@ -370,6 +375,36 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     };
   }, [roomId, nickname, user]);
 
+  // 2. 뒤로가기/새로고침 차단 useEffect
+  useEffect(() => {
+    isBlockingRef.current = true;
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (!isBlockingRef.current) return;
+      setTimeout(() => {
+        window.history.pushState(null, '', window.location.href);
+      }, 0);
+      setShowLeaveConfirmModal(true);
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isBlockingRef.current) return;
+      e.preventDefault();
+      e.returnValue = '게임이 진행 중입니다. 정말로 나가시겠습니까?';
+      return '게임이 진행 중입니다. 정말로 나가시겠습니까?';
+    };
+
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      isBlockingRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     const audio = new Audio('/audio/entersound.wav');
     audio.play();
@@ -384,6 +419,63 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       router.push("/lobby");
     }
   };
+
+  // 3. 나가기 버튼 핸들러 변경
+  const handleLeaveRoomClick = () => {
+    setShowLeaveConfirmModal(true);
+  };
+
+  // 4. 모달 내 버튼 핸들러
+  const handleConfirmLeave = () => {
+    isBlockingRef.current = false;
+    setShowLeaveConfirmModal(false);
+    setTimeout(() => {
+      handleLeaveRoom(); // 기존 나가기 로직 호출
+    }, 100);
+  };
+
+  const handleStayInGame = () => {
+    setShowLeaveConfirmModal(false);
+    setTimeout(() => {
+      if (isBlockingRef.current) {
+        window.history.pushState(null, '', window.location.href);
+      }
+    }, 100);
+  };
+
+  // 5. renderLeaveConfirmModal 함수 추가
+  const renderLeaveConfirmModal = () => (
+    showLeaveConfirmModal && (
+      <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+          <div className="text-center">
+            <div className="text-4xl mb-4">⚠️</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
+              게임을 나가시겠습니까?
+            </h3>
+            <p className="text-gray-600 mb-6 leading-relaxed">
+              게임이 진행 중입니다.<br />
+              나가시면 게임에서 제외되며 점수가 저장되지 않습니다.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleStayInGame}
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                계속 게임하기
+              </button>
+              <button
+                onClick={handleConfirmLeave}
+                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+              >
+                나가기
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  );
 
   /* ───── 녹음 함수 (10초 후 stop) ───── */
   async function startRecording(kw: Keyword) {
@@ -431,6 +523,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     socket.current?.emit("room_chat", {
       roomId,
       message: `${nickname}: ${msg.trim()}`,
+      msgType: "chat",
     });
     setChatInput("");
   }
@@ -441,6 +534,24 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     handleLeaveRoom();
     router.push(`/lobby`);
   }
+
+  // 게임 시작 핸들러 추가 (랜덤송과 동일하게 API 호출)
+  const handleStartGame = async () => {
+    try {
+      // room 상태를 play로 바꾸는 API 호출 (키워드 없음)
+      await api.post(`/api/game-session/${room.roomId}/start`, {
+        keywords: [],
+      });
+    } catch (e) {
+      // 실패해도 일단 진행
+      console.error('room 상태 play 전환 API 실패', e);
+    }
+    // 기존 소켓 emit
+    socket.current?.emit("start_game", {
+      roomId,
+      maxRounds: room.maxRound,
+    });
+  };
 
   const renderGamePhase = () => {
     switch (phase) {
@@ -558,12 +669,24 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                         {chatMsgs.length === 0 ? (
                           <div className="text-gray-300 text-base text-center my-auto select-none">&nbsp;</div>
                         ) : (
-                          chatMsgs.map((c, i) => (
-                            <div key={i} className="flex items-center w-full text-base py-0.5">
-                              <span className="font-bold text-black mr-1">{c.message.split(":")[0]}:</span>
-                              <span className="ml-1 whitespace-pre-line break-all flex-1 text-black">{c.message.split(":").slice(1).join(":")}</span>
-                            </div>
-                          ))
+                          chatMsgs.map((c, i) => {
+                            if (c.msgType === 'chat') {
+                              const [who, ...body] = c.message.split(':');
+                              return (
+                                <div key={i} className="flex items-center text-base py-0.5">
+                                  <span className="font-bold mr-1">{who}:</span>
+                                  <span className="whitespace-pre-line break-all">{body.join(':')}</span>
+                                </div>
+                              );
+                            } else {
+                              /* join / leave → 시스템 메시지 */
+                              return (
+                                <div key={i} className="text-center text-sm italic text-gray-500 py-0.5">
+                                  {c.message}
+                                </div>
+                              );
+                            }
+                          })
                         )}
                       </div>
                     </div>
@@ -648,12 +771,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                       {isHost ? (
                         <Button
                           disabled={!users.every((u) => u.ready && u.mic) || users.length < 1}
-                          onClick={() =>
-                            socket.current?.emit("start_game", {
-                              roomId,
-                              maxRounds: room.maxRound,
-                            })
-                          }
+                          onClick={handleStartGame}
                           className="w-full h-[54px] text-xl font-extrabold shadow-2xl border-2 rounded-2xl transition-all duration-150
                             bg-gradient-to-br from-blue-700 via-blue-600 to-cyan-500 hover:from-blue-800 hover:to-cyan-600 text-white">
                           <Play className="w-5 h-5 mr-2" /> 게임 시작
@@ -994,6 +1112,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
         <div className="absolute inset-0 bg-gradient-to-br from-pink-400 via-purple-500 via-blue-500 to-cyan-400 opacity-0 pointer-events-none" />
         {/* 실제 컨텐츠 */}
         <div className="relative z-10">
+          {renderLeaveConfirmModal()}
           {renderGamePhase()}
         </div>
       </div>
@@ -1016,7 +1135,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                 <div className="flex-shrink-0">
                   <Button
                     variant="outline"
-                    onClick={handleLeaveRoom}
+                    onClick={handleLeaveRoomClick}
                     className="bg-white/90 flex-shrink-0"
                   >
                     <ArrowLeft className="w-4 h-4 mr-2" />
@@ -1107,12 +1226,14 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
           {phase === 'result' ? (
             // result 페이즈일 때는 카드 없이 전체 영역에 바로 렌더링
             <div className="flex-1 flex items-center rounded-2xl justify-center">
+              {renderLeaveConfirmModal()}
               {renderGamePhase()}
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-white/90 rounded-2xl min-h-[448px]">
               {/* 실제 게임 내용 */}
               <div className="w-full flex flex-col items-center justify-center">
+                {renderLeaveConfirmModal()}
                 {renderGamePhase()}
               </div>
             </div>
@@ -1125,16 +1246,33 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
             <div className="flex-1 overflow-y-auto">
               <KeysingyouChatBox
                 user={user}
-                messages={chatMsgs.map((c, i) => ({
-                  id: i,
-                  type: 'TALK',
-                  roomId: room.roomId,
-                  senderId: '',
-                  senderName: c.message.split(":")[0],
-                  message: c.message.split(":").slice(1).join(":"),
-                  timestamp: '',
-                  time: '',
-                }))}
+                messages={chatMsgs.map((c, i) => {
+                  if (c.msgType === "chat") {
+                    const [who, ...body] = c.message.split(":");
+                    return {
+                      id: i,
+                      type: "TALK",
+                      roomId: room.roomId,
+                      senderId: "",
+                      senderName: who ?? "",
+                      message: body.join(":").trim(), // 내용
+                      timestamp: "",
+                      time: "",
+                    };
+                  }
+
+                  // join / leave / 기타 시스템 알림
+                  return {
+                    id: i,
+                    type: "SYSTEM",
+                    roomId: room.roomId,
+                    senderId: "",
+                    senderName: "",            // 필요 없으므로 빈값
+                    message: c.message,        // 전체 문장을 그대로 넘긴다
+                    timestamp: "",
+                    time: "",
+                  };
+                })}
                 onSend={sendChat}
                 autoScrollToBottom={true}
                 chatType="game"
