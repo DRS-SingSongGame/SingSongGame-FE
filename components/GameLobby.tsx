@@ -122,7 +122,7 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
   const [isQuickMatchOpen, setIsQuickMatchOpen] = useState(false);
   const [settings, setSettings] = useState({
     standardFilter: true,
-    bgmVolume: 50,
+    bgmVolume: 20,
     effectVolume: 50,
     bgmType: "acoustic",
     autoReady: false,
