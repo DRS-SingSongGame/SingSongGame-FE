@@ -33,6 +33,7 @@ const AudioVisualizer: React.FC<Props> = ({ audioRef }) => {
     if (!sourceRef.current) {
       try {
         sourceRef.current = audioCtx.createMediaElementSource(audioEl);
+        audioEl._srcNode = sourceRef.current;
         sourceRef.current.connect(analyser);
         analyser.connect(audioCtx.destination);
       } catch (error) {

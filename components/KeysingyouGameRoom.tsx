@@ -16,6 +16,7 @@ import { TimerCircle } from "./ui/TimerCircle";
 import { Progress } from "./ui/Progress";
 import AudioVisualizer from "./ui/AudioVisualizer";
 import { getSharedAudioCtx } from "@/lib/sharedAudioCtx";
+import { attachEcho } from "@/lib/applyEcho";
 
 interface GameRoomProps {
   user: any;
@@ -154,16 +155,23 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
 
 
   useEffect(() => {
-    if (phase === "listen") {
-      setAnalysisStep("분석중");
-      const timer1 = setTimeout(() => setAnalysisStep("대조중"), 4000);
-      const timer2 = setTimeout(() => setAnalysisStep("추출중"), 7000);
-      return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
-      };
-    }
+    if (phase !== "listen") return;
+
+    setAnalysisStep("분석중");
+    const timer1 = setTimeout(() => setAnalysisStep("대조중"), 4000);
+    const timer2 = setTimeout(() => setAnalysisStep("추출중"), 7000);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, [phase, audioSrc]);
+
+  useEffect(() => {
+    if (phase !== "listen" || !audioRef.current) return;
+
+    getSharedAudioCtx().resume().catch(() => { });
+    attachEcho(audioRef.current);
+  }, [phase]);
 
   // 2. 키워드 phase 진입 시 슬롯머신 애니메이션
   useEffect(() => {
