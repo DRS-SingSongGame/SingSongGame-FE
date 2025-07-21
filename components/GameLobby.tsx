@@ -71,7 +71,7 @@ const getGameModeLabel = (mode: string) => {
     case "PLAIN_SONG":
       return "평어 노래 맞추기";
     case "QUICK_MATCH":
-      return "빠른 대전"
+      return "빠른 대전";
     default:
       return "알 수 없음";
   }
@@ -80,6 +80,7 @@ const getGameModeLabel = (mode: string) => {
 const getGamePath = (roomId: string, roomType: string) => {
   switch (roomType) {
     case "RANDOM_SONG":
+    case "QUICK_MATCH":
       return `/room/${roomId}/randomsonggame`;
     case "KEY_SING_YOU":
       return `/keysingyou_room/${roomId}`;
@@ -137,10 +138,11 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
   const handleBgmPlay = () => setIsBgmPlaying(true);
   const handleBgmPause = () => setIsBgmPlaying(false);
 
-  const [myQuickMatchResult, setMyQuickMatchResult] = useState<QuickMatchResult | null>(null);
+  const [myQuickMatchResult, setMyQuickMatchResult] =
+    useState<QuickMatchResult | null>(null);
   const [tier, setTier] = useState<string>("");
   const { rooms, refetch } = useRooms();
-  
+
   useEffect(() => {
     connectLobbySocket(
       user.id,
@@ -164,12 +166,11 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
         setOnlineUsers(users);
       },
       (deletedRoomId: number) => {
-        console.log('🗑️ 방이 삭제되었습니다:', deletedRoomId);
+        console.log("🗑️ 방이 삭제되었습니다:", deletedRoomId);
         // 지연을 두고 한 번만 refetch
         setTimeout(() => {
           refetch();
         }, 100);
-        
       }
     );
 
@@ -187,8 +188,6 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
   const handleSendMessage = (message: string) => {
     sendLobbyMessage(user.id, user.nickname, message);
   };
-
-  
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -233,9 +232,10 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
   };
 
   const handleMatchFound = (room: MatchedRoom) => {
-    console.log("Match found:", room);
+    console.log("📦 매칭된 방 정보:", room);
     setIsQuickMatchOpen(false);
     const gamePath = getGamePath(room.roomId, room.roomType);
+    console.log("🔍 gamePath:", gamePath);
     router.push(gamePath);
   };
 
@@ -261,7 +261,9 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
         console.log("✅ 빠대 파싱된 결과:", parsed);
 
         if (Array.isArray(parsed.players)) {
-          const myResult = parsed.players.find((p: any) => p.userId === user.id);
+          const myResult = parsed.players.find(
+            (p: any) => p.userId === user.id
+          );
           if (myResult) {
             setMyQuickMatchResult({ ...myResult, roomId: parsed.roomId });
           }
@@ -277,18 +279,22 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
 
   // 티어명-이미지 매핑
   const tierImageMap: Record<string, string> = {
-    '새내기': '/rank/t1.png',
-    '훈련생': '/rank/t2.png',
-    '모험가': '/rank/t3.png',
-    '도전자': '/rank/t4.png',
-    '에이스': '/rank/t5.png',
-    '전설': '/rank/t6.png',
+    새내기: "/rank/t1.png",
+    훈련생: "/rank/t2.png",
+    모험가: "/rank/t3.png",
+    도전자: "/rank/t4.png",
+    에이스: "/rank/t5.png",
+    전설: "/rank/t6.png",
   };
-  const tierImg = tierImageMap[tier] || '';
+  const tierImg = tierImageMap[tier] || "";
 
   return (
     <div className="py-2 md:py-4 px-2 md:px-4 bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 h-full min-h-0">
-      <BGMPlayer bgmVolume={settings.bgmVolume} isPlaying={isBgmPlaying} setIsPlaying={setIsBgmPlaying} />
+      <BGMPlayer
+        bgmVolume={settings.bgmVolume}
+        isPlaying={isBgmPlaying}
+        setIsPlaying={setIsBgmPlaying}
+      />
 
       {/* 📱 모바일: 내 정보를 맨 위로 (lg에서는 숨김) */}
       <div className="block lg:hidden mb-4">
@@ -303,12 +309,17 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
                       src={tierImg}
                       alt={tier}
                       className="absolute top-1/2 left-[-60px] -translate-y-1/2 w-16 h-16 object-contain opacity-0 group-hover:opacity-100 transition pointer-events-none z-50"
-                      style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.2))" }}
+                      style={{
+                        filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.2))",
+                      }}
                     />
                   )}
                   <Avatar className="w-12 h-12 ring-2 ring-pink-500">
                     {user.profileImage ? (
-                      <AvatarImage src={user.profileImage} alt="프로필 이미지" />
+                      <AvatarImage
+                        src={user.profileImage}
+                        alt="프로필 이미지"
+                      />
                     ) : (
                       <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm">
                         {user.nickname?.[0] || "?"}
@@ -318,9 +329,15 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
                   <div>
                     <h3 className="font-semibold text-base">{user.nickname}</h3>
                     <div className="flex items-center gap-1">
-                      <p className="text-gray-600 text-sm">{tier || "티어 없음"}</p>
+                      <p className="text-gray-600 text-sm">
+                        {tier || "티어 없음"}
+                      </p>
                       {tierImg && (
-                        <img src={tierImg} alt={tier} className="w-4 h-4 object-contain" />
+                        <img
+                          src={tierImg}
+                          alt={tier}
+                          className="w-4 h-4 object-contain"
+                        />
                       )}
                     </div>
                   </div>
@@ -350,11 +367,9 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
       </div>
 
       <div className="max-w-screen-2xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-x-6 h-full min-h-0">
-        
         {/* 메인 컨텐츠 영역 */}
         <div className="col-span-1 lg:col-span-9 h-full min-h-0 flex flex-col">
           <Card className="bg-white/80 backdrop-blur-sm flex-1 min-h-0 h-full w-full p-0 text-base lg:text-xl flex flex-col justify-between">
-            
             {/* 검색 및 버튼 영역 */}
             <CardHeader className="pb-1 w-full max-w-full">
               {/* 모바일 레이아웃 */}
@@ -444,7 +459,7 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
                   className="ml-1 p-0 bg-transparent hover:bg-transparent flex items-center justify-center"
                   onClick={() => setShowQuickMatchInfo(true)}
                   aria-label="빠른대전 설명 보기"
-                  style={{ height: '32px', width: '32px' }}
+                  style={{ height: "32px", width: "32px" }}
                 >
                   <HelpCircle className="w-6 h-6 text-red-500" />
                 </button>
@@ -453,100 +468,141 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
 
             {/* 방 목록 영역 */}
             <CardContent className="px-0 pb-0 w-full max-w-full flex-1 min-h-0 overflow-hidden flex flex-col">
-              <div 
+              <div
                 className="absolute inset-0 flex items-center justify-center pointer-events-none"
                 style={{
                   backgroundImage: 'url("/singsonglogo.png")',
-                  backgroundSize: '400px lg:800px',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                  opacity: 0.40,
-                  zIndex: 1
+                  backgroundSize: "400px lg:800px",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                  opacity: 0.4,
+                  zIndex: 1,
                 }}
               />
-                <ScrollArea className="flex-1 w-full max-w-full z-10">
+              <ScrollArea className="flex-1 w-full max-w-full z-10">
                 <div className="px-2 lg:px-6 py-2 overflow-y-auto h-[400px]">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 max-w-5xl mx-auto content-start">
-                      {filteredRooms.length === 0 ? (
-                        // 방이 없을 때만 중앙 정렬
-                        <div className="col-span-full flex flex-col items-center justify-center py-8 min-h-[300px]">
-                          <div className="text-3xl mb-3">🎵</div>
-                          <p className="text-gray-500 text-sm font-medium text-center">
-                            현재 참여 가능한 방이 없습니다
-                          </p>
-                          <p className="text-gray-400 text-xs mt-1 text-center">
-                            새로운 방을 만들어보세요!
-                          </p>
-                        </div>
-                      ) : (
-                        // 방이 있을 때는 위쪽부터 정렬
-                        filteredRooms.map((room) => (
-                          <Card
-                            key={room.roomId}
-                            className={`relative flex rounded-xl border-2 lg:border-4 overflow-hidden px-3 lg:px-4 py-2 lg:py-3 min-h-[80px] lg:min-h-[100px] w-full max-w-sm lg:max-w-md text-sm lg:text-base shadow-lg transition-shadow 
-                              ${room.gameStatus === "IN_PROGRESS" ? "pointer-events-none opacity-60 bg-neutral-900 border-gray-700" : "cursor-pointer glow-hover bg-cyan-100 border-blue-400"}`}
-                            onClick={() => {
-                              if (room.gameStatus !== "IN_PROGRESS") {
-                                playButtonSound();
-                                handleRoomClick(room);
-                              }
+                    {filteredRooms.length === 0 ? (
+                      // 방이 없을 때만 중앙 정렬
+                      <div className="col-span-full flex flex-col items-center justify-center py-8 min-h-[300px]">
+                        <div className="text-3xl mb-3">🎵</div>
+                        <p className="text-gray-500 text-sm font-medium text-center">
+                          현재 참여 가능한 방이 없습니다
+                        </p>
+                        <p className="text-gray-400 text-xs mt-1 text-center">
+                          새로운 방을 만들어보세요!
+                        </p>
+                      </div>
+                    ) : (
+                      // 방이 있을 때는 위쪽부터 정렬
+                      filteredRooms.map((room) => (
+                        <Card
+                          key={room.roomId}
+                          className={`relative flex rounded-xl border-2 lg:border-4 overflow-hidden px-3 lg:px-4 py-2 lg:py-3 min-h-[80px] lg:min-h-[100px] w-full max-w-sm lg:max-w-md text-sm lg:text-base shadow-lg transition-shadow 
+                              ${
+                                room.gameStatus === "IN_PROGRESS"
+                                  ? "pointer-events-none opacity-60 bg-neutral-900 border-gray-700"
+                                  : "cursor-pointer glow-hover bg-cyan-100 border-blue-400"
+                              }`}
+                          onClick={() => {
+                            if (room.gameStatus !== "IN_PROGRESS") {
+                              playButtonSound();
+                              handleRoomClick(room);
+                            }
+                          }}
+                        >
+                          <span
+                            className={`absolute right-1 lg:right-2 bottom-1 lg:bottom-2 text-[40px] lg:text-[80px] font-extrabold select-none pointer-events-none
+                                ${
+                                  room.gameStatus === "IN_PROGRESS"
+                                    ? "text-white/20"
+                                    : "text-gray-300/40"
+                                }`}
+                            style={{
+                              transform: "rotate(-25deg)",
+                              lineHeight: 1,
+                              userSelect: "none",
+                              zIndex: 1,
+                              letterSpacing: "1px lg:2px",
                             }}
                           >
-                            <span
-                              className={`absolute right-1 lg:right-2 bottom-1 lg:bottom-2 text-[40px] lg:text-[80px] font-extrabold select-none pointer-events-none
-                                ${room.gameStatus === "IN_PROGRESS" ? "text-white/20" : "text-gray-300/40"}`}
-                              style={{
-                                transform: "rotate(-25deg)",
-                                lineHeight: 1,
-                                userSelect: "none",
-                                zIndex: 1,
-                                letterSpacing: "1px lg:2px"
-                              }}
-                            >
-                              {room.gameStatus === "IN_PROGRESS" ? "Play" : "Wait"}
+                            {room.gameStatus === "IN_PROGRESS"
+                              ? "Play"
+                              : "Wait"}
+                          </span>
+                          <div className="flex flex-col items-center justify-center mr-3 lg:mr-4 z-10 min-w-[30px] lg:min-w-[40px]">
+                            <span className="text-xl lg:text-3xl font-extrabold text-gray-800">
+                              {room.roomId}
                             </span>
-                            <div className="flex flex-col items-center justify-center mr-3 lg:mr-4 z-10 min-w-[30px] lg:min-w-[40px]">
-                              <span className="text-xl lg:text-3xl font-extrabold text-gray-800">{room.roomId}</span>
-                              <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-yellow-300 mt-1"></span>
-                            </div>
-                            <div className="flex-1 z-10">
-                              <div className="flex justify-between items-center">
-                                <span
-                                  className={`font-bold text-sm lg:text-lg ${room.gameStatus === "IN_PROGRESS" ? "text-black" : "text-gray-900"} truncate`}
-                                  style={{ maxWidth: '40%' }}
-                                >
-                                  {room.roomName}
+                            <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-yellow-300 mt-1"></span>
+                          </div>
+                          <div className="flex-1 z-10">
+                            <div className="flex justify-between items-center">
+                              <span
+                                className={`font-bold text-sm lg:text-lg ${
+                                  room.gameStatus === "IN_PROGRESS"
+                                    ? "text-black"
+                                    : "text-gray-900"
+                                } truncate`}
+                                style={{ maxWidth: "40%" }}
+                              >
+                                {room.roomName}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-700 text-xs lg:text-sm">
+                                  {room.players.length} / {room.maxPlayer}
                                 </span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-gray-700 text-xs lg:text-sm">{room.players.length} / {room.maxPlayer}</span>
-                                  {room.isPrivate && (
-                                    <span className="inline-block">
-                                      <svg width="16" height="16" className="lg:w-5 lg:h-5 text-black" fill="currentColor">
-                                        <path d="M10 2a4 4 0 0 0-4 4v2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1V6a4 4 0 0 0-4-4zm-2 4a2 2 0 1 1 4 0v2H8V6zm-3 4h10v6H5v-6z" />
-                                      </svg>
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className={`text-xs lg:text-sm ${room.gameStatus === "IN_PROGRESS" ? "text-black" : "text-gray-700"}`}>
-                                {getGameModeLabel(room.roomType)}
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <div className={`text-xs ${room.gameStatus === "IN_PROGRESS" ? "text-black" : "text-gray-500"}`}>
-                                  방장: {room.hostName}
-                                </div>
-                                <div className={`text-xs ${room.gameStatus === "IN_PROGRESS" ? "text-black" : "text-gray-500"}`}>
-                                  {room.maxRound || 3}라운드
-                                </div>
+                                {room.isPrivate && (
+                                  <span className="inline-block">
+                                    <svg
+                                      width="16"
+                                      height="16"
+                                      className="lg:w-5 lg:h-5 text-black"
+                                      fill="currentColor"
+                                    >
+                                      <path d="M10 2a4 4 0 0 0-4 4v2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1V6a4 4 0 0 0-4-4zm-2 4a2 2 0 1 1 4 0v2H8V6zm-3 4h10v6H5v-6z" />
+                                    </svg>
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          </Card>
-                        ))
-                      )}
-                    </div>
+                            <div
+                              className={`text-xs lg:text-sm ${
+                                room.gameStatus === "IN_PROGRESS"
+                                  ? "text-black"
+                                  : "text-gray-700"
+                              }`}
+                            >
+                              {getGameModeLabel(room.roomType)}
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <div
+                                className={`text-xs ${
+                                  room.gameStatus === "IN_PROGRESS"
+                                    ? "text-black"
+                                    : "text-gray-500"
+                                }`}
+                              >
+                                방장: {room.hostName}
+                              </div>
+                              <div
+                                className={`text-xs ${
+                                  room.gameStatus === "IN_PROGRESS"
+                                    ? "text-black"
+                                    : "text-gray-500"
+                                }`}
+                              >
+                                {room.maxRound || 3}라운드
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      ))
+                    )}
                   </div>
-                </ScrollArea>
-              </CardContent>
+                </div>
+              </ScrollArea>
+            </CardContent>
 
             {/* 채팅 영역 */}
             <div className="w-full px-3 lg:px-6 pb-3 lg:pb-6 pt-2">
@@ -555,9 +611,14 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
                   {chatMessages.map((msg) => (
                     <div key={msg.id} className="flex items-center text-xs">
                       <span className="font-semibold text-purple-600 mr-1">
-                        {msg.type === "ENTER" || msg.type === "LEAVE" ? "시스템" : msg.senderName}:
+                        {msg.type === "ENTER" || msg.type === "LEAVE"
+                          ? "시스템"
+                          : msg.senderName}
+                        :
                       </span>
-                      <span className="ml-1 flex-1 truncate">{msg.message}</span>
+                      <span className="ml-1 flex-1 truncate">
+                        {msg.message}
+                      </span>
                       <span className="text-gray-400 text-xs ml-2 hidden sm:inline lg:inline">
                         {msg.time}
                       </span>
@@ -612,12 +673,18 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
                       src={tierImg}
                       alt={tier}
                       className="absolute top-1/2 left-[-90px] -translate-y-1/2 w-20 h-20 object-contain opacity-0 group-hover:opacity-100 transition pointer-events-none"
-                      style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.2))", zIndex: 9999 }}
+                      style={{
+                        filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.2))",
+                        zIndex: 9999,
+                      }}
                     />
                   )}
                   <Avatar className="w-16 h-16 ring-4 ring-pink-500">
                     {user.profileImage ? (
-                      <AvatarImage src={user.profileImage} alt="프로필 이미지" />
+                      <AvatarImage
+                        src={user.profileImage}
+                        alt="프로필 이미지"
+                      />
                     ) : (
                       <AvatarFallback className="bg-gradient-to-r from-pink-500 to-purple-500 text-white">
                         {user.nickname?.[0] || "?"}
@@ -625,11 +692,17 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
                     )}
                   </Avatar>
                   <div className="min-w-0 flex flex-col">
-                    <h3 className="font-semibold text-lg truncate">{user.nickname}</h3>
+                    <h3 className="font-semibold text-lg truncate">
+                      {user.nickname}
+                    </h3>
                     <span className="text-xs text-gray-500 font-semibold mt-1 flex items-center gap-1">
                       {tier || "티어 없음"}
                       {tierImg && (
-                        <img src={tierImg} alt={tier} className="w-5 h-5 object-contain inline-block align-middle" />
+                        <img
+                          src={tierImg}
+                          alt={tier}
+                          className="w-5 h-5 object-contain inline-block align-middle"
+                        />
                       )}
                     </span>
                   </div>
@@ -653,7 +726,7 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
               </div>
             </CardHeader>
           </Card>
-          
+
           <div className="mt-4" />
           <Card className="bg-white/90 backdrop-blur-sm w-full h-[740px] flex flex-col p-0">
             <div className="p-6 flex-1 flex flex-col">
@@ -738,7 +811,7 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
           }}
         />
       )}
-      
+
       {error.open && (
         <ErrorModal
           open={error.open}
@@ -755,9 +828,10 @@ const GameLobby = ({ user, onCreateRoom, onLogout }: GameLobbyProps) => {
               랜덤 노래 맞추기
             </h4>
             <p className="text-sm lg:text-base text-blue-600">
-              • 6명의 플레이어가 함께 참여<br />
-              • 랜덤한 노래를 듣고 제목 맞추기<br />
-              • 가장 빨리 정답을 맞힌 사람이 점수 획득
+              • 6명의 플레이어가 함께 참여
+              <br />
+              • 랜덤한 노래를 듣고 제목 맞추기
+              <br />• 가장 빨리 정답을 맞힌 사람이 점수 획득
             </p>
             <Button
               onClick={() => setShowQuickMatchInfo(false)}
