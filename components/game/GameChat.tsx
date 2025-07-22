@@ -51,34 +51,23 @@ const GameChat = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 p-4">
-        <ScrollArea className="h-80 scrollbar-hide" ref={scrollRef}>
-          <div className="space-y-3">
-            <AnimatePresence>
-              {messages.map((msg, index) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                  transition={{ 
-                    duration: 0.3, 
-                    delay: index * 0.1,
-                    type: "spring",
-                    stiffness: 100
-                  }}
-                  className={`flex gap-2 text-base text-white`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <span className="font-semibold text-white">
-                      {msg.playerName}:
-                    </span>
-                    <span className="text-white ml-1">
-                      {msg.message}
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+        <ScrollArea className="h-80 scrollbar-hide">
+          <div className="space-y-3" ref={scrollRef} style={{maxHeight: '20rem', overflowY: 'auto'}}>
+            {messages.map((msg, index) => (
+              <div
+                key={msg.id}
+                className="flex gap-2 text-base text-white"
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="font-semibold text-white text-2xl">
+                    {msg.playerName}:
+                  </span>
+                  <span className="text-white ml-1 text-2xl">
+                    {msg.message}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </ScrollArea>
         
