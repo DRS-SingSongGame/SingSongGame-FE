@@ -178,6 +178,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
     if (phase === "keyword" && keyword) {
       // 키워드 룰렛 시작 시 사운드 재생
       const keywordAudio = new Audio('/audio/keyword.wav');
+      keywordAudio.volume = 0.2;
       keywordAudio.play().catch(error => {
         console.log('키워드 사운드 재생 실패:', error);
       });
@@ -219,6 +220,8 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
         // 정답일 때: clap.mp3와 wow.wav 동시 재생
         const clapAudio = new Audio('/audio/clap.mp3');
         const wowAudio = new Audio('/audio/wow.wav');
+        clapAudio.volume = 0.2;
+        wowAudio.volume = 0.2;
 
         clapAudio.play().catch(error => {
           console.log('박수 사운드 재생 실패:', error);
@@ -230,6 +233,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       } else {
         // 틀렸을 때: fail.mp3 재생
         const failAudio = new Audio('/audio/fail.mp3');
+        failAudio.volume = 0.2;
         failAudio.play().catch(error => {
           console.log('실패 사운드 재생 실패:', error);
         });
@@ -365,7 +369,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
 
         // final 페이즈 시작 시 final.wav 재생
         const finalAudio = new Audio('/audio/final.wav');
-        finalAudio.volume = 1.0; // 음량을 100%로 설정
+        finalAudio.volume = 0.8;
         finalAudio.play().catch(error => {
           console.log('파이널 사운드 재생 실패:', error);
         });
@@ -415,6 +419,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
 
   useEffect(() => {
     const audio = new Audio('/audio/entersound.wav');
+    audio.volume = 0.2;
     audio.play();
   }, []);
 
@@ -829,7 +834,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       case 'keyword':
         return (
           <div className="text-center space-y-8">
-            <div className="bg-green-500 text-white rounded-lg p-8 transform hover:scale-105 transition-all shadow-xl w-auto inline-block">
+            <div className="bg-gradient-to-br from-pink-500 to-purple-600 text-white rounded-lg p-8 transform hover:scale-105 transition-all shadow-xl w-auto inline-block">
               <h2 className="text-4xl font-bold mb-2">{keyword?.type}</h2>
               <div className="relative overflow-hidden flex items-center justify-center" style={{
                 height: '5rem',
@@ -871,7 +876,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
             <div className="flex flex-col justify-center items-center min-h-[500px] h-full">
               {/* 키워드 박스 - keyword 페이즈와 동일한 스타일 */}
               <div className="text-center space-y-8 mb-8">
-                <div className="bg-green-500 text-white rounded-lg p-8 transform hover:scale-105 transition-all shadow-xl w-auto inline-block">
+                <div className="bg-gradient-to-br from-pink-500 to-purple-600 text-white rounded-lg p-8 transform hover:scale-105 transition-all shadow-xl w-auto inline-block">
                   <h2 className="text-4xl font-bold mb-2">{keyword?.type}</h2>
                   <div className="relative overflow-hidden flex items-center justify-center" style={{
                     height: '5rem',
@@ -897,7 +902,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
           <div className="flex flex-col justify-center items-center min-h-[500px] h-full">
             {/* 키워드 박스 - keyword 페이즈와 동일한 스타일 */}
             <div className="text-center space-y-8 mb-8">
-              <div className="bg-green-500 text-white rounded-lg p-8 transform hover:scale-105 transition-all shadow-xl w-auto inline-block">
+              <div className="bg-gradient-to-br from-pink-500 to-purple-600 text-white rounded-lg p-8 transform hover:scale-105 transition-all shadow-xl w-auto inline-block">
                 <h2 className="text-4xl font-bold mb-2">{keyword?.type}</h2>
                 <div className="relative overflow-hidden flex items-center justify-center" style={{
                   height: '5rem',
@@ -931,7 +936,7 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       case 'listen':
         return (
           <div className="text-center space-y-8">
-            <div className="bg-blue-500 text-white rounded-lg p-6 inline-block">
+            <div className="bg-gradient-to-br from-blue-500 to-cyan-400 text-white rounded-lg p-6 inline-block">
               <h2 className="text-2xl font-bold mb-2">음성 분석 중</h2>
               <p className="text-xl">{users.find((u) => u.sid === currentSid)?.nickname} 님의 녹음 재생중..</p>
             </div>
@@ -1041,50 +1046,158 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
         );
 
       case 'final':
+        const showScores = finalScores || [];
+        const isTwoColumn = showScores.length > 3;
+
+        const targetSize = isTwoColumn ? 6 : 3;
+        const paddedScores = [...showScores, ...Array(Math.max(0, targetSize - showScores.length)).fill(null)];
+
+        const leftCol = isTwoColumn ? paddedScores.slice(0, 3) : paddedScores;
+        const rightCol = isTwoColumn ? paddedScores.slice(3, 6) : [];
+
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <div className="bg-yellow-500 text-white rounded-lg p-6 inline-block">
-                <Trophy className="w-12 h-12 mx-auto mb-2" />
-                <h1 className="text-3xl font-bold">최종 결과</h1>
+              <div className="bg-gradient-to-br from-yellow-400 to-amber-500 text-white rounded-xl p-6 inline-block shadow-xl border-2 border-white/30">
+                <div className="flex items-center justify-center gap-4">
+                  <Trophy className="w-12 h-12 mb-0 drop-shadow-md" />
+                  <h1 className="text-4xl font-bold mb-0 drop-shadow-md">
+                    최종 결과
+                  </h1>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {finalScores && finalScores.map((ranking, index) => (
-                <div
-                  key={ranking.nickname}
-                  className={`flex items-center justify-between p-4 rounded-xl shadow-sm border ${index === 0
-                    ? 'bg-yellow-50 border-yellow-200'
-                    : index === 1
-                      ? 'bg-gray-50 border-gray-200'
-                      : index === 2
-                        ? 'bg-orange-50 border-orange-200'
-                        : 'bg-white border-gray-100'
-                    }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold ${index === 0
-                      ? 'bg-yellow-500 text-white'
-                      : index === 1
-                        ? 'bg-gray-400 text-white'
-                        : index === 2
-                          ? 'bg-orange-400 text-white'
-                          : 'bg-blue-100 text-blue-600'
-                      }`}>
-                      {index + 1}
-                    </div>
-                    <span className="text-lg font-semibold text-gray-900">
-                      {ranking.nickname}
-                    </span>
-                  </div>
-
-                  <div className="text-xl font-bold text-gray-900 ml-8">
-                    {ranking.score}점
-                  </div>
+            {isTwoColumn ? (
+              <div className="grid grid-cols-2 gap-6 w-full max-w-xl mx-auto">
+                <div className="flex flex-col gap-3">
+                  {leftCol.map((ranking, index) => (
+                    ranking ? (
+                      <div
+                        key={ranking.nickname}
+                        className={`flex items-center justify-between p-4 rounded-xl shadow-sm border ${index === 0
+                          ? 'bg-yellow-50 border-yellow-200'
+                          : index === 1
+                            ? 'bg-gray-50 border-gray-200'
+                            : index === 2
+                              ? 'bg-orange-50 border-orange-200'
+                              : 'bg-white border-gray-100'
+                          }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold ${index === 0
+                            ? 'bg-yellow-500 text-white'
+                            : index === 1
+                              ? 'bg-gray-400 text-white'
+                              : index === 2
+                                ? 'bg-orange-400 text-white'
+                                : 'bg-blue-100 text-blue-600'
+                            }`}>
+                            {index + 1}
+                          </div>
+                          <span className="text-lg font-semibold text-gray-900">
+                            {ranking.nickname}
+                          </span>
+                        </div>
+                        <div className="text-xl font-bold text-gray-900 ml-8">
+                          {ranking.score}점
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={"empty-" + index} className="flex items-center justify-between p-4 rounded-xl shadow-sm border bg-gray-100 border-gray-200 text-gray-400 select-none">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold bg-gray-300 text-white">
+                            {index + 1}
+                          </div>
+                          <span className="text-lg font-semibold">빈 슬롯</span>
+                        </div>
+                        <div className="text-xl font-bold ml-8">&nbsp;</div>
+                      </div>
+                    )
+                  ))}
                 </div>
-              ))}
-            </div>
+                <div className="flex flex-col gap-3">
+                  {rightCol.map((ranking, idx) => {
+                    const index = idx + 3;
+                    return ranking ? (
+                      <div
+                        key={ranking.nickname}
+                        className={`flex items-center justify-between p-4 rounded-xl shadow-sm border bg-white border-gray-100`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold bg-blue-100 text-blue-600">
+                            {index + 1}
+                          </div>
+                          <span className="text-lg font-semibold text-gray-900">
+                            {ranking.nickname}
+                          </span>
+                        </div>
+                        <div className="text-xl font-bold text-gray-900 ml-8">
+                          {ranking.score}점
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={"empty-" + index} className="flex items-center justify-between p-4 rounded-xl shadow-sm border bg-gray-100 border-gray-200 text-gray-400 select-none">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold bg-gray-300 text-white">
+                            {index + 1}
+                          </div>
+                          <span className="text-lg font-semibold">빈 슬롯</span>
+                        </div>
+                        <div className="text-xl font-bold ml-8">&nbsp;</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 w-full max-w-md mx-auto">
+                {leftCol.map((ranking, index) => (
+                  ranking ? (
+                    <div
+                      key={ranking.nickname}
+                      className={`flex items-center justify-between p-4 rounded-xl shadow-sm border ${index === 0
+                        ? 'bg-yellow-50 border-yellow-200'
+                        : index === 1
+                          ? 'bg-gray-50 border-gray-200'
+                          : index === 2
+                            ? 'bg-orange-50 border-orange-200'
+                            : 'bg-white border-gray-100'
+                        }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold ${index === 0
+                          ? 'bg-yellow-500 text-white'
+                          : index === 1
+                            ? 'bg-gray-400 text-white'
+                            : index === 2
+                              ? 'bg-orange-400 text-white'
+                              : 'bg-blue-100 text-blue-600'
+                          }`}>
+                          {index + 1}
+                        </div>
+                        <span className="text-lg font-semibold text-gray-900">
+                          {ranking.nickname}
+                        </span>
+                      </div>
+                      <div className="text-xl font-bold text-gray-900 ml-8">
+                        {ranking.score}점
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={"empty-" + index} className="flex items-center justify-between p-4 rounded-xl shadow-sm border bg-gray-100 border-gray-200 text-gray-400 select-none">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold bg-gray-300 text-white">
+                          {index + 1}
+                        </div>
+                        <span className="text-lg font-semibold">빈 슬롯</span>
+                      </div>
+                      <div className="text-xl font-bold ml-8">&nbsp;</div>
+                    </div>
+                  )
+                ))}
+              </div>
+            )}
 
             <div className="text-center">
               <Button
