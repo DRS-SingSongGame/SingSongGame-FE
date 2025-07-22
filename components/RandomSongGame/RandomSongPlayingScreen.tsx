@@ -120,7 +120,7 @@ export const PlayingScreen = ({
                 <CardTitle className="text-pink-700 text-sm lg:text-lg">게임 채팅</CardTitle>
               </CardHeader>
               <CardContent className="p-3 lg:p-6 pt-0">
-                <div className="h-48 lg:h-80">
+                <div className="h-80 lg:h-[500px]">
                   <ChatBox 
                     ref={chatBoxRef}
                     user={user} 
@@ -427,34 +427,59 @@ const ScoreBoard = ({ players, winner }: { players: any[]; winner?: string }) =>
       </CardTitle>
     </CardHeader>
     <CardContent className="p-3 lg:p-6 pt-0">
-      <div className="space-y-2">
-        {players.map((player, index) => (
-          <div
-            key={player.id}
-            className={`flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-lg transition-all duration-500 ${
-              player.nickname === winner
-                ? "bg-gradient-to-r from-yellow-100 via-green-100 to-yellow-100 border-2 border-yellow-400 shadow-lg animate-pulse transform scale-105"
-                : "bg-gray-50"
-            }`}
-          >
-            <div className="text-xs lg:text-lg font-bold text-gray-500 w-6">
-              #{index + 1}
-            </div>
-            <Avatar className="w-6 h-6 lg:w-8 lg:h-8">
-              <AvatarImage src={player.avatar} />
-              <AvatarFallback className="text-xs">{player.nickname[0]}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-sm lg:text-base truncate">{player.nickname}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-lg lg:text-2xl font-bold text-blue-600">
-                {player.score}
+      <div className="h-80 lg:h-[500px] overflow-y-auto">
+        <div className="space-y-3 lg:space-y-4">
+          {Array.from({ length: 6 }, (_, index) => {
+            const player = players[index];
+            return (
+              <div
+                key={player ? player.id : `empty-${index}`}
+                className={`flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-lg transition-all duration-500 ${
+                  player && player.nickname === winner
+                    ? "bg-gradient-to-r from-yellow-200 to-yellow-100 border-2 border-yellow-500 shadow-xl animate-pulse"
+                    : player
+                    ? "bg-gray-50 border border-transparent"
+                    : "bg-gray-100 border border-gray-300"
+                }`}
+              >
+                <div className="text-xs lg:text-lg font-bold text-gray-500 w-6">
+                  #{index + 1}
+                </div>
+                {player ? (
+                  <>
+                    <Avatar className="w-6 h-6 lg:w-8 lg:h-8">
+                      <AvatarImage src={player.avatar} />
+                      <AvatarFallback className="text-xs">{player.nickname[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm lg:text-base truncate">{player.nickname}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg lg:text-2xl font-bold text-blue-600">
+                        {player.score}
+                      </div>
+                      <div className="text-xs text-gray-500">점</div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-6 h-6 lg:w-8 lg:h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                      <Users className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm lg:text-base text-gray-400">빈 자리</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg lg:text-2xl font-bold text-gray-400">
+                        -
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
-              <div className="text-xs text-gray-500">점</div>
-            </div>
-          </div>
-        ))}
+            );
+          })}
+        </div>
       </div>
     </CardContent>
   </Card>
