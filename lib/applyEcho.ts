@@ -17,17 +17,17 @@ export function attachEcho(audioEl: HTMLAudioElement) {
 
   // ───── echo chain once ─────
   const delay = ctx.createDelay(5);
-  delay.delayTime.value = 0.33;
+  delay.delayTime.value = 0.27;
 
   const feedback = ctx.createGain();
-  feedback.gain.value = 0.4;
+  feedback.gain.value = 0.35;
 
   const lpf = ctx.createBiquadFilter();
   lpf.type = "lowpass";
-  lpf.frequency.value = 3500;
+  lpf.frequency.value = 2500;
 
   const wet = ctx.createGain();
-  wet.gain.value = 0.6;
+  wet.gain.value = 0.55;
 
   const dry = ctx.createGain();
   dry.gain.value = 1;
