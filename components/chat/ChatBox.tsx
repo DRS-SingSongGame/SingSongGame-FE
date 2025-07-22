@@ -180,12 +180,12 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className="flex items-start w-full text-xs lg:text-lg gap-1 lg:gap-2"
+                className="flex items-start w-full text-sm lg:text-xl gap-1 lg:gap-2"
               >
-                <span className="font-semibold text-purple-600 text-xs lg:text-lg shrink-0"> 
+                <span className="font-semibold text-purple-600 text-sm lg:text-xl shrink-0"> 
                   {(msg.type === 'ENTER' || msg.type === 'LEAVE') ? '시스템' : msg.senderName}:
                 </span>
-                <span className="whitespace-pre-line break-all flex-1 text-xs lg:text-lg leading-tight lg:leading-normal">
+                <span className="whitespace-pre-line break-all flex-1 text-sm lg:text-xl leading-tight lg:leading-normal">
                   {msg.message}
                 </span>
                 <span className="text-gray-400 text-xs whitespace-nowrap shrink-0 hidden lg:block">
@@ -205,11 +205,11 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={() => setIsComposing(false)}
               placeholder="메시지를 입력하세요..."
-              className="text-xs lg:text-lg px-2 lg:px-3 py-1.5 lg:py-2"
+              className="text-sm lg:text-xl px-2 lg:px-3 py-1.5 lg:py-2"
             />
             <Button 
               onClick={handleSend} 
-              className="text-xs lg:text-lg px-3 lg:px-6 py-1.5 lg:py-2 shrink-0"
+              className="text-sm lg:text-xl px-3 lg:px-6 py-1.5 lg:py-2 shrink-0"
             >
               전송
             </Button>
