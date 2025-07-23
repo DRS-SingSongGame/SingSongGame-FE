@@ -963,7 +963,9 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
                   </>
                 )}
               </h3>
-              <AudioVisualizer audioRef={audioRef} />
+              <div className={`transition-opacity duration-500 ${["listen", "result"].includes(phase) ? "opacity-100" : "opacity-0"}`}>
+                <AudioVisualizer audioRef={audioRef} />
+              </div>
             </div>
           </div>
         );

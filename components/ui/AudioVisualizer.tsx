@@ -104,8 +104,16 @@ const AudioVisualizer: React.FC<Props> = ({ audioRef }) => {
         cancelAnimationFrame(animationId);
         animationId = null;
       }
-      // 캔버스 클리어
+
+      // ⬇️ 캔버스를 clear하지 않고, 일직선 파형을 그려서 "잔상"처럼 보이게 유지
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#7c3aed";  // 흐릿한 잔상
+      ctx.beginPath();
+      const centerY = canvas.height / 2;
+      ctx.moveTo(0, centerY);
+      ctx.lineTo(canvas.width, centerY);
+      ctx.stroke();
     };
 
     // 이벤트 리스너들
