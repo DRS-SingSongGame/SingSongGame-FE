@@ -287,6 +287,11 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
       }
     });
 
+    sock.on("redirect_lobby", (d) => {
+      alert(d.reason ?? "서버와 연결이 끊겼습니다.");
+      handleLeaveRoom();
+    });
+
     sock.on("room_update", (d: { users: User[] }) => setUsers(d.users));
     sock.on("start_failed", (d: { reason: string }) => alert(d.reason));
 
@@ -544,8 +549,8 @@ const KeysingyouGameRoom = ({ user, room, onBack }: GameRoomProps) => {
   /* ───── 나가기 ───── */
   function leaveRoom() {
     socket.current?.emit("leave_room");
+    disconnectSocket();
     handleLeaveRoom();
-    router.push(`/lobby`);
   }
 
   // 게임 시작 핸들러 추가 (랜덤송과 동일하게 API 호출)
