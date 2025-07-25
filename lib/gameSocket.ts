@@ -190,7 +190,7 @@ export const sendGameMessage = (
   const prefix = isAiGame ? "ai-room" : "room";
   if (stompClient && stompClient.connected) {
     const payload = { senderId, senderName, message };
-    console.log(":수신_봉투: 보내는 채팅 메시지:", payload);
+    // console.log(":수신_봉투: 보내는 채팅 메시지:", payload);
     stompClient.publish({
       destination: `/api/${prefix}/${roomId}/chat`, // :흰색_확인_표시: 백엔드에 맞는 경로
       body: JSON.stringify(payload),
