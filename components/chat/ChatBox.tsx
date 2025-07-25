@@ -57,7 +57,6 @@ const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(({
 
   const handleSend = () => {
     const messageToSend = input.trim();
-    console.log("text", messageToSend)
     if (!messageToSend) return;
     onSend?.(messageToSend);
     setInput('');

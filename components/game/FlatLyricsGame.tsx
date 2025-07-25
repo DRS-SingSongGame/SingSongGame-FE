@@ -463,7 +463,7 @@ const FlatLyricsGame = ({
         }
       },
       onMessage: (data: any) => {
-        console.log("[WebSocket 수신]", data);
+        // console.log("[WebSocket 수신]", data);
         const msg: ChatMessage = {
           id: Date.now(),
           playerId: data.senderId,
@@ -694,16 +694,16 @@ const FlatLyricsGame = ({
                         const winner = players.find(
                           (p) => String(p.id) === String(gameState.roundWinner)
                         );
-                        console.log(
-                          "정답창 - roundWinner:",
-                          gameState.roundWinner
-                        );
-                        console.log("정답창 - 찾은 플레이어:", winner);
-                        console.log("정답창 - 닉네임:", winner?.nickname);
-                        console.log(
-                          "정답창 - 플레이어 ID들:",
-                          players.map((p) => ({ id: p.id, type: typeof p.id }))
-                        );
+                        // console.log(
+                        //   "정답창 - roundWinner:",
+                        //   gameState.roundWinner
+                        // );
+                        // console.log("정답창 - 찾은 플레이어:", winner);
+                        // console.log("정답창 - 닉네임:", winner?.nickname);
+                        // console.log(
+                        //   "정답창 - 플레이어 ID들:",
+                        //   players.map((p) => ({ id: p.id, type: typeof p.id }))
+                        // );
                         return winner?.nickname
                           ? `${winner.nickname}님이 맞췄습니다!`
                           : "정답입니다!";

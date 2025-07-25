@@ -119,7 +119,7 @@ const RandomSongGame = ({
       }, 4000);
     },
     onMessage: (msg: any) => {
-      console.log("Game WebSocket Message:", msg);
+      
       if (msg.type === "PLAYER_UPDATE") {
         onPlayersUpdate?.(msg.players);
         console.log("Player update received:", msg.players);
